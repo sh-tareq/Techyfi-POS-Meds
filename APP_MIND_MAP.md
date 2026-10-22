@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-22 (app version 2.6.96-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220977; DB schema version 38)
+Last updated: 2026-10-22 (app version 2.6.97-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220978; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -375,8 +375,19 @@ mindmap
           Title wraps cleanly up to 2 lines across full card width (zero premature clipping or truncation)
         Monospace Barcode Hologram & Code Generator
           Monospace #SKU/Barcode chip with animated Realistic3DHologramLaserCodeIcon (12dp)
-          Tapping barcode chip directly opens ProductCodeImageDialog (Thermal Label & Barcode/QR Generator)
-        Adaptive Product Image Full-View Modal (EnlargedImageDialog)
+          Tapping barcode chip directly opens ProductCodeImageDialog (Thermal Label & Barcode/QR Studio)
+            Product Hero Card with category tag, 3D avatar icon, live stock indicator dot, and pagination switcher (< 1 of N >)
+            Pinned Thermal Sticker Preview Canvas with DPI indicator (203/300 DPI) and Zoom Inspect modal
+            5 Quick Template Presets (Standard Retail, Grocery & Expiry, Jewelry Mini, Apparel Dual-Price, Warehouse Code 128)
+            Segmented 3-Tab Architecture (🏷️ Label Setup, 🏢 Store & Fields, 📅 Dates & Scale)
+            Code Format Dropdown (Code 128, EAN-13 recommended, EAN-8, Code 39, QR Code) with narrow barcode density warning
+            Selling, MRP, Wholesale price tier cards + compact Dual Price row (struck-through MRP + discounted price preview)
+            Copies Stepper with Auto (stock-matched) vs Manual toggle mode and quick preset chips (1, 2, 3, 5, 12, 50, 100, Stock)
+            Label Dimensions Dropdown with all 8 thermal presets (25x15 to 100x150 mm) + custom mm dimensions
+            Compact 2-column Additional Custom Field with quick presets (+ Batch, + Size, + Weight, + Origin, ✕ Clear)
+            Date Tracking (Mfg vs Pkg toggle, Mfg date, Expiry date)
+            Element Scaling Card with Reset All and 8 independent scalers with range sliders and +/- step buttons
+            Fixed Bottom Action Dock with dynamic print copy count, PDF share, and PNG export
           Tapping available thumbnail opens full-view high-resolution image modal with title, barcode, and price
           Thumbnail box stays completely hidden when no image is uploaded (maximizing horizontal title room)
         Compact List View (ProductItemRow)
@@ -3234,6 +3245,37 @@ mindmap
   - **Adaptive M3 Chip Styling**: Standardized the barcode chip with holographic laser code icon and category chip with `Icons.Default.Sell`, bilingual localized category translation, and dark/light mode adaptive color contrast.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220977, versionName "2.6.96-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with the update-compatible keystore for direct in-place installation.
+
+### Release Final-V22-10-2026-R2: Product Code Image & Thermal Label Studio Redesign (Version 2.6.97-Final-V22-10-2026, Build Final-V22-10-2026)
+- **Product Hero Card & Real-Time Stock Carousel**:
+  - Integrated product hero card featuring category pill, 3D avatar badge, SKU pill, and live stock health indicator dot with quantity display.
+  - In-dialog pagination carousel (`< 1 of N >`) allowing cashiers to quickly cycle through all products in catalog without dismissing the dialog.
+- **Pinned Thermal Sticker Preview Canvas**:
+  - Pinned sticker stage with live dimensions and DPI indicator badge (`50 × 30 mm • 203 DPI`).
+  - High-Resolution **Zoom Inspect Modal** with thermal dot matrix simulation and scannability inspection.
+  - 1-tap template presets carousel: *Standard Retail*, *Grocery & Expiry*, *Jewelry Mini*, *Apparel Dual-Price*, *Warehouse Code 128*.
+  - Density warning banner with 1-tap switch to QR Code when barcode width is narrow (< 45mm) to protect against unreadable thermal scans.
+- **Segmented 3-Tab Architecture**:
+  - **Tab 1: `🏷️ Label Setup`**:
+    - Code Format dropdown (Code 128, EAN-13 with auto recommended badge, EAN-8, Code 39, QR Code).
+    - Thermal DPI toggle (203 DPI standard vs 300 DPI hi-res).
+    - Price Tier selector (Selling, MRP, Wholesale) + compact single-row **Dual Price** (`MRP + Discounted Price` with struck-through MRP and selling price preview).
+    - Micro-options: *Show Unit (/pcs)*, *Show Code Number*, *Bangla Numerals (০-৯)*.
+    - Print Copies: **Auto (Stock)** vs **Manual** toggle mode with SharedPreferences persistence, `+`/`−` stepper, and quick chips (1, 2, 3, 5, 12, 50, 100, Stock).
+  - **Tab 2: `🏢 Store & Fields`**:
+    - Store Branding: *Show Store Name* & *Show Store Logo* toggles with store name input field.
+    - Label Dimensions Dropdown: All 8 standard thermal presets (25×15 mm, 30×20 mm, 40×25 mm, 45×35 mm, 50×30 mm, 60×40 mm, 100×150 mm, and Custom mm inputs).
+    - Compact 2-column Additional Custom Field with 1-tap quick presets (`+ Batch`, `+ Size`, `+ Weight`, `+ Origin`, `✕ Clear`).
+  - **Tab 3: `📅 Dates & Scale`**:
+    - Dates & Tracking: Enable Dates toggle, Mfg vs Pkg selector with 3D icons, and date pickers.
+    - Element Scaling: Clean header with "ELEMENT SCALING" and "Reset All", and all 8 scalers (*Product Name, Price, Code Number, Store Logo, Store Name, Date Tracking, Barcode Graphic, Extra Field*) complete with `+`/`−` step buttons, percentage readout, and individual reset controls.
+- **Fixed Bottom Action Dock**:
+  - Dynamic primary print button displaying the active copy count (`Print (N Copies)`).
+  - Instant action buttons for PDF export/sharing and PNG image saving.
+- **Full Bilingual Localization**:
+  - Complete English and Bengali translations across all strings, labels, and badges.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220978, versionName "2.6.97-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with update-compatible keystore for direct in-place installation.
 
 ## Maintenance note
 

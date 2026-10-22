@@ -3396,6 +3396,27 @@
     <string name="sales_report_sold_units_fmt">%1$s sold</string>
     <string name="sales_report_net_sales_label">Net Sales</string>
     <string name="scanner_qty_format">%1$s · Qty %2$s</string>
+    <!-- Generate Code Image Redesign (LBL-REDESIGN) -->
+    <string name="tab_label_setup">Label Setup</string>
+    <string name="tab_store_info">Store &amp; Fields</string>
+    <string name="tab_dates_scale">Dates &amp; Scale</string>
+    <string name="zoom_inspect_label">Zoom Inspect</string>
+    <string name="zoom_inspect_dialog_title">High-Resolution Label Inspection</string>
+    <string name="zoom_inspect_dialog_sub">203 DPI Thermal Dot Simulation &amp; Scannability Check</string>
+    <string name="dual_price_option">Dual Price (MRP + Selling)</string>
+    <string name="dual_price_hint">Prints MRP struck-through with Selling Price</string>
+    <string name="product_carousel_counter">%1$d of %2$d</string>
+    <string name="product_prev">Previous Product</string>
+    <string name="product_next">Next Product</string>
+    <string name="product_select_picker_title">Select Product for Label</string>
+    <string name="element_scaling_title">Element Scaling</string>
+    <string name="copies_mode_auto">Auto (Stock)</string>
+    <string name="copies_mode_manual">Manual</string>
+    <string name="copies_mode_auto_desc">Auto Mode: Copies matched to stock (%1$d)</string>
+    <string name="copies_mode_manual_desc">Manual Mode: Custom copies locked (%1$d)</string>
+    <string name="show_store_logo">Show Store Logo</string>
+    <string name="store_logo_scale">Store Logo Scale</string>
+    <string name="extra_field_scale">Extra Field Scale</string>
 </resources>
 
 

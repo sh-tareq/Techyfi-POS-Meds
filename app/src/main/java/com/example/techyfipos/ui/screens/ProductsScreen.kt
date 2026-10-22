@@ -3039,7 +3039,9 @@ fun ProductsScreen(
         val prod = productForCodeDialog!!
         ProductCodeImageDialog(
             product = prod,
-            onDismiss = { productForCodeDialog = null }
+            onDismiss = { productForCodeDialog = null },
+            allProducts = allProductsList,
+            onProductSelected = { newProd -> productForCodeDialog = newProd }
         )
     }
 

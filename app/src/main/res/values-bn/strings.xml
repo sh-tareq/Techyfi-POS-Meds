@@ -3398,4 +3398,25 @@
     <string name="sales_report_sold_units_fmt">%1$s টি বিক্রয়</string>
     <string name="sales_report_net_sales_label">নিট বিক্রয়</string>
     <string name="scanner_qty_format">%1$s · পরিমাণ %2$s</string>
+    <!-- Generate Code Image Redesign (LBL-REDESIGN) -->
+    <string name="tab_label_setup">বেসিক লেবেল</string>
+    <string name="tab_store_info">দোকান ও তথ্য</string>
+    <string name="tab_dates_scale">তারিখ ও সাইজ</string>
+    <string name="zoom_inspect_label">জুম ইনস্পেক্ট</string>
+    <string name="zoom_inspect_dialog_title">হাই-রেজোলিউশন লেবেল ইনস্পেকশন</string>
+    <string name="zoom_inspect_dialog_sub">২০৩ DPI থার্মাল ডট সিমুলেশন ও স্ক্যানার ক্ল্যারিটি</string>
+    <string name="dual_price_option">ডুয়েল প্রাইস (MRP + বিক্রয় ছাড়)</string>
+    <string name="dual_price_hint">এমআরপি কেটে ডিসকাউন্ট বিক্রয় মূল্য দেখায়</string>
+    <string name="product_carousel_counter">%1$d এর %2$d</string>
+    <string name="product_prev">পূর্ববর্তী পণ্য</string>
+    <string name="product_next">পরবর্তী পণ্য</string>
+    <string name="product_select_picker_title">লেবেলের জন্য পণ্য নির্বাচন করুন</string>
+    <string name="element_scaling_title">উপাদান স্কেলিং</string>
+    <string name="copies_mode_auto">অটো (স্টক)</string>
+    <string name="copies_mode_manual">ম্যানুয়াল</string>
+    <string name="copies_mode_auto_desc">অটো মোড: স্টক অনুযায়ী কপি সংখ্যা (%1$d)</string>
+    <string name="copies_mode_manual_desc">ম্যানুয়াল মোড: নির্দিষ্ট কপি সংখ্যা লক করা (%1$d)</string>
+    <string name="show_store_logo">দোকানের লোগো দেখান</string>
+    <string name="store_logo_scale">দোকানের লোগোর সাইজ</string>
+    <string name="extra_field_scale">অতিরিক্ত ফিল্ড সাইজ</string>
 </resources>

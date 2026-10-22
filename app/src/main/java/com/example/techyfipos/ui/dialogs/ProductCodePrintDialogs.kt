@@ -2986,7 +2986,9 @@ fun BatchProductCodePrintDialog(
 @Composable
 fun ProductCodeImageDialog(
     product: Product,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    allProducts: List<Product> = emptyList(),
+    onProductSelected: ((Product) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val activity = LocalActivity.current
@@ -2999,11 +3001,23 @@ fun ProductCodeImageDialog(
         context.getSharedPreferences("product_code_image_settings", android.content.Context.MODE_PRIVATE)
     }
     val hadSavedStoreName = remember { preferences.contains("store_name") }
-    val recommendedCodeType = remember(product.barcode) { getRecommendedCodeType(product.barcode) }
+
+    // In-dialog Product Switching State
+    var currentProduct by remember(product) { mutableStateOf(product) }
+    val productIndex = remember(currentProduct, allProducts) {
+        allProducts.indexOfFirst { it.barcode == currentProduct.barcode }
+    }
+    val hasPrev = productIndex > 0
+    val hasNext = productIndex in 0 until allProducts.lastIndex
+
+    // Code Format & Settings State
+    val recommendedCodeType = remember(currentProduct.barcode) { getRecommendedCodeType(currentProduct.barcode) }
     var codeTypeName by rememberSaveable {
         val stored = preferences.getString("code_type", null)
         mutableStateOf(stored ?: recommendedCodeType.name)
     }
+    var codeFormatMenuExpanded by remember { mutableStateOf(false) }
+
     var labelSizeName by rememberSaveable {
         val stored = preferences.getString("label_size", ProductCodeLabelSize.SIZE_50_X_30.name)
         mutableStateOf(
@@ -3015,19 +3029,24 @@ fun ProductCodeImageDialog(
             }
         )
     }
+    var labelSizeDropdownExpanded by remember { mutableStateOf(false) }
+
     var showPrice by rememberSaveable { mutableStateOf(preferences.getBoolean("show_price", true)) }
     var priceTierName by rememberSaveable {
         mutableStateOf(preferences.getString("price_tier", ProductCodePriceTier.SELLING.name) ?: ProductCodePriceTier.SELLING.name)
     }
     val priceTier = ProductCodePriceTier.entries.firstOrNull { it.name == priceTierName } ?: ProductCodePriceTier.SELLING
+    var isDualPrice by rememberSaveable { mutableStateOf(priceTierName == ProductCodePriceTier.DUAL.name) }
+
     var showUnit by rememberSaveable { mutableStateOf(preferences.getBoolean("show_unit", preferences.getBoolean("show_price_unit", false))) }
     var showBanglaDigits by rememberSaveable { mutableStateOf(preferences.getBoolean("show_bangla_digits", false)) }
     var showCodeNumber by rememberSaveable { mutableStateOf(preferences.getBoolean("show_code_number", true)) }
     var showStoreName by rememberSaveable { mutableStateOf(preferences.getBoolean("show_store_name", true)) }
+    var showLogo by rememberSaveable { mutableStateOf(preferences.getBoolean("show_logo", false)) }
     var showDateTracking by rememberSaveable { mutableStateOf(preferences.getBoolean("show_date_tracking", false)) }
-    var mfgOrPkgType by rememberSaveable { mutableStateOf(product.mfgOrPkgType ?: "Mfg") }
-    var mfgOrPkgDate by rememberSaveable { mutableStateOf(product.mfgOrPkgDate ?: "") }
-    var expDate by rememberSaveable { mutableStateOf(product.expiryDate ?: "") }
+    var mfgOrPkgType by rememberSaveable { mutableStateOf(currentProduct.mfgOrPkgType ?: "Mfg") }
+    var mfgOrPkgDate by rememberSaveable { mutableStateOf(currentProduct.mfgOrPkgDate ?: "") }
+    var expDate by rememberSaveable { mutableStateOf(currentProduct.expiryDate ?: "") }
     var extraFieldTitle by rememberSaveable {
         mutableStateOf(preferences.getString("extra_field_title", preferences.getString("extra_field_label", "") ?: "") ?: "")
     }
@@ -3035,14 +3054,26 @@ fun ProductCodeImageDialog(
         mutableStateOf(preferences.getString("extra_field_value", "") ?: "")
     }
 
-    val formattedPriceString = formatProductCodeLabelPriceString(
-        tier = priceTier,
-        sellingPrice = product.sellingPrice,
-        mrpPrice = product.mrpPrice,
-        wholesalePrice = product.wholesalePrice,
-        showUnit = showUnit,
-        showBanglaDigits = showBanglaDigits
-    )
+    // Copies Mode & Persistence (Auto Stock vs Manual)
+    var copiesMode by rememberSaveable {
+        mutableStateOf(preferences.getString("pos_label_copies_mode", "MANUAL") ?: "MANUAL")
+    }
+    var manualCopies by rememberSaveable {
+        mutableIntStateOf(preferences.getInt("pos_label_manual_copies", 1))
+    }
+    var printCopies by remember(copiesMode, manualCopies, currentProduct.stockQty) {
+        mutableIntStateOf(
+            if (copiesMode == "AUTO") {
+                currentProduct.stockQty.toInt().coerceAtLeast(1)
+            } else {
+                manualCopies.coerceIn(1, 500)
+            }
+        )
+    }
+
+    // Active Segmented Tab (0 = Label Setup, 1 = Store & Fields, 2 = Dates & Scale)
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var showZoomModal by remember { mutableStateOf(false) }
 
     var storeNameInput by rememberSaveable {
         mutableStateOf(preferences.getString("store_name", "") ?: "")
@@ -3053,6 +3084,8 @@ fun ProductCodeImageDialog(
     var customHeightInput by rememberSaveable {
         mutableStateOf(preferences.getFloat("custom_height_mm", 30f).toString().removeSuffix(".0"))
     }
+
+    // All 8 Scalers (60% to 180%)
     var productNameTextScale by rememberSaveable {
         mutableFloatStateOf(preferences.getFloat("product_name_text_scale", 1f))
     }
@@ -3061,6 +3094,9 @@ fun ProductCodeImageDialog(
     }
     var codeNumberTextScale by rememberSaveable {
         mutableFloatStateOf(preferences.getFloat("code_number_text_scale", 1f))
+    }
+    var storeLogoScale by rememberSaveable {
+        mutableFloatStateOf(preferences.getFloat("store_logo_scale", 1f))
     }
     var storeNameTextScale by rememberSaveable {
         mutableFloatStateOf(preferences.getFloat("store_name_text_scale", 1f))
@@ -3071,8 +3107,10 @@ fun ProductCodeImageDialog(
     var barcodeGraphicScale by rememberSaveable {
         mutableFloatStateOf(preferences.getFloat("barcode_graphic_scale", 1f))
     }
-    var labelSizeMenuExpanded by remember { mutableStateOf(false) }
-    var showAdvancedStyling by rememberSaveable { mutableStateOf(false) }
+    var extraFieldTextScale by rememberSaveable {
+        mutableFloatStateOf(preferences.getFloat("extra_field_text_scale", 1f))
+    }
+
     var actionStatus by remember { mutableStateOf<ActionStatus?>(null) }
     var isSaving by remember { mutableStateOf(false) }
     var isPrinting by remember { mutableStateOf(false) }
@@ -3080,11 +3118,9 @@ fun ProductCodeImageDialog(
     var singlePrintJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var isSharingPdf by remember { mutableStateOf(false) }
     var sharePdfJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    var printCopies by rememberSaveable { mutableIntStateOf(1) }
 
     val codeType = ProductCodeType.entries.firstOrNull { it.name == codeTypeName } ?: ProductCodeType.BARCODE
-    val labelSize = ProductCodeLabelSize.entries.firstOrNull { it.name == labelSizeName }
-        ?: ProductCodeLabelSize.SIZE_50_X_30
+    val labelSize = ProductCodeLabelSize.entries.firstOrNull { it.name == labelSizeName } ?: ProductCodeLabelSize.SIZE_50_X_30
     val parsedCustomWidth = customWidthInput.toFloatOrNull()
     val isCustomWidthError = labelSize == ProductCodeLabelSize.CUSTOM && (parsedCustomWidth == null || parsedCustomWidth !in 15f..150f)
     val parsedCustomHeight = customHeightInput.toFloatOrNull()
@@ -3095,6 +3131,15 @@ fun ProductCodeImageDialog(
     val (selectedLabelWidthMm, selectedLabelHeightMm) = resolveLabelDimensionsMm(labelSize, customWidthMm, customHeightMm)
     val effectiveStoreName = storeNameInput.ifBlank { configuredStoreName }
 
+    val formattedPriceString = formatProductCodeLabelPriceString(
+        tier = if (isDualPrice) ProductCodePriceTier.DUAL else priceTier,
+        sellingPrice = currentProduct.sellingPrice,
+        mrpPrice = currentProduct.mrpPrice,
+        wholesalePrice = currentProduct.wholesalePrice,
+        showUnit = showUnit,
+        showBanglaDigits = showBanglaDigits
+    )
+
     LaunchedEffect(configuredStoreName) {
         if (!hadSavedStoreName && configuredStoreName.isNotBlank() && storeNameInput.isBlank()) {
             storeNameInput = configuredStoreName
@@ -3103,17 +3148,18 @@ fun ProductCodeImageDialog(
 
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     LaunchedEffect(
-        product, codeType, labelSize, showPrice, priceTierName, showUnit, showBanglaDigits, showCodeNumber, showStoreName, effectiveStoreName,
+        currentProduct, codeType, labelSize, showPrice, priceTierName, isDualPrice, showUnit, showBanglaDigits,
+        showCodeNumber, showStoreName, showLogo, effectiveStoreName,
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
-        codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
-        extraFieldTitle, extraFieldValue
+        codeNumberTextScale, storeLogoScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
+        extraFieldTitle, extraFieldValue, extraFieldTextScale
     ) {
         val old = bitmap
         val newBmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             generateProductCodeLabelBitmap(
-                productName = product.name,
-                barcode = product.barcode,
+                productName = currentProduct.name,
+                barcode = currentProduct.barcode,
                 formattedPrice = formattedPriceString,
                 codeType = codeType,
                 labelSize = labelSize,
@@ -3136,6 +3182,8 @@ fun ProductCodeImageDialog(
                 showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
                 extraFieldLabel = extraFieldTitle,
                 extraFieldValue = extraFieldValue,
+                extraFieldTextScale = extraFieldTextScale,
+                showLogo = showLogo,
                 dpi = invoiceSettings.labelDpi,
                 showBanglaDigits = showBanglaDigits
             )
@@ -3155,33 +3203,39 @@ fun ProductCodeImageDialog(
     }
 
     LaunchedEffect(
-        codeTypeName, labelSizeName, showPrice, priceTierName, showUnit, showBanglaDigits, showCodeNumber, showStoreName, storeNameInput,
+        codeTypeName, labelSizeName, showPrice, priceTierName, isDualPrice, showUnit, showBanglaDigits,
+        showCodeNumber, showStoreName, showLogo, storeNameInput,
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthInput, customHeightInput, productNameTextScale, priceTextScale,
-        codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
-        extraFieldTitle, extraFieldValue
+        codeNumberTextScale, storeLogoScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
+        extraFieldTitle, extraFieldValue, extraFieldTextScale, copiesMode, manualCopies
     ) {
         val editor = preferences.edit()
             .putString("code_type", codeTypeName)
             .putString("label_size", labelSizeName)
             .putBoolean("show_price", showPrice)
-            .putString("price_tier", priceTierName)
+            .putString("price_tier", if (isDualPrice) ProductCodePriceTier.DUAL.name else priceTierName)
             .putBoolean("show_price_unit", showUnit)
             .putBoolean("show_unit", showUnit)
             .putBoolean("show_bangla_digits", showBanglaDigits)
             .putBoolean("show_code_number", showCodeNumber)
             .putBoolean("show_store_name", showStoreName)
+            .putBoolean("show_logo", showLogo)
             .putBoolean("show_date_tracking", showDateTracking)
             .putString("store_name", storeNameInput.trim())
             .putFloat("product_name_text_scale", productNameTextScale)
             .putFloat("price_text_scale", priceTextScale)
             .putFloat("code_number_text_scale", codeNumberTextScale)
+            .putFloat("store_logo_scale", storeLogoScale)
             .putFloat("store_name_text_scale", storeNameTextScale)
             .putFloat("date_tracking_text_scale", dateTrackingTextScale)
             .putFloat("barcode_graphic_scale", barcodeGraphicScale)
+            .putFloat("extra_field_text_scale", extraFieldTextScale)
             .putString("extra_field_title", extraFieldTitle.trim())
             .putString("extra_field_label", extraFieldTitle.trim())
             .putString("extra_field_value", extraFieldValue.trim())
+            .putString("pos_label_copies_mode", copiesMode)
+            .putInt("pos_label_manual_copies", manualCopies)
         if (parsedCustomWidth != null && parsedCustomWidth in 15f..150f) {
             editor.putFloat("custom_width_mm", parsedCustomWidth)
         }
@@ -3202,31 +3256,57 @@ fun ProductCodeImageDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.94f)
-                .fillMaxHeight(0.92f)
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.94f)
                 .trackUserActivity(),
-            shape = RoundedCornerShape(22.dp),
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp,
-            shadowElevation = 12.dp
+            tonalElevation = 6.dp,
+            shadowElevation = 16.dp
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Header
+                // 1. DIALOG HEADER WITH 3D ICON BADGE
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        stringResource(R.string.generate_code_image),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QrCode2,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.generate_code_image),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Barcode & QR Label Studio",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     IconButton(
                         onClick = onDismiss,
                         enabled = !isPrinting && !isSharingPdf
@@ -3235,61 +3315,412 @@ fun ProductCodeImageDialog(
                     }
                 }
 
-                // Pinned Preview Card (LBL-21)
+                // 2. AUTO VS MANUAL COPIES MODE BANNER
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (copiesMode == "AUTO") {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                    },
+                    border = BorderStroke(
+                        1.dp,
+                        if (copiesMode == "AUTO") MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        val currentBmp = bitmap
-                        if (currentBmp != null) {
-                            Image(
-                                bitmap = currentBmp.asImageBitmap(),
-                                contentDescription = stringResource(R.string.product_code_image_preview),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 70.dp, max = 130.dp)
-                                    .background(Color.White),
-                                contentScale = ContentScale.Fit
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = if (copiesMode == "AUTO") Icons.Default.AutoMode else Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = if (copiesMode == "AUTO") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
                             )
-                        } else {
                             Text(
-                                stringResource(R.string.code_generation_failed),
-                                color = MaterialTheme.colorScheme.error
+                                text = if (copiesMode == "AUTO") {
+                                    stringResource(R.string.copies_mode_auto_desc, printCopies)
+                                } else {
+                                    stringResource(R.string.copies_mode_manual_desc, printCopies)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
+                        }
+
+                        // Toggle Mode Chip
+                        Surface(
+                            onClick = {
+                                if (copiesMode == "AUTO") {
+                                    copiesMode = "MANUAL"
+                                    printCopies = manualCopies.coerceIn(1, 500)
+                                } else {
+                                    copiesMode = "AUTO"
+                                    printCopies = currentProduct.stockQty.toInt().coerceAtLeast(1)
+                                }
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (copiesMode == "AUTO") stringResource(R.string.copies_mode_auto) else stringResource(R.string.copies_mode_manual),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Icon(
+                                    Icons.Default.SwapHoriz,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
 
-                val isSingleDense = remember(product.barcode, codeType, selectedLabelWidthMm, invoiceSettings.labelDpi) {
-                    isBarcodeTooDenseForLabel(product.barcode, codeType, selectedLabelWidthMm, invoiceSettings.labelDpi)
+                // If Manual mode, display quick copies stepper
+                if (copiesMode == "MANUAL") {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Copies Stepper:",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        if (printCopies > 1) {
+                                            val c = printCopies - 1
+                                            printCopies = c
+                                            manualCopies = c
+                                        }
+                                    },
+                                    enabled = printCopies > 1,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp))
+                                }
+                                Text(
+                                    text = "$printCopies",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.width(36.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                                IconButton(
+                                    onClick = {
+                                        if (printCopies < 500) {
+                                            val c = printCopies + 1
+                                            printCopies = c
+                                            manualCopies = c
+                                        }
+                                    },
+                                    enabled = printCopies < 500,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. PRODUCT HERO CARD & CAROUSEL
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Top Carousel Navigation Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Category Badge
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            ) {
+                                Text(
+                                    text = currentProduct.category.ifBlank { "General" }.uppercase(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontSize = 9.sp
+                                )
+                            }
+
+                            // Carousel Controls (If products available)
+                            if (allProducts.isNotEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            if (hasPrev) {
+                                                val prev = allProducts[productIndex - 1]
+                                                currentProduct = prev
+                                                onProductSelected?.invoke(prev)
+                                            }
+                                        },
+                                        enabled = hasPrev,
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ChevronLeft,
+                                            contentDescription = stringResource(R.string.product_prev),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = stringResource(R.string.product_carousel_counter, productIndex + 1, allProducts.size),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            if (hasNext) {
+                                                val next = allProducts[productIndex + 1]
+                                                currentProduct = next
+                                                onProductSelected?.invoke(next)
+                                            }
+                                        },
+                                        enabled = hasNext,
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ChevronRight,
+                                            contentDescription = stringResource(R.string.product_next),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Product Details Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 3D Product Avatar Box
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(Color(0xFF4338CA), Color(0xFF6366F1))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "📦",
+                                    fontSize = 20.sp
+                                )
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = currentProduct.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = currentProduct.barcode,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "•",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = if (currentProduct.stockQty > 0) "In Stock: ${currentProduct.stockQty.toInt()} pcs" else "Out of Stock",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (currentProduct.stockQty > 0) Color(0xFF10B981) else MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. PINNED STICKER PREVIEW WITH ZOOM INSPECT
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Preview Header (Dimensions + Zoom Inspect Button)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "📐 ${selectedLabelWidthMm.toInt()} × ${selectedLabelHeightMm.toInt()} mm • ${invoiceSettings.labelDpi} DPI",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            // Zoom Inspect Button
+                            Surface(
+                                onClick = { showZoomModal = true },
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ZoomIn,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(13.dp),
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.zoom_inspect_label),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        }
+
+                        // Sticker Canvas Frame
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 65.dp, max = 120.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White)
+                                .clickable { showZoomModal = true }
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val currentBmp = bitmap
+                            if (currentBmp != null) {
+                                Image(
+                                    bitmap = currentBmp.asImageBitmap(),
+                                    contentDescription = stringResource(R.string.product_code_image_preview),
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit
+                                )
+                            } else {
+                                Text(
+                                    stringResource(R.string.code_generation_failed),
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // High Density Barcode Warning (LBL-21)
+                val isSingleDense = remember(currentProduct.barcode, codeType, selectedLabelWidthMm, invoiceSettings.labelDpi) {
+                    isBarcodeTooDenseForLabel(currentProduct.barcode, codeType, selectedLabelWidthMm, invoiceSettings.labelDpi)
                 }
                 if (isSingleDense) {
                     Surface(
-                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
-                            modifier = Modifier.padding(8.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.barcode_too_dense_warning),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
+                            Text(
+                                text = stringResource(R.string.barcode_too_dense_warning),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.weight(1f)
+                            )
                             TextButton(onClick = { codeTypeName = ProductCodeType.QR_CODE.name }) {
                                 Text(stringResource(R.string.switch_to_qr), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
@@ -3297,532 +3728,944 @@ fun ProductCodeImageDialog(
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                // 5. SEGMENTED 3-TAB SELECTOR
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        val tabs = listOf(
+                            "🏷️" to stringResource(R.string.tab_label_setup),
+                            "🏢" to stringResource(R.string.tab_store_info),
+                            "📅" to stringResource(R.string.tab_dates_scale)
+                        )
+                        tabs.forEachIndexed { index, (icon, title) ->
+                            val isSelected = selectedTab == index
+                            Surface(
+                                onClick = { selectedTab = index },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(text = icon, fontSize = 12.sp)
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        text = title,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
 
-                // Scrollable Settings
+                // 6. SCROLLABLE TAB CONTENT AREA
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Templates Row (LBL-18)
-                    Text(
-                        stringResource(R.string.label_presets_title),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val presets = remember { getDefaultLabelPresets() }
-                        presets.forEach { preset ->
-                            val presetName = preset.nameRes?.let { stringResource(it) } ?: preset.name
-                            FilterChip(
-                                selected = false,
-                                onClick = {
-                                    labelSizeName = preset.style.labelSize.name
-                                    customWidthInput = preset.style.customWidthMm.toString().removeSuffix(".0")
-                                    customHeightInput = preset.style.customHeightMm.toString().removeSuffix(".0")
-                                    showPrice = preset.style.showPrice
-                                    priceTierName = preset.style.priceTier.name
-                                    showCodeNumber = preset.style.showCodeNumber
-                                    showStoreName = preset.style.showStoreName
-                                    showDateTracking = preset.style.showDateTracking
-                                    extraFieldTitle = preset.style.extraFieldLabel
-                                    extraFieldValue = preset.style.extraFieldValue
-                                    productNameTextScale = preset.style.productNameTextScale
-                                    priceTextScale = preset.style.priceTextScale
-                                    codeNumberTextScale = preset.style.codeNumberTextScale
-                                    storeNameTextScale = preset.style.storeNameTextScale
-                                    dateTrackingTextScale = preset.style.dateTrackingTextScale
-                                    barcodeGraphicScale = preset.style.barcodeGraphicScale
-                                    Toast.makeText(context, context.getString(R.string.label_preset_saved_toast), Toast.LENGTH_SHORT).show()
-                                },
-                                label = { Text(presetName, fontSize = 11.5.sp) },
-                                leadingIcon = { Icon(Icons.Default.DashboardCustomize, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            )
-                        }
-                    }
+                    when (selectedTab) {
+                        0 -> {
+                            // TAB 1: LABEL SETUP
 
-                    // Code Type (LBL-16)
-                    val isEan13Valid = remember(product.barcode) { isValidEan13(product.barcode) }
-                    val isEan8Valid = remember(product.barcode) { isValidEan8(product.barcode) }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = codeType == ProductCodeType.BARCODE,
-                            onClick = { codeTypeName = ProductCodeType.BARCODE.name },
-                            label = { Text("Code 128") },
-                            leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                        )
-                        if (isEan13Valid) {
-                            FilterChip(
-                                selected = codeType == ProductCodeType.EAN_13,
-                                onClick = { codeTypeName = ProductCodeType.EAN_13.name },
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(stringResource(R.string.code_type_ean13))
-                                        if (recommendedCodeType == ProductCodeType.EAN_13) {
-                                            Text("★", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
-                                        }
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                            )
-                        }
-                        if (isEan8Valid) {
-                            FilterChip(
-                                selected = codeType == ProductCodeType.EAN_8,
-                                onClick = { codeTypeName = ProductCodeType.EAN_8.name },
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(stringResource(R.string.code_type_ean8))
-                                        if (recommendedCodeType == ProductCodeType.EAN_8) {
-                                            Text("★", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
-                                        }
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                            )
-                        }
-                        FilterChip(
-                            selected = codeType == ProductCodeType.CODE_39,
-                            onClick = { codeTypeName = ProductCodeType.CODE_39.name },
-                            label = { Text(stringResource(R.string.code_type_code39)) },
-                            leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                        )
-                        FilterChip(
-                            selected = codeType == ProductCodeType.QR_CODE,
-                            onClick = { codeTypeName = ProductCodeType.QR_CODE.name },
-                            label = { Text(stringResource(R.string.qr_code)) },
-                            leadingIcon = { Icon(Icons.Default.QrCode2, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                        )
-                    }
-
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showStoreName = !showStoreName }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(checked = showStoreName, onCheckedChange = { showStoreName = it })
-                            Text(stringResource(R.string.products_show_store_name), style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-
-                    AnimatedVisibility(visible = showStoreName) {
-                        OutlinedTextField(
-                            value = storeNameInput,
-                            onValueChange = { storeNameInput = it.take(80) },
-                            label = { Text(stringResource(R.string.products_store_name_label)) },
-                            placeholder = { Text(configuredStoreName.ifBlank { "Techyfi POS" }) },
-                            supportingText = { Text(stringResource(R.string.products_store_name_supporting_text)) },
-                            singleLine = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp)
-                        )
-                    }
-
-                    // Label Copies Control Card
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CopiesStepper(
-                                copies = printCopies,
-                                onCopiesChange = { printCopies = it },
-                                stockQuantity = product.stockQty,
-                                onErrorChange = { isSingleCopiesError = it }
-                            )
-                        }
-                    }
-                val singleSellingDisplay = if (showBanglaDigits) toBanglaDigits(formatTaka(product.sellingPrice)) else formatTaka(product.sellingPrice)
-                val singleMrpDisplay = if (product.mrpPrice > 0) {
-                    val base = formatTaka(product.mrpPrice)
-                    if (showBanglaDigits) toBanglaDigits(base) else base
-                } else stringResource(R.string.products_price_tier_not_set)
-                val singleWholesaleDisplay = if (product.wholesalePrice > 0) {
-                    val base = formatTaka(product.wholesalePrice)
-                    if (showBanglaDigits) toBanglaDigits(base) else base
-                } else stringResource(R.string.products_price_tier_not_set)
-
-                PriceTierSwitcherCard(
-                    showPrice = showPrice,
-                    onShowPriceChange = { showPrice = it },
-                    selectedTier = priceTier,
-                    onTierSelect = { priceTierName = it.name },
-                    sellingPriceDisplay = singleSellingDisplay,
-                    mrpPriceDisplay = singleMrpDisplay,
-                    wholesalePriceDisplay = singleWholesaleDisplay,
-                    showUnit = showUnit,
-                    onShowUnitChange = { showUnit = it },
-                    showBanglaDigits = showBanglaDigits,
-                    onShowBanglaDigitsChange = { showBanglaDigits = it }
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showCodeNumber = !showCodeNumber }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(checked = showCodeNumber, onCheckedChange = { showCodeNumber = it })
-                        Text(
-                            stringResource(R.string.show_code_number),
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 2
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showDateTracking = !showDateTracking }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(checked = showDateTracking, onCheckedChange = { showDateTracking = it })
-                        Text(stringResource(R.string.products_show_date_tracking), style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-
-                AnimatedVisibility(visible = showDateTracking) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                            .padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = stringResource(R.string.products_date_tracking_info_label),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            // A. Code Format Dropdown Card
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             ) {
-                                FilterChip(
-                                    selected = mfgOrPkgType == "Mfg",
-                                    onClick = { mfgOrPkgType = "Mfg" },
-                                    label = { Text(stringResource(R.string.products_mfg_abbr), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                    leadingIcon = { Animated3DFactoryIcon() },
-                                    modifier = Modifier.height(32.dp)
-                                )
-                                FilterChip(
-                                    selected = mfgOrPkgType == "Pkg",
-                                    onClick = { mfgOrPkgType = "Pkg" },
-                                    label = { Text(stringResource(R.string.products_pkg_abbr), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                    leadingIcon = { Animated3DPackageIcon(fontSize = 14.sp) },
-                                    modifier = Modifier.height(32.dp)
-                                )
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            DateInputField(
-                                label = if (mfgOrPkgType == "Pkg") stringResource(R.string.products_pkg_date_label) else stringResource(R.string.products_mfg_date_label),
-                                value = mfgOrPkgDate,
-                                onValueChange = { mfgOrPkgDate = it },
-                                modifier = Modifier.weight(1f)
-                            )
-                            DateInputField(
-                                label = stringResource(R.string.products_exp_date_label),
-                                value = expDate,
-                                onValueChange = { expDate = it },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
-
-                // Additional Field Section (LBL-18)
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.label_extra_field_title),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedTextField(
-                                value = extraFieldTitle,
-                                onValueChange = { extraFieldTitle = it.take(30) },
-                                label = { Text(stringResource(R.string.label_extra_field_name), fontSize = 11.sp) },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = extraFieldValue,
-                                onValueChange = { extraFieldValue = it.take(40) },
-                                label = { Text(stringResource(R.string.label_extra_field_value), fontSize = 11.sp) },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(stringResource(R.string.label_size), style = MaterialTheme.typography.labelLarge)
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = { labelSizeMenuExpanded = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            labelSize.getLocalizedName(context),
-                            modifier = Modifier.weight(1f),
-                            textAlign = TextAlign.Start
-                        )
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                    }
-                    DropdownMenu(
-                        expanded = labelSizeMenuExpanded,
-                        onDismissRequest = { labelSizeMenuExpanded = false }
-                    ) {
-                        ProductCodeLabelSize.entries.forEach { size ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(size.getLocalizedName(context))
-                                },
-                                leadingIcon = if (size == labelSize) {
-                                    { Icon(Icons.Default.Check, contentDescription = null) }
-                                } else null,
-                                onClick = {
-                                    labelSizeName = size.name
-                                    labelSizeMenuExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                AnimatedVisibility(visible = labelSize == ProductCodeLabelSize.CUSTOM) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = customWidthInput,
-                            onValueChange = { value ->
-                                if (value.matches(Regex("\\d{0,3}(\\.\\d?)?"))) customWidthInput = value
-                            },
-                            label = { Text(stringResource(R.string.products_width_mm_label)) },
-                            isError = isCustomWidthError,
-                            supportingText = {
-                                if (isCustomWidthError) {
-                                    Text(stringResource(R.string.custom_width_range_error), color = MaterialTheme.colorScheme.error)
-                                } else {
-                                    Text(stringResource(R.string.products_width_range_hint))
-                                }
-                            },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = customHeightInput,
-                            onValueChange = { value ->
-                                if (value.matches(Regex("\\d{0,3}(\\.\\d?)?"))) customHeightInput = value
-                            },
-                            label = { Text(stringResource(R.string.products_height_mm_label)) },
-                            isError = isCustomHeightError,
-                            supportingText = {
-                                if (isCustomHeightError) {
-                                    Text(stringResource(R.string.custom_height_range_error), color = MaterialTheme.colorScheme.error)
-                                } else {
-                                    Text(stringResource(R.string.products_height_range_hint))
-                                }
-                            },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-                // Advanced text & graphic scale section
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth(),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showAdvancedStyling = !showAdvancedStyling },
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Tune,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = stringResource(R.string.batch_print_advanced_settings),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            Icon(
-                                if (showAdvancedStyling) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        AnimatedVisibility(visible = showAdvancedStyling) {
-                            Column(
-                                modifier = Modifier.padding(top = 10.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
-                                        text = stringResource(R.string.reset_size_hint),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        text = "SELECT CODE FORMAT",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
-                                    TextButton(
-                                        onClick = {
-                                            productNameTextScale = 1.0f
-                                            priceTextScale = 1.0f
-                                            codeNumberTextScale = 1.0f
-                                            storeNameTextScale = 1.0f
-                                            dateTrackingTextScale = 1.0f
-                                            barcodeGraphicScale = 1.0f
+
+                                    // Dropdown Trigger Box
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        Surface(
+                                            onClick = { codeFormatMenuExpanded = true },
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = MaterialTheme.colorScheme.surface,
+                                            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (codeType == ProductCodeType.QR_CODE) Icons.Default.QrCode2 else Icons.Default.ViewWeek,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                    Column {
+                                                        Text(
+                                                            text = when (codeType) {
+                                                                ProductCodeType.BARCODE -> "Code 128"
+                                                                ProductCodeType.EAN_13 -> "EAN-13"
+                                                                ProductCodeType.EAN_8 -> "EAN-8"
+                                                                ProductCodeType.CODE_39 -> "Code 39"
+                                                                ProductCodeType.QR_CODE -> "QR Code"
+                                                            },
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                        Text(
+                                                            text = when (codeType) {
+                                                                ProductCodeType.BARCODE -> "Standard Barcode"
+                                                                ProductCodeType.EAN_13 -> "Global Retail"
+                                                                ProductCodeType.EAN_8 -> "Compact 8-Digit"
+                                                                ProductCodeType.CODE_39 -> "Alphanumeric"
+                                                                ProductCodeType.QR_CODE -> "2D Matrix"
+                                                            },
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                                Icon(
+                                                    imageVector = if (codeFormatMenuExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
                                         }
-                                    ) {
-                                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(stringResource(R.string.reset_all_sizes), style = MaterialTheme.typography.labelMedium)
+
+                                        DropdownMenu(
+                                            expanded = codeFormatMenuExpanded,
+                                            onDismissRequest = { codeFormatMenuExpanded = false }
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Column {
+                                                        Text("Code 128", fontWeight = FontWeight.Bold)
+                                                        Text("Standard Barcode", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    }
+                                                },
+                                                leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null) },
+                                                trailingIcon = if (codeType == ProductCodeType.BARCODE) {
+                                                    { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                                                } else null,
+                                                onClick = {
+                                                    codeTypeName = ProductCodeType.BARCODE.name
+                                                    codeFormatMenuExpanded = false
+                                                }
+                                            )
+                                            val isEan13Valid = remember(currentProduct.barcode) { isValidEan13(currentProduct.barcode) }
+                                            if (isEan13Valid) {
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Column {
+                                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                                Text("EAN-13", fontWeight = FontWeight.Bold)
+                                                                if (recommendedCodeType == ProductCodeType.EAN_13) {
+                                                                    Text("★ Recommended", fontSize = 10.sp, color = Color(0xFFFBBF24))
+                                                                }
+                                                            }
+                                                            Text("Global Retail", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        }
+                                                    },
+                                                    leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null) },
+                                                    trailingIcon = if (codeType == ProductCodeType.EAN_13) {
+                                                        { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                                                    } else null,
+                                                    onClick = {
+                                                        codeTypeName = ProductCodeType.EAN_13.name
+                                                        codeFormatMenuExpanded = false
+                                                    }
+                                                )
+                                            }
+                                            val isEan8Valid = remember(currentProduct.barcode) { isValidEan8(currentProduct.barcode) }
+                                            if (isEan8Valid) {
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Column {
+                                                            Text("EAN-8", fontWeight = FontWeight.Bold)
+                                                            Text("Compact 8-Digit", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        }
+                                                    },
+                                                    leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null) },
+                                                    trailingIcon = if (codeType == ProductCodeType.EAN_8) {
+                                                        { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                                                    } else null,
+                                                    onClick = {
+                                                        codeTypeName = ProductCodeType.EAN_8.name
+                                                        codeFormatMenuExpanded = false
+                                                    }
+                                                )
+                                            }
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Column {
+                                                        Text("Code 39", fontWeight = FontWeight.Bold)
+                                                        Text("Alphanumeric", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    }
+                                                },
+                                                leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null) },
+                                                trailingIcon = if (codeType == ProductCodeType.CODE_39) {
+                                                    { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                                                } else null,
+                                                onClick = {
+                                                    codeTypeName = ProductCodeType.CODE_39.name
+                                                    codeFormatMenuExpanded = false
+                                                }
+                                            )
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Column {
+                                                        Text("QR Code", fontWeight = FontWeight.Bold)
+                                                        Text("2D Matrix", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    }
+                                                },
+                                                leadingIcon = { Icon(Icons.Default.QrCode2, contentDescription = null) },
+                                                trailingIcon = if (codeType == ProductCodeType.QR_CODE) {
+                                                    { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                                                } else null,
+                                                onClick = {
+                                                    codeTypeName = ProductCodeType.QR_CODE.name
+                                                    codeFormatMenuExpanded = false
+                                                }
+                                            )
+                                        }
                                     }
                                 }
-                                LabelTextSizeControl(
-                                    label = stringResource(R.string.products_label_product_name),
-                                    scale = productNameTextScale,
-                                    onScaleChange = { productNameTextScale = it },
-                                    onReset = { productNameTextScale = 1.0f }
-                                )
-                                LabelTextSizeControl(
-                                    label = stringResource(R.string.products_label_price),
-                                    scale = priceTextScale,
-                                    enabled = showPrice,
-                                    onScaleChange = { priceTextScale = it },
-                                    onReset = { priceTextScale = 1.0f }
-                                )
-                                LabelTextSizeControl(
-                                    label = stringResource(R.string.products_label_code_number),
-                                    scale = codeNumberTextScale,
-                                    enabled = showCodeNumber,
-                                    onScaleChange = { codeNumberTextScale = it },
-                                    onReset = { codeNumberTextScale = 1.0f }
-                                )
-                                LabelTextSizeControl(
-                                    label = stringResource(R.string.products_label_store_name),
-                                    scale = storeNameTextScale,
-                                    enabled = showStoreName && storeNameInput.isNotBlank(),
-                                    onScaleChange = { storeNameTextScale = it },
-                                    onReset = { storeNameTextScale = 1.0f }
-                                )
-                                LabelTextSizeControl(
-                                    label = stringResource(R.string.products_label_date_tracking_text),
-                                    scale = dateTrackingTextScale,
-                                    enabled = showDateTracking && (mfgOrPkgDate.isNotBlank() || expDate.isNotBlank()),
-                                    onScaleChange = { dateTrackingTextScale = it },
-                                    onReset = { dateTrackingTextScale = 1.0f }
-                                )
-                                LabelTextSizeControl(
-                                    label = stringResource(R.string.products_label_barcode_graphic_height),
-                                    scale = barcodeGraphicScale,
-                                    enabled = true,
-                                    onScaleChange = { barcodeGraphicScale = it },
-                                    onReset = { barcodeGraphicScale = 1.0f }
-                                )
+                            }
+
+                            // B. Price Tier & Dual Price Controls Card
+                            val singleSellingDisplay = if (showBanglaDigits) toBanglaDigits(formatTaka(currentProduct.sellingPrice)) else formatTaka(currentProduct.sellingPrice)
+                            val singleMrpDisplay = if (currentProduct.mrpPrice > 0) {
+                                val base = formatTaka(currentProduct.mrpPrice)
+                                if (showBanglaDigits) toBanglaDigits(base) else base
+                            } else stringResource(R.string.products_price_tier_not_set)
+                            val singleWholesaleDisplay = if (currentProduct.wholesalePrice > 0) {
+                                val base = formatTaka(currentProduct.wholesalePrice)
+                                if (showBanglaDigits) toBanglaDigits(base) else base
+                            } else stringResource(R.string.products_price_tier_not_set)
+
+                            PriceTierSwitcherCard(
+                                showPrice = showPrice,
+                                onShowPriceChange = { showPrice = it },
+                                selectedTier = if (isDualPrice) ProductCodePriceTier.DUAL else priceTier,
+                                onTierSelect = {
+                                    isDualPrice = false
+                                    priceTierName = it.name
+                                },
+                                sellingPriceDisplay = singleSellingDisplay,
+                                mrpPriceDisplay = singleMrpDisplay,
+                                wholesalePriceDisplay = singleWholesaleDisplay,
+                                showUnit = showUnit,
+                                onShowUnitChange = { showUnit = it },
+                                showBanglaDigits = showBanglaDigits,
+                                onShowBanglaDigitsChange = { showBanglaDigits = it }
+                            )
+
+                            // Dual Price Quick Toggle Row
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { isDualPrice = !isDualPrice }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(checked = isDualPrice, onCheckedChange = { isDualPrice = it })
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = stringResource(R.string.dual_price_option),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.dual_price_hint),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Show Code Number Row
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { showCodeNumber = !showCodeNumber }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(checked = showCodeNumber, onCheckedChange = { showCodeNumber = it })
+                                    Text(
+                                        text = stringResource(R.string.show_code_number),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+
+                            // C. Label Presets Row
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.label_presets_title).uppercase(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        val presets = remember { getDefaultLabelPresets() }
+                                        presets.forEach { preset ->
+                                            val presetName = preset.nameRes?.let { stringResource(it) } ?: preset.name
+                                            FilterChip(
+                                                selected = false,
+                                                onClick = {
+                                                    labelSizeName = preset.style.labelSize.name
+                                                    customWidthInput = preset.style.customWidthMm.toString().removeSuffix(".0")
+                                                    customHeightInput = preset.style.customHeightMm.toString().removeSuffix(".0")
+                                                    showPrice = preset.style.showPrice
+                                                    priceTierName = preset.style.priceTier.name
+                                                    isDualPrice = false
+                                                    showCodeNumber = preset.style.showCodeNumber
+                                                    showStoreName = preset.style.showStoreName
+                                                    showDateTracking = preset.style.showDateTracking
+                                                    extraFieldTitle = preset.style.extraFieldLabel
+                                                    extraFieldValue = preset.style.extraFieldValue
+                                                    productNameTextScale = preset.style.productNameTextScale
+                                                    priceTextScale = preset.style.priceTextScale
+                                                    codeNumberTextScale = preset.style.codeNumberTextScale
+                                                    storeNameTextScale = preset.style.storeNameTextScale
+                                                    dateTrackingTextScale = preset.style.dateTrackingTextScale
+                                                    barcodeGraphicScale = preset.style.barcodeGraphicScale
+                                                    Toast.makeText(context, context.getString(R.string.label_preset_saved_toast), Toast.LENGTH_SHORT).show()
+                                                },
+                                                label = { Text(presetName, fontSize = 11.sp) },
+                                                leadingIcon = { Icon(Icons.Default.DashboardCustomize, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        1 -> {
+                            // TAB 2: STORE & FIELDS
+
+                            // A. Store Branding Card
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "STORE BRANDING",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = "Top Label Header",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF2DD4BF),
+                                            fontSize = 10.sp
+                                        )
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        FilterChip(
+                                            selected = showStoreName,
+                                            onClick = { showStoreName = !showStoreName },
+                                            label = { Text("Show Store Name") },
+                                            leadingIcon = if (showStoreName) {
+                                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                            } else null,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        FilterChip(
+                                            selected = showLogo,
+                                            onClick = { showLogo = !showLogo },
+                                            label = { Text(stringResource(R.string.show_store_logo)) },
+                                            leadingIcon = if (showLogo) {
+                                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                            } else null,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+
+                                    AnimatedVisibility(visible = showStoreName) {
+                                        OutlinedTextField(
+                                            value = storeNameInput,
+                                            onValueChange = { storeNameInput = it.take(80) },
+                                            label = { Text(stringResource(R.string.products_store_name_label)) },
+                                            placeholder = { Text(configuredStoreName.ifBlank { "Techyfi POS" }) },
+                                            singleLine = true,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+
+                            // B. Label Dimensions Dropdown Card (All 8 Thermal Sizes)
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "LABEL DIMENSIONS",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = "Standard Thermal Sizes",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF38BDF8),
+                                            fontSize = 10.sp
+                                        )
+                                    }
+
+                                    // Dimensions Dropdown Trigger
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        Surface(
+                                            onClick = { labelSizeDropdownExpanded = true },
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = MaterialTheme.colorScheme.surface,
+                                            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    Text(text = "📐", fontSize = 16.sp)
+                                                    Column {
+                                                        Text(
+                                                            text = when (labelSize) {
+                                                                ProductCodeLabelSize.SIZE_25_X_15 -> "25 × 15 mm"
+                                                                ProductCodeLabelSize.SIZE_30_X_20 -> "30 × 20 mm"
+                                                                ProductCodeLabelSize.SIZE_40_X_25 -> "40 × 25 mm"
+                                                                ProductCodeLabelSize.SIZE_45_X_35 -> "45 × 35 mm"
+                                                                ProductCodeLabelSize.SIZE_50_X_30 -> "50 × 30 mm"
+                                                                ProductCodeLabelSize.SIZE_60_X_40 -> "60 × 40 mm"
+                                                                ProductCodeLabelSize.SIZE_100_X_150 -> "100 × 150 mm"
+                                                                ProductCodeLabelSize.CUSTOM -> "Custom Dimensions"
+                                                            },
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                        Text(
+                                                            text = when (labelSize) {
+                                                                ProductCodeLabelSize.SIZE_25_X_15 -> "Jewelry Mini"
+                                                                ProductCodeLabelSize.SIZE_30_X_20 -> "Small Item"
+                                                                ProductCodeLabelSize.SIZE_40_X_25 -> "Compact"
+                                                                ProductCodeLabelSize.SIZE_45_X_35 -> "Square / Box"
+                                                                ProductCodeLabelSize.SIZE_50_X_30 -> "Wide Standard"
+                                                                ProductCodeLabelSize.SIZE_60_X_40 -> "Apparel Hangtag"
+                                                                ProductCodeLabelSize.SIZE_100_X_150 -> "Shipping Roll"
+                                                                ProductCodeLabelSize.CUSTOM -> "User Defined Width × Height"
+                                                            },
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                                Icon(
+                                                    imageVector = if (labelSizeDropdownExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+
+                                        DropdownMenu(
+                                            expanded = labelSizeDropdownExpanded,
+                                            onDismissRequest = { labelSizeDropdownExpanded = false }
+                                        ) {
+                                            ProductCodeLabelSize.entries.forEach { size ->
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Column {
+                                                            Text(
+                                                                text = when (size) {
+                                                                    ProductCodeLabelSize.SIZE_25_X_15 -> "25 × 15 mm"
+                                                                    ProductCodeLabelSize.SIZE_30_X_20 -> "30 × 20 mm"
+                                                                    ProductCodeLabelSize.SIZE_40_X_25 -> "40 × 25 mm"
+                                                                    ProductCodeLabelSize.SIZE_45_X_35 -> "45 × 35 mm"
+                                                                    ProductCodeLabelSize.SIZE_50_X_30 -> "50 × 30 mm"
+                                                                    ProductCodeLabelSize.SIZE_60_X_40 -> "60 × 40 mm"
+                                                                    ProductCodeLabelSize.SIZE_100_X_150 -> "100 × 150 mm"
+                                                                    ProductCodeLabelSize.CUSTOM -> "Custom Dimensions"
+                                                                },
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                            Text(
+                                                                text = when (size) {
+                                                                    ProductCodeLabelSize.SIZE_25_X_15 -> "Jewelry Mini"
+                                                                    ProductCodeLabelSize.SIZE_30_X_20 -> "Small Item"
+                                                                    ProductCodeLabelSize.SIZE_40_X_25 -> "Compact"
+                                                                    ProductCodeLabelSize.SIZE_45_X_35 -> "Square / Box"
+                                                                    ProductCodeLabelSize.SIZE_50_X_30 -> "Wide Standard"
+                                                                    ProductCodeLabelSize.SIZE_60_X_40 -> "Apparel Hangtag"
+                                                                    ProductCodeLabelSize.SIZE_100_X_150 -> "Shipping Roll"
+                                                                    ProductCodeLabelSize.CUSTOM -> "User Defined Width × Height"
+                                                                },
+                                                                fontSize = 11.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                    },
+                                                    leadingIcon = { Text("📐") },
+                                                    trailingIcon = if (size == labelSize) {
+                                                        { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                                                    } else null,
+                                                    onClick = {
+                                                        labelSizeName = size.name
+                                                        labelSizeDropdownExpanded = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Custom mm inputs when Custom is selected
+                                    AnimatedVisibility(visible = labelSize == ProductCodeLabelSize.CUSTOM) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            OutlinedTextField(
+                                                value = customWidthInput,
+                                                onValueChange = { value ->
+                                                    if (value.matches(Regex("\\d{0,3}(\\.\\d?)?"))) customWidthInput = value
+                                                },
+                                                label = { Text(stringResource(R.string.products_width_mm_label), fontSize = 11.sp) },
+                                                isError = isCustomWidthError,
+                                                supportingText = {
+                                                    if (isCustomWidthError) {
+                                                        Text(stringResource(R.string.custom_width_range_error), color = MaterialTheme.colorScheme.error, fontSize = 10.sp)
+                                                    }
+                                                },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            OutlinedTextField(
+                                                value = customHeightInput,
+                                                onValueChange = { value ->
+                                                    if (value.matches(Regex("\\d{0,3}(\\.\\d?)?"))) customHeightInput = value
+                                                },
+                                                label = { Text(stringResource(R.string.products_height_mm_label), fontSize = 11.sp) },
+                                                isError = isCustomHeightError,
+                                                supportingText = {
+                                                    if (isCustomHeightError) {
+                                                        Text(stringResource(R.string.custom_height_range_error), color = MaterialTheme.colorScheme.error, fontSize = 10.sp)
+                                                    }
+                                                },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // C. Additional Custom Field Card (Symmetrical 2-Column + Presets)
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "ADDITIONAL CUSTOM FIELD",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = "Optional",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 10.sp
+                                        )
+                                    }
+
+                                    // 2-Column Balanced Grid
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        OutlinedTextField(
+                                            value = extraFieldTitle,
+                                            onValueChange = { extraFieldTitle = it.take(30) },
+                                            label = { Text("Field Label", fontSize = 11.sp) },
+                                            placeholder = { Text("e.g. Batch", fontSize = 11.sp) },
+                                            singleLine = true,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        OutlinedTextField(
+                                            value = extraFieldValue,
+                                            onValueChange = { extraFieldValue = it.take(40) },
+                                            label = { Text("Field Value", fontSize = 11.sp) },
+                                            placeholder = { Text("e.g. #B2026", fontSize = 11.sp) },
+                                            singleLine = true,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+
+                                    // Quick Preset Buttons
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Presets:",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 10.sp
+                                        )
+                                        val quickPresets = listOf(
+                                            "Batch" to "#B2026",
+                                            "Size" to "XL",
+                                            "Weight" to "500g",
+                                            "Origin" to "BD"
+                                        )
+                                        quickPresets.forEach { (lbl, defaultVal) ->
+                                            Surface(
+                                                onClick = {
+                                                    extraFieldTitle = lbl
+                                                    if (extraFieldValue.isBlank()) extraFieldValue = defaultVal
+                                                },
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = MaterialTheme.colorScheme.surface,
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                            ) {
+                                                Text(
+                                                    text = "+ $lbl",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                        }
+                                        if (extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank()) {
+                                            Surface(
+                                                onClick = {
+                                                    extraFieldTitle = ""
+                                                    extraFieldValue = ""
+                                                },
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                                            ) {
+                                                Text(
+                                                    text = "✕",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        2 -> {
+                            // TAB 3: DATES & SCALE
+
+                            // A. Dates & Tracking Card
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "DATES & TRACKING",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        FilterChip(
+                                            selected = showDateTracking,
+                                            onClick = { showDateTracking = !showDateTracking },
+                                            label = { Text("Enable Dates", fontSize = 11.sp) },
+                                            leadingIcon = if (showDateTracking) {
+                                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                                            } else null,
+                                            modifier = Modifier.height(28.dp)
+                                        )
+                                    }
+
+                                    AnimatedVisibility(visible = showDateTracking) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.products_date_tracking_info_label),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    FilterChip(
+                                                        selected = mfgOrPkgType == "Mfg",
+                                                        onClick = { mfgOrPkgType = "Mfg" },
+                                                        label = { Text(stringResource(R.string.products_mfg_abbr), fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                                                        leadingIcon = { Animated3DFactoryIcon() },
+                                                        modifier = Modifier.height(28.dp)
+                                                    )
+                                                    FilterChip(
+                                                        selected = mfgOrPkgType == "Pkg",
+                                                        onClick = { mfgOrPkgType = "Pkg" },
+                                                        label = { Text(stringResource(R.string.products_pkg_abbr), fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                                                        leadingIcon = { Animated3DPackageIcon(fontSize = 12.sp) },
+                                                        modifier = Modifier.height(28.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                DateInputField(
+                                                    label = if (mfgOrPkgType == "Pkg") stringResource(R.string.products_pkg_date_label) else stringResource(R.string.products_mfg_date_label),
+                                                    value = mfgOrPkgDate,
+                                                    onValueChange = { mfgOrPkgDate = it },
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                DateInputField(
+                                                    label = stringResource(R.string.products_exp_date_label),
+                                                    value = expDate,
+                                                    onValueChange = { expDate = it },
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // B. Element Scaling Card (Compact Clean Header)
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.element_scaling_title).uppercase(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        TextButton(
+                                            onClick = {
+                                                productNameTextScale = 1.0f
+                                                priceTextScale = 1.0f
+                                                codeNumberTextScale = 1.0f
+                                                storeLogoScale = 1.0f
+                                                storeNameTextScale = 1.0f
+                                                dateTrackingTextScale = 1.0f
+                                                barcodeGraphicScale = 1.0f
+                                                extraFieldTextScale = 1.0f
+                                            }
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.reset_all_sizes),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF38BDF8)
+                                            )
+                                        }
+                                    }
+
+                                    // All 8 Scalers
+                                    LabelTextSizeControl(
+                                        label = stringResource(R.string.products_label_product_name),
+                                        scale = productNameTextScale,
+                                        onScaleChange = { productNameTextScale = it },
+                                        onReset = { productNameTextScale = 1.0f }
+                                    )
+                                    LabelTextSizeControl(
+                                        label = stringResource(R.string.products_label_price),
+                                        scale = priceTextScale,
+                                        enabled = showPrice,
+                                        onScaleChange = { priceTextScale = it },
+                                        onReset = { priceTextScale = 1.0f }
+                                    )
+                                    LabelTextSizeControl(
+                                        label = stringResource(R.string.products_label_code_number),
+                                        scale = codeNumberTextScale,
+                                        enabled = showCodeNumber,
+                                        onScaleChange = { codeNumberTextScale = it },
+                                        onReset = { codeNumberTextScale = 1.0f }
+                                    )
+                                    LabelTextSizeControl(
+                                        label = stringResource(R.string.store_logo_scale),
+                                        scale = storeLogoScale,
+                                        enabled = showLogo,
+                                        onScaleChange = { storeLogoScale = it },
+                                        onReset = { storeLogoScale = 1.0f }
+                                    )
+                                    LabelTextSizeControl(
+                                        label = stringResource(R.string.products_label_store_name),
+                                        scale = storeNameTextScale,
+                                        enabled = showStoreName && storeNameInput.isNotBlank(),
+                                        onScaleChange = { storeNameTextScale = it },
+                                        onReset = { storeNameTextScale = 1.0f }
+                                    )
+                                    LabelTextSizeControl(
+                                        label = stringResource(R.string.products_label_date_tracking_text),
+                                        scale = dateTrackingTextScale,
+                                        enabled = showDateTracking && (mfgOrPkgDate.isNotBlank() || expDate.isNotBlank()),
+                                        onScaleChange = { dateTrackingTextScale = it },
+                                        onReset = { dateTrackingTextScale = 1.0f }
+                                    )
+                                    LabelTextSizeControl(
+                                        label = stringResource(R.string.products_label_barcode_graphic_height),
+                                        scale = barcodeGraphicScale,
+                                        enabled = true,
+                                        onScaleChange = { barcodeGraphicScale = it },
+                                        onReset = { barcodeGraphicScale = 1.0f }
+                                    )
+                                    LabelTextSizeControl(
+                                        label = stringResource(R.string.extra_field_scale),
+                                        scale = extraFieldTextScale,
+                                        enabled = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+                                        onScaleChange = { extraFieldTextScale = it },
+                                        onReset = { extraFieldTextScale = 1.0f }
+                                    )
+                                }
                             }
                         }
                     }
-                }
-            } // End of scrollable settings Column
+                } // End of scrollable tab Column
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                Spacer(modifier = Modifier.height(14.dp))
+                // 7. BOTTOM ACTION BAR
                 if (bitmap != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -3863,7 +4706,7 @@ fun ProductCodeImageDialog(
                                                             cacheProductCodeLabelPdf(
                                                                 context = context,
                                                                 bitmap = currentBmp,
-                                                                productName = product.name,
+                                                                productName = currentProduct.name,
                                                                 codeType = codeType,
                                                                 widthMm = selectedLabelWidthMm,
                                                                 heightMm = selectedLabelHeightMm,
@@ -3874,7 +4717,7 @@ fun ProductCodeImageDialog(
                                                     widthMm = selectedLabelWidthMm,
                                                     heightMm = selectedLabelHeightMm,
                                                     copies = printCopies,
-                                                    jobName = context.getString(R.string.print_job_product_label_fmt, product.name),
+                                                    jobName = context.getString(R.string.print_job_product_label_fmt, currentProduct.name),
                                                     settings = invoiceSettings
                                                 )
                                                 when (outcome) {
@@ -3925,7 +4768,7 @@ fun ProductCodeImageDialog(
                                             cacheProductCodeLabelPdf(
                                                 context = context,
                                                 bitmap = currentBmp,
-                                                productName = product.name,
+                                                productName = currentProduct.name,
                                                 codeType = codeType,
                                                 widthMm = selectedLabelWidthMm,
                                                 heightMm = selectedLabelHeightMm,
@@ -3936,7 +4779,7 @@ fun ProductCodeImageDialog(
                                             val shared = shareProductCodeLabelPdf(
                                                 activity ?: context,
                                                 cached.second,
-                                                product.name
+                                                currentProduct.name
                                             )
                                             if (!shared) {
                                                 actionStatus = ActionStatus(context.getString(R.string.code_image_share_failed), isError = true)
@@ -3966,7 +4809,7 @@ fun ProductCodeImageDialog(
                                 scope.launch {
                                     isSaving = true
                                     val savedUri = withContext(Dispatchers.IO) {
-                                        saveProductCodeLabelToPictures(context, currentBmp, product.name, codeType)
+                                        saveProductCodeLabelToPictures(context, currentBmp, currentProduct.name, codeType)
                                     }
                                     isSaving = false
                                     actionStatus = if (savedUri != null) {
@@ -3990,18 +4833,85 @@ fun ProductCodeImageDialog(
                 }
 
                 actionStatus?.let { status ->
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         status.text,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
-                        color = if (status.isError) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        },
+                        color = if (status.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodySmall
                     )
+                }
+            }
+        }
+    }
+
+    // 8. HIGH RESOLUTION ZOOM INSPECT MODAL
+    if (showZoomModal && bitmap != null) {
+        Dialog(
+            onDismissRequest = { showZoomModal = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .fillMaxHeight(0.80f),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp,
+                shadowElevation = 24.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.zoom_inspect_dialog_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${selectedLabelWidthMm.toInt()} × ${selectedLabelHeightMm.toInt()} mm • ${invoiceSettings.labelDpi} DPI Dot Simulation",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(onClick = { showZoomModal = false }) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.dismiss))
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White)
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            bitmap = bitmap!!.asImageBitmap(),
+                            contentDescription = stringResource(R.string.product_code_image_preview),
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+
+                    Button(
+                        onClick = { showZoomModal = false },
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(stringResource(R.string.dismiss), fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
