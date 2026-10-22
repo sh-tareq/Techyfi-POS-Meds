@@ -3074,6 +3074,8 @@ fun ProductCodeImageDialog(
     // Active Segmented Tab (0 = Label Setup, 1 = Store & Fields, 2 = Dates & Scale)
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showZoomModal by remember { mutableStateOf(false) }
+    var activePresetKey by rememberSaveable { mutableStateOf<String?>("standard") }
+    var selectedDpi by rememberSaveable { mutableIntStateOf(invoiceSettings.labelDpi.takeIf { it in listOf(203, 300) } ?: 203) }
 
     var storeNameInput by rememberSaveable {
         mutableStateOf(preferences.getString("store_name", "") ?: "")
@@ -3153,7 +3155,7 @@ fun ProductCodeImageDialog(
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
         codeNumberTextScale, storeLogoScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
-        extraFieldTitle, extraFieldValue, extraFieldTextScale
+        extraFieldTitle, extraFieldValue, extraFieldTextScale, selectedDpi
     ) {
         val old = bitmap
         val newBmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
@@ -3184,7 +3186,7 @@ fun ProductCodeImageDialog(
                 extraFieldValue = extraFieldValue,
                 extraFieldTextScale = extraFieldTextScale,
                 showLogo = showLogo,
-                dpi = invoiceSettings.labelDpi,
+                dpi = selectedDpi,
                 showBanglaDigits = showBanglaDigits
             )
         }
@@ -3315,152 +3317,15 @@ fun ProductCodeImageDialog(
                     }
                 }
 
-                // 2. AUTO VS MANUAL COPIES MODE BANNER
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (copiesMode == "AUTO") {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                    },
-                    border = BorderStroke(
-                        1.dp,
-                        if (copiesMode == "AUTO") MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                // 2. UNIFIED SCROLLABLE DIALOG BODY (Matching preview: Hero, Preview with Presets, Tabs, and Tab Controls)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = if (copiesMode == "AUTO") Icons.Default.AutoMode else Icons.Default.Tune,
-                                contentDescription = null,
-                                tint = if (copiesMode == "AUTO") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = if (copiesMode == "AUTO") {
-                                    stringResource(R.string.copies_mode_auto_desc, printCopies)
-                                } else {
-                                    stringResource(R.string.copies_mode_manual_desc, printCopies)
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        // Toggle Mode Chip
-                        Surface(
-                            onClick = {
-                                if (copiesMode == "AUTO") {
-                                    copiesMode = "MANUAL"
-                                    printCopies = manualCopies.coerceIn(1, 500)
-                                } else {
-                                    copiesMode = "AUTO"
-                                    printCopies = currentProduct.stockQty.toInt().coerceAtLeast(1)
-                                }
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = if (copiesMode == "AUTO") stringResource(R.string.copies_mode_auto) else stringResource(R.string.copies_mode_manual),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Icon(
-                                    Icons.Default.SwapHoriz,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // If Manual mode, display quick copies stepper
-                if (copiesMode == "MANUAL") {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Copies Stepper:",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        if (printCopies > 1) {
-                                            val c = printCopies - 1
-                                            printCopies = c
-                                            manualCopies = c
-                                        }
-                                    },
-                                    enabled = printCopies > 1,
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp))
-                                }
-                                Text(
-                                    text = "$printCopies",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    modifier = Modifier.width(36.dp),
-                                    textAlign = TextAlign.Center
-                                )
-                                IconButton(
-                                    onClick = {
-                                        if (printCopies < 500) {
-                                            val c = printCopies + 1
-                                            printCopies = c
-                                            manualCopies = c
-                                        }
-                                    },
-                                    enabled = printCopies < 500,
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 3. PRODUCT HERO CARD & CAROUSEL
+                    // A. PRODUCT HERO CARD & CAROUSEL
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
@@ -3631,7 +3496,7 @@ fun ProductCodeImageDialog(
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
-                                        text = "📐 ${selectedLabelWidthMm.toInt()} × ${selectedLabelHeightMm.toInt()} mm • ${invoiceSettings.labelDpi} DPI",
+                                        text = "📐 ${selectedLabelWidthMm.toInt()} × ${selectedLabelHeightMm.toInt()} mm • $selectedDpi DPI",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp,
@@ -3672,7 +3537,7 @@ fun ProductCodeImageDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 65.dp, max = 120.dp)
+                                .heightIn(min = 90.dp, max = 150.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color.White)
                                 .clickable { showZoomModal = true }
@@ -3695,12 +3560,138 @@ fun ProductCodeImageDialog(
                                 )
                             }
                         }
+
+                        // Quick Template Presets Carousel (LBL-18: Standard, Grocery, Jewelry, Apparel, Warehouse)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val presetPills = listOf(
+                                Triple("standard", "🏷️", "Standard Retail"),
+                                Triple("grocery", "🥫", "Grocery & Expiry"),
+                                Triple("jewelry", "💍", "Jewelry Mini"),
+                                Triple("apparel", "👗", "Apparel Dual-Price"),
+                                Triple("warehouse", "📦", "Warehouse Code 128")
+                            )
+                            presetPills.forEach { (key, icon, name) ->
+                                val isActive = activePresetKey == key
+                                Surface(
+                                    onClick = {
+                                        activePresetKey = key
+                                        when (key) {
+                                            "standard" -> {
+                                                labelSizeName = ProductCodeLabelSize.SIZE_50_X_30.name
+                                                priceTierName = ProductCodePriceTier.SELLING.name
+                                                showPrice = true
+                                                showCodeNumber = true
+                                                showStoreName = true
+                                                showDateTracking = false
+                                                isDualPrice = false
+                                                productNameTextScale = 1.0f
+                                                priceTextScale = 1.0f
+                                                codeNumberTextScale = 1.0f
+                                                storeNameTextScale = 1.0f
+                                                dateTrackingTextScale = 1.0f
+                                                barcodeGraphicScale = 1.0f
+                                                extraFieldTextScale = 1.0f
+                                            }
+                                            "grocery" -> {
+                                                labelSizeName = ProductCodeLabelSize.SIZE_40_X_25.name
+                                                priceTierName = ProductCodePriceTier.SELLING.name
+                                                showPrice = true
+                                                showCodeNumber = true
+                                                showDateTracking = true
+                                                isDualPrice = false
+                                                productNameTextScale = 1.0f
+                                                priceTextScale = 1.0f
+                                                codeNumberTextScale = 1.0f
+                                                storeNameTextScale = 1.0f
+                                                dateTrackingTextScale = 1.0f
+                                                barcodeGraphicScale = 1.0f
+                                                extraFieldTextScale = 1.0f
+                                            }
+                                            "jewelry" -> {
+                                                labelSizeName = ProductCodeLabelSize.SIZE_25_X_15.name
+                                                priceTierName = ProductCodePriceTier.SELLING.name
+                                                showPrice = true
+                                                showCodeNumber = false
+                                                showDateTracking = false
+                                                isDualPrice = false
+                                                productNameTextScale = 1.0f
+                                                priceTextScale = 1.0f
+                                                codeNumberTextScale = 1.0f
+                                                storeNameTextScale = 1.0f
+                                                dateTrackingTextScale = 1.0f
+                                                barcodeGraphicScale = 0.8f
+                                                extraFieldTextScale = 1.0f
+                                            }
+                                            "apparel" -> {
+                                                labelSizeName = ProductCodeLabelSize.SIZE_60_X_40.name
+                                                isDualPrice = true
+                                                showPrice = true
+                                                showUnit = true
+                                                showStoreName = true
+                                                showCodeNumber = true
+                                                showDateTracking = false
+                                                productNameTextScale = 1.0f
+                                                priceTextScale = 1.0f
+                                                codeNumberTextScale = 1.0f
+                                                storeNameTextScale = 1.0f
+                                                dateTrackingTextScale = 1.0f
+                                                barcodeGraphicScale = 1.0f
+                                                extraFieldTextScale = 1.0f
+                                            }
+                                            "warehouse" -> {
+                                                labelSizeName = ProductCodeLabelSize.SIZE_100_X_150.name
+                                                codeTypeName = ProductCodeType.BARCODE.name
+                                                showPrice = false
+                                                showStoreName = true
+                                                showCodeNumber = true
+                                                showDateTracking = true
+                                                isDualPrice = false
+                                                productNameTextScale = 1.0f
+                                                priceTextScale = 1.0f
+                                                codeNumberTextScale = 1.0f
+                                                storeNameTextScale = 1.0f
+                                                dateTrackingTextScale = 1.0f
+                                                barcodeGraphicScale = 1.0f
+                                                extraFieldTextScale = 1.0f
+                                            }
+                                        }
+                                        Toast.makeText(context, context.getString(R.string.label_preset_saved_toast), Toast.LENGTH_SHORT).show()
+                                    },
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(icon, fontSize = 12.sp)
+                                        Text(
+                                            text = name,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
                 // High Density Barcode Warning (LBL-21)
-                val isSingleDense = remember(currentProduct.barcode, codeType, selectedLabelWidthMm, invoiceSettings.labelDpi) {
-                    isBarcodeTooDenseForLabel(currentProduct.barcode, codeType, selectedLabelWidthMm, invoiceSettings.labelDpi)
+                val isSingleDense = remember(currentProduct.barcode, codeType, selectedLabelWidthMm, selectedDpi) {
+                    isBarcodeTooDenseForLabel(currentProduct.barcode, codeType, selectedLabelWidthMm, selectedDpi)
                 }
                 if (isSingleDense) {
                     Surface(
@@ -3773,14 +3764,8 @@ fun ProductCodeImageDialog(
                     }
                 }
 
-                // 6. SCROLLABLE TAB CONTENT AREA
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    when (selectedTab) {
+                // D. ACTIVE TAB PANE CONTENT
+                when (selectedTab) {
                         0 -> {
                             // TAB 1: LABEL SETUP
 
@@ -3958,6 +3943,45 @@ fun ProductCodeImageDialog(
                                             )
                                         }
                                     }
+
+                                    // Thermal DPI Resolution Selector
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Print Resolution:",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 11.sp
+                                        )
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            val dpis = listOf(203 to "203 DPI (Std)", 300 to "300 DPI (Hi-Res)")
+                                            dpis.forEach { (dpiVal, dpiLabel) ->
+                                                val isDpiSelected = selectedDpi == dpiVal
+                                                Surface(
+                                                    onClick = { selectedDpi = dpiVal },
+                                                    shape = RoundedCornerShape(16.dp),
+                                                    color = if (isDpiSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                                    border = BorderStroke(
+                                                        1.dp,
+                                                        if (isDpiSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                                    )
+                                                ) {
+                                                    Text(
+                                                        text = dpiLabel,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = if (isDpiSelected) FontWeight.Bold else FontWeight.Medium,
+                                                        color = if (isDpiSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -4042,7 +4066,7 @@ fun ProductCodeImageDialog(
                                 }
                             }
 
-                            // C. Label Presets Row
+                            // C. Print Copies Card (Auto vs Manual + Stepper + Quick Chips)
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(14.dp),
@@ -4051,48 +4075,195 @@ fun ProductCodeImageDialog(
                             ) {
                                 Column(
                                     modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.label_presets_title).uppercase(),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
+                                    // Row: Section Title + Mode Toggle Chips
                                     Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState()),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "PRINT COPIES",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = MaterialTheme.colorScheme.surface,
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                        ) {
+                                            Row(modifier = Modifier.padding(2.dp)) {
+                                                Surface(
+                                                    onClick = {
+                                                        copiesMode = "AUTO"
+                                                        printCopies = currentProduct.stockQty.toInt().coerceAtLeast(1)
+                                                    },
+                                                    shape = RoundedCornerShape(18.dp),
+                                                    color = if (copiesMode == "AUTO") MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                    ) {
+                                                        Text("⚡", fontSize = 10.sp)
+                                                        Text(
+                                                            text = "Auto (${currentProduct.stockQty.toInt()})",
+                                                            fontSize = 10.sp,
+                                                            fontWeight = if (copiesMode == "AUTO") FontWeight.Bold else FontWeight.Medium,
+                                                            color = if (copiesMode == "AUTO") MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                                Surface(
+                                                    onClick = {
+                                                        copiesMode = "MANUAL"
+                                                        printCopies = manualCopies.coerceIn(1, 500)
+                                                    },
+                                                    shape = RoundedCornerShape(18.dp),
+                                                    color = if (copiesMode == "MANUAL") MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                    ) {
+                                                        Text("✏️", fontSize = 10.sp)
+                                                        Text(
+                                                            text = "Manual",
+                                                            fontSize = 10.sp,
+                                                            fontWeight = if (copiesMode == "MANUAL") FontWeight.Bold else FontWeight.Medium,
+                                                            color = if (copiesMode == "MANUAL") MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Stepper Row + Chips
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        val presets = remember { getDefaultLabelPresets() }
-                                        presets.forEach { preset ->
-                                            val presetName = preset.nameRes?.let { stringResource(it) } ?: preset.name
-                                            FilterChip(
-                                                selected = false,
-                                                onClick = {
-                                                    labelSizeName = preset.style.labelSize.name
-                                                    customWidthInput = preset.style.customWidthMm.toString().removeSuffix(".0")
-                                                    customHeightInput = preset.style.customHeightMm.toString().removeSuffix(".0")
-                                                    showPrice = preset.style.showPrice
-                                                    priceTierName = preset.style.priceTier.name
-                                                    isDualPrice = false
-                                                    showCodeNumber = preset.style.showCodeNumber
-                                                    showStoreName = preset.style.showStoreName
-                                                    showDateTracking = preset.style.showDateTracking
-                                                    extraFieldTitle = preset.style.extraFieldLabel
-                                                    extraFieldValue = preset.style.extraFieldValue
-                                                    productNameTextScale = preset.style.productNameTextScale
-                                                    priceTextScale = preset.style.priceTextScale
-                                                    codeNumberTextScale = preset.style.codeNumberTextScale
-                                                    storeNameTextScale = preset.style.storeNameTextScale
-                                                    dateTrackingTextScale = preset.style.dateTrackingTextScale
-                                                    barcodeGraphicScale = preset.style.barcodeGraphicScale
-                                                    Toast.makeText(context, context.getString(R.string.label_preset_saved_toast), Toast.LENGTH_SHORT).show()
-                                                },
-                                                label = { Text(presetName, fontSize = 11.sp) },
-                                                leadingIcon = { Icon(Icons.Default.DashboardCustomize, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                            )
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = MaterialTheme.colorScheme.surface,
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.padding(2.dp)
+                                            ) {
+                                                IconButton(
+                                                    onClick = {
+                                                        if (printCopies > 1) {
+                                                            val c = printCopies - 1
+                                                            printCopies = c
+                                                            manualCopies = c
+                                                            copiesMode = "MANUAL"
+                                                        }
+                                                    },
+                                                    enabled = printCopies > 1,
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                }
+                                                BasicTextField(
+                                                    value = "$printCopies",
+                                                    onValueChange = { str ->
+                                                        val n = str.filter { it.isDigit() }.toIntOrNull()
+                                                        if (n != null && n in 1..9999) {
+                                                            printCopies = n.coerceIn(1, 500)
+                                                            manualCopies = printCopies
+                                                            copiesMode = "MANUAL"
+                                                        }
+                                                    },
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    singleLine = true,
+                                                    textStyle = TextStyle(
+                                                        textAlign = TextAlign.Center,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 13.sp,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    ),
+                                                    modifier = Modifier.width(36.dp)
+                                                )
+                                                IconButton(
+                                                    onClick = {
+                                                        if (printCopies < 500) {
+                                                            val c = printCopies + 1
+                                                            printCopies = c
+                                                            manualCopies = c
+                                                            copiesMode = "MANUAL"
+                                                        }
+                                                    },
+                                                    enabled = printCopies < 500,
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                }
+                                            }
+                                        }
+
+                                        Row(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .horizontalScroll(rememberScrollState()),
+                                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            val chips = listOf(1, 2, 3, 5, 12, 50, 100)
+                                            chips.forEach { chipVal ->
+                                                val isChipSelected = printCopies == chipVal && copiesMode == "MANUAL"
+                                                Surface(
+                                                    onClick = {
+                                                        printCopies = chipVal
+                                                        manualCopies = chipVal
+                                                        copiesMode = "MANUAL"
+                                                    },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = if (isChipSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                                    border = BorderStroke(
+                                                        1.dp,
+                                                        if (isChipSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                                    )
+                                                ) {
+                                                    Text(
+                                                        text = "$chipVal",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = if (isChipSelected) FontWeight.Bold else FontWeight.Medium,
+                                                        color = if (isChipSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp)
+                                                    )
+                                                }
+                                            }
+                                            if (currentProduct.stockQty > 0) {
+                                                val isStockSelected = copiesMode == "AUTO"
+                                                Surface(
+                                                    onClick = {
+                                                        copiesMode = "AUTO"
+                                                        printCopies = currentProduct.stockQty.toInt().coerceAtLeast(1)
+                                                    },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = if (isStockSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                                    border = BorderStroke(
+                                                        1.dp,
+                                                        if (isStockSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                                    )
+                                                ) {
+                                                    Text(
+                                                        text = "Stock (${currentProduct.stockQty.toInt()})",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = if (isStockSelected) FontWeight.Bold else FontWeight.Medium,
+                                                        color = if (isStockSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }

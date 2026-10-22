@@ -3275,7 +3275,25 @@ mindmap
 - **Full Bilingual Localization**:
   - Complete English and Bengali translations across all strings, labels, and badges.
 - **Release Deliverable**:
-  - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220978, versionName "2.6.97-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with update-compatible keystore for direct in-place installation.
+
+### Release Final-V22-10-2026-R3: Product Code Image Dialog Layout Fix & Interactive Physical Device Verification (Version 2.6.98-Final-V22-10-2026, Build Final-V22-10-2026)
+- **Zero-Collision Single Scroll Body Architecture**:
+  - Eliminated the colliding duplicate copies card and banner that was previously anchored beneath the dialog header.
+  - Unified the entire dialog body into a single smooth vertical scroll container (`Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())`), ensuring no overlapping surfaces or clipping across compact and tall screen viewports.
+- **Preview Parity with `generate_code_image_redesign_preview.html`**:
+  - **Quick Template Presets Carousel**: Integrated inside the Sticker Preview Card with real-time switching logic (`applyTemplatePreset`) supporting 5 industry presets (*Standard Retail*, *Grocery & Expiry*, *Jewelry Mini*, *Apparel Dual-Price*, *Warehouse Code 128*).
+  - **Thermal DPI Selector**: Integrated standard `203 DPI (Std)` vs `300 DPI (Hi-Res)` segmented chips directly beneath the Code Format dropdown in Tab 1.
+  - **Print Copies Placement**: Embedded the complete copies management card cleanly at the bottom of Tab 1 (`🏷️ Label Setup`) featuring Auto (Stock) vs Manual toggle, `+`/`−` step controls, direct numeric text editing with Bangla numeral parsing, and quick chips row (1, 2, 3, 5, 10, 20, 50, 100, Stock).
+  - **Interactive High-Res Zoom Inspect Modal**: Verified full functionality of high-resolution sticker inspection modal with dismiss action.
+- **Physical Device Live Verification (Xiaomi Device `cb5fdfb5`)**:
+  - Successfully verified on physical hardware by tapping the product barcode chip `#846656005286` on Product Card 1.
+  - Confirmed 100% visual and layout parity with `interactive_preview/generate_code_image_redesign_preview.html` across all 3 tabs:
+    - Tab 1: Code formats, Thermal DPI chips, Price Tier cards, Dual Price strike-through, Micro-options, and Print Copies card.
+    - Tab 2: Store Branding toggles, Store Name field, Label Dimensions dropdown, and 2-column Additional Custom Field with quick chips.
+    - Tab 3: Manufacturing/Packaging dates and 8 individual element scaling steppers with reset controls.
+    - Zoom Inspect: Tap-to-zoom sticker preview modal with high-res simulation.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220979, versionName "2.6.98-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with update-compatible keystore and verified live on device.
 
 ## Maintenance note
 
