@@ -4107,7 +4107,7 @@ fun ProductCodeImageDialog(
                                 onShowPriceChange = { showPrice = it },
                                 selectedTier = if (isDualPrice) ProductCodePriceTier.DUAL else priceTier,
                                 onTierSelect = {
-                                    isDualPrice = false
+                                    isDualPrice = (it == ProductCodePriceTier.DUAL)
                                     priceTierName = it.name
                                 },
                                 sellingPriceDisplay = singleSellingDisplay,
@@ -4118,45 +4118,6 @@ fun ProductCodeImageDialog(
                                 showBanglaDigits = showBanglaDigits,
                                 onShowBanglaDigitsChange = { showBanglaDigits = it }
                             )
-
-                            // Dual Price Quick Toggle Row
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                color = studioCardBg,
-                                shadowElevation = 1.dp,
-                                border = BorderStroke(1.dp, studioCardBorder)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { isDualPrice = !isDualPrice }
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(
-                                        checked = isDualPrice,
-                                        onCheckedChange = { isDualPrice = it },
-                                        colors = CheckboxDefaults.colors(
-                                            checkedColor = studioPrimary,
-                                            checkmarkColor = Color.White
-                                        )
-                                    )
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.dual_price_option),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = studioTextMain
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.dual_price_hint),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = studioTextMuted
-                                        )
-                                    }
-                                }
-                            }
 
                             // Show Code Number Row
                             Surface(

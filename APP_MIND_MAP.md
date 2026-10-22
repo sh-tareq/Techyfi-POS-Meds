@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-22 (app version 2.6.99-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220980; DB schema version 38)
+Last updated: 2026-10-22 (app version 2.7.00-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220981; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3309,6 +3309,16 @@ mindmap
   - Verified live on device display (1080x2248): captured and confirmed visual fidelity across Tab 1, Tab 2, and Tab 3.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220980, versionName "2.6.99-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with update-compatible keystore, deployed and verified on Xiaomi device.
+
+### Release Final-V22-10-2026-R5: Redundant Dual Price Card Elimination (Version 2.7.00-Final-V22-10-2026, Build Final-V22-10-2026)
+- **Eliminated Redundant Dual Price Card**:
+  - Removed duplicate `Dual Price (MRP + Selling) / Prints MRP struck-through with Selling Price` checkbox Surface from Tab 1 of `ProductCodeImageDialog`.
+  - Bound dual price state cleanly and directly to `PriceTierSwitcherCard`'s integrated `Dual Display (MRP + Offer)` row (`onTierSelect = { isDualPrice = (it == ProductCodePriceTier.DUAL); priceTierName = it.name }`).
+  - Restored clean, streamlined vertical flow transitioning directly from `PriceTierSwitcherCard` into `Show Code Number` and `PRINT COPIES`.
+- **Physical Device Live Verification (Xiaomi Device `cb5fdfb5`)**:
+  - Installed and verified live on Xiaomi MI 8 hardware; captured on-device screenshots confirming clean layout without duplicate controls.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220981, versionName "2.7.00-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with update-compatible keystore and verified live on device.
 
 ## Maintenance note
 
