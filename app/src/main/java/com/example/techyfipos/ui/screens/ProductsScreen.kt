@@ -1165,29 +1165,36 @@ fun ProductsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(if (isSystemInDarkTheme()) Color(0xFF111827) else Color(0xFFF8FAFC))
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 // Drawer Card 1: Purchase Cost
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = MaterialTheme.colorScheme.surface,
                                     border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1.18f)
                                 ) {
-                                    Column(modifier = Modifier.padding(8.dp)) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
                                         Text(
                                             text = stringResource(R.string.products_purchase_cost_label),
-                                            fontSize = 9.5.sp,
+                                            fontSize = 8.5.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            letterSpacing = (-0.2).sp
                                         )
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = if (canViewCosts) formatTaka(totalPurchaseValue) else "••••••",
-                                            fontSize = 12.sp,
+                                            fontSize = 11.5.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = MaterialTheme.colorScheme.onSurface,
                                             maxLines = 1,
@@ -1205,46 +1212,94 @@ fun ProductsScreen(
                                         shape = RoundedCornerShape(10.dp),
                                         color = MaterialTheme.colorScheme.surface,
                                         border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(0.82f)
                                     ) {
-                                        Column(modifier = Modifier.padding(8.dp)) {
+                                        Column(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
                                             Text(
                                                 text = stringResource(R.string.products_margin_label),
-                                                fontSize = 9.5.sp,
+                                                fontSize = 8.5.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                letterSpacing = (-0.2).sp
                                             )
+                                            Spacer(modifier = Modifier.height(2.dp))
                                             Text(
                                                 text = String.format(Locale.US, "+%.1f%%", marginPct),
-                                                fontSize = 12.sp,
+                                                fontSize = 11.5.sp,
                                                 fontWeight = FontWeight.ExtraBold,
                                                 color = Color(0xFF059669),
-                                                maxLines = 1
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }
                                     }
                                 }
 
-                                // Drawer Card 3: Total SKUs (Moved here per user request)
+                                // Drawer Card 3: Total SKUs
                                 val skuCount = allProductsList.size
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = MaterialTheme.colorScheme.surface,
                                     border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(0.95f)
                                 ) {
-                                    Column(modifier = Modifier.padding(8.dp)) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
                                         Text(
                                             text = stringResource(R.string.products_total_skus_label),
-                                            fontSize = 9.5.sp,
+                                            fontSize = 8.5.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            letterSpacing = (-0.2).sp
                                         )
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = pluralStringResource(R.plurals.products_sku_count, skuCount, skuCount),
-                                            fontSize = 12.sp,
+                                            fontSize = 11.5.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = MaterialTheme.colorScheme.primary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+
+                                // Drawer Card 4: In-Stock Units
+                                val uStr = if (totalStockUnits % 1.0 == 0.0) totalStockUnits.toLong().toString() else String.format(Locale.US, "%.1f", totalStockUnits)
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                    modifier = Modifier.weight(1.05f)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.products_in_stock_units_label),
+                                            fontSize = 8.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            letterSpacing = (-0.2).sp
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = stringResource(R.string.products_units_pcs, uStr),
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color(0xFF059669),
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )

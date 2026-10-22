@@ -1252,7 +1252,7 @@
     <string name="products_total_selling_value_skus">মোট বিক্রয় মূল্য (%1$d এসকেইউ)</string>
     <string name="products_margin_label">মার্জিন</string>
     <string name="products_purchase_cost_label">ক্রয় খরচ</string>
-    <string name="products_in_stock_units_label">মজুদে থাকা ইউনিট</string>
+    <string name="products_in_stock_units_label">মজুদ ইউনিট</string>
     <string name="products_total_skus_label">মোট এসকেইউ</string>
     <string name="products_units_pcs">%1$s পিস</string>
     <string name="products_stock_alerts_label">স্টক সতর্কতা</string>
