@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-22 (app version 2.6.95-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220976; DB schema version 38)
+Last updated: 2026-10-22 (app version 2.6.96-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220977; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3228,8 +3228,12 @@ mindmap
   - **One-Tap Reset & Toggle-Off**: Tapping the highlighted category badge a second time or clicking `✕ Clear` resets the filter, restoring the full SKU catalog.
 - **On-Device Physical Hardware Verification**:
   - Verified on physical Xiaomi device (`cb5fdfb5`) across both List View and Grid View, confirming card alignment, category tap filtering, clear filter actions, and valuation drawer animations.
+- **Hardware Stock Check & Quick Inventory Dialog Polish**:
+  - **Multi-Line Product Title Expansion**: Expanded `product.name` in `HardwareStockCheckDialog` (across both `ProductsScreen.kt` and `ScannerScreen.kt`) from 1 line to up to 3 lines (`maxLines = 3`, `lineHeight = 20.sp`, `fontSize = 15.sp`), preventing long SKU titles (e.g., "Himalaya Strawberry Face Wash...") from truncating prematurely with ellipsis.
+  - **Product Image Preview & 3D Fallback**: Integrated real product thumbnail rendering via `rememberUriImagePainter` with rounded 10dp borders, falling back seamlessly to `Realistic3DProductsBoxIcon(size = 46.dp)` when no image is registered.
+  - **Adaptive M3 Chip Styling**: Standardized the barcode chip with holographic laser code icon and category chip with `Icons.Default.Sell`, bilingual localized category translation, and dark/light mode adaptive color contrast.
 - **Release Deliverable**:
-  - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220976, versionName "2.6.95-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with the update-compatible keystore for direct in-place installation.
+  - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220977, versionName "2.6.96-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with the update-compatible keystore for direct in-place installation.
 
 ## Maintenance note
 

@@ -3532,7 +3532,9 @@ private fun HardwareStockCheckDialog(
                     .padding(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Header Row with 3D Floating Isometric Package Icon
+                // Header Row with 3D Floating Isometric Package Icon or Product Image
+                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                val productImage = rememberUriImagePainter(product.imageUri)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -3544,47 +3546,89 @@ private fun HardwareStockCheckDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Realistic3DProductsBoxIcon(size = 46.dp)
+                    if (productImage != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                bitmap = productImage,
+                                contentDescription = product.name,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    } else {
+                        Realistic3DProductsBoxIcon(size = 46.dp)
+                    }
 
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         Text(
                             text = product.name,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 16.sp,
+                            fontSize = 15.sp,
+                            lineHeight = 20.sp,
                             color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(Modifier.height(2.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                             ) {
-                                Text(
-                                    text = product.barcode,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
                                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                )
+                                ) {
+                                    Realistic3DHologramLaserCodeIcon(size = 10.dp)
+                                    Text(
+                                        text = product.barcode,
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                             if (product.category.isNotBlank()) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f))
+                                    color = if (isDark) Color(0xFF312E81).copy(alpha = 0.45f) else Color(0xFFEEF2FF),
+                                    border = BorderStroke(0.7.dp, if (isDark) Color(0xFF6366F1).copy(alpha = 0.45f) else Color(0xFFC7D2FE))
                                 ) {
-                                    Text(
-                                        text = getLocalizedCategoryName(product.category),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Sell,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(9.5.dp),
+                                            tint = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4F46E5)
+                                        )
+                                        Text(
+                                            text = getLocalizedCategoryName(product.category),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
                         }
