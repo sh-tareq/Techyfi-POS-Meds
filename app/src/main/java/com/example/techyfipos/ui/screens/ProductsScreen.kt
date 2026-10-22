@@ -447,7 +447,7 @@ fun ProductsScreen(
         productsList
             .asSequence()
             .filter { product ->
-                selectedCategory == null || product.category.trim() == selectedCategory
+                selectedCategory == null || product.category.trim().equals(selectedCategory?.trim(), ignoreCase = true)
             }
             .filter { product ->
                 if (!highMarginOnly || !canViewCosts) true
@@ -1813,7 +1813,7 @@ fun ProductsScreen(
                     val stockOutChipLabel = stringResource(R.string.products_filter_out_of_stock_chip)
                     val inStockLabel = stringResource(R.string.in_stock)
                     val filterSummary = buildList {
-                        if (selectedCategory != null) add(selectedCategory!!)
+                        if (selectedCategory != null) add(getLocalizedCategoryName(selectedCategory!!))
                         if (stockFilter != ProductStockFilter.ALL) add(when (stockFilter) {
                             ProductStockFilter.AVAILABLE -> inStockLabel
                             ProductStockFilter.LOW -> stockLowChipLabel
@@ -2024,6 +2024,15 @@ fun ProductsScreen(
                                     isTablet = isTablet,
                                     isSelectionMode = batchSelectMode,
                                     isSelected = isSelected,
+                                    isCategorySelected = selectedCategory != null && product.category.trim().equals(selectedCategory?.trim(), ignoreCase = true),
+                                    onCategoryClick = { cat ->
+                                        val trimmed = cat.trim()
+                                        if (trimmed.isNotBlank()) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            selectedCategory = if (selectedCategory?.trim()?.equals(trimmed, ignoreCase = true) == true) null else trimmed
+                                            scope.launch { listState.animateScrollToItem(0) }
+                                        }
+                                    },
                                     onToggleSelect = {
                                         if (isSelected) selectedBarcodes.remove(product.barcode)
                                         else selectedBarcodes.add(product.barcode)
@@ -2083,6 +2092,15 @@ fun ProductsScreen(
                                     product = product,
                                     isSelectionMode = batchSelectMode,
                                     isSelected = isSelected,
+                                    isCategorySelected = selectedCategory != null && product.category.trim().equals(selectedCategory?.trim(), ignoreCase = true),
+                                    onCategoryClick = { cat ->
+                                        val trimmed = cat.trim()
+                                        if (trimmed.isNotBlank()) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            selectedCategory = if (selectedCategory?.trim()?.equals(trimmed, ignoreCase = true) == true) null else trimmed
+                                            scope.launch { gridState.animateScrollToItem(0) }
+                                        }
+                                    },
                                     onToggleSelect = {
                                         if (isSelected) selectedBarcodes.remove(product.barcode)
                                         else selectedBarcodes.add(product.barcode)
@@ -4520,8 +4538,11 @@ fun ProductItemRow(
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     onToggleSelect: () -> Unit = {},
-    isTablet: Boolean = false
+    isTablet: Boolean = false,
+    isCategorySelected: Boolean = false,
+    onCategoryClick: (String) -> Unit = {}
 ) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val productImage = rememberUriImagePainter(product.imageUri)
     val isOut = product.stockQty <= 0.0
     val isLow = product.stockQty > 0.0 && product.stockQty <= product.reorderLevel
@@ -4604,14 +4625,16 @@ fun ProductItemRow(
                 )
 
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Surface(
                         onClick = onGenerateCode,
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(6.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        modifier = Modifier.weight(1.15f, fill = false)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -4632,14 +4655,52 @@ fun ProductItemRow(
                     }
 
                     if (product.category.isNotBlank()) {
-                        Text(
-                            text = getLocalizedCategoryName(product.category),
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF4F46E5),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Surface(
+                            onClick = {
+                                if (isSelectionMode) onToggleSelect()
+                                else onCategoryClick(product.category.trim())
+                            },
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isCategorySelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else if (isDark) {
+                                Color(0xFF312E81).copy(alpha = 0.45f)
+                            } else {
+                                Color(0xFFEEF2FF)
+                            },
+                            border = BorderStroke(
+                                0.7.dp,
+                                if (isCategorySelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else if (isDark) {
+                                    Color(0xFF6366F1).copy(alpha = 0.45f)
+                                } else {
+                                    Color(0xFFC7D2FE)
+                                }
+                            ),
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.5.dp),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sell,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(10.dp),
+                                    tint = if (isCategorySelected) Color.White else Color(0xFF4F46E5)
+                                )
+                                Text(
+                                    text = getLocalizedCategoryName(product.category),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isCategorySelected) Color.White else if (isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -4773,7 +4834,7 @@ fun getCategoryEmoji(category: String): String {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ProductGridCard(
     product: Product,
@@ -4787,7 +4848,9 @@ private fun ProductGridCard(
     onAddToCart: () -> Unit,
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
-    onToggleSelect: () -> Unit = {}
+    onToggleSelect: () -> Unit = {},
+    isCategorySelected: Boolean = false,
+    onCategoryClick: (String) -> Unit = {}
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val productImage = rememberUriImagePainter(product.imageUri)
@@ -4817,7 +4880,7 @@ private fun ProductGridCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             // Row 1: Leading item (Checkbox or 38dp Thumbnail) on Left, Stock Status Pill on Right
             Row(
@@ -4904,6 +4967,7 @@ private fun ProductGridCard(
                     text = product.name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.5.sp,
+                    minLines = 2,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -4920,19 +4984,20 @@ private fun ProductGridCard(
                 ) {
                     Surface(
                         onClick = onGenerateCode,
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(6.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
+                        modifier = Modifier.weight(1.15f, fill = false)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.5.dp)
+                            horizontalArrangement = Arrangement.spacedBy(2.5.dp),
+                            modifier = Modifier.padding(horizontal = 4.5.dp, vertical = 2.dp)
                         ) {
                             Realistic3DHologramLaserCodeIcon(size = 10.dp)
                             Text(
                                 text = "#${product.barcode}",
-                                fontSize = 9.5.sp,
+                                fontSize = 9.sp,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -4943,14 +5008,52 @@ private fun ProductGridCard(
                     }
 
                     if (product.category.isNotBlank()) {
-                        Text(
-                            text = getLocalizedCategoryName(product.category),
-                            color = Color(0xFF4F46E5),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Surface(
+                            onClick = {
+                                if (isSelectionMode) onToggleSelect()
+                                else onCategoryClick(product.category.trim())
+                            },
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isCategorySelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else if (isDark) {
+                                Color(0xFF312E81).copy(alpha = 0.45f)
+                            } else {
+                                Color(0xFFEEF2FF)
+                            },
+                            border = BorderStroke(
+                                0.7.dp,
+                                if (isCategorySelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else if (isDark) {
+                                    Color(0xFF6366F1).copy(alpha = 0.45f)
+                                } else {
+                                    Color(0xFFC7D2FE)
+                                }
+                            ),
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.5.dp),
+                                modifier = Modifier.padding(horizontal = 4.5.dp, vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sell,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(9.dp),
+                                    tint = if (isCategorySelected) Color.White else Color(0xFF4F46E5)
+                                )
+                                Text(
+                                    text = getLocalizedCategoryName(product.category),
+                                    color = if (isCategorySelected) Color.White else if (isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-21 (app version 2.6.94-Final-V21-10-2026, build `Techyfi-POS-Final-V21-10-2026.apk`; versionCode 220972; DB schema version 38)
+Last updated: 2026-10-22 (app version 2.6.95-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220976; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3208,9 +3208,28 @@ mindmap
   - **Compact 36dp Valuation Stat Bar & 4-Metric Expandable Drawer**: Replaced the large valuation card with a sleek 36dp stat bar displaying total selling valuation, stock health badges (In-Stock, Low, Out), and an expandable drawer revealing 4 balanced metric cards: Purchase Cost, Gross Profit Margin, Total SKUs, and In-Stock Units (e.g., 8513.7 Pcs) with bilingual string support.
   - **Bottom Blank Space Elimination**: Zeroed Scaffold bottom insets (`contentWindowInsets = WindowInsets(0, 0, 0, 0)`) and optimized list content padding (`bottom = 72.dp` on phone) to ensure product cards flow naturally behind the FAB directly to the bottom navigation bar without unnecessary blank space.
   - **Single View Toggle Control**: Replaced the dual segmented switcher with a single 40dp toggle button alternating smoothly between List and Grid layouts.
+  - **FlowRow Badge Wrapping**: Wrapped the barcode chip and category badge in an adaptive `FlowRow` in both `ProductItemRow` and `ProductGridCard` with subtle pill containers, completely preventing text truncation on narrow screens.
   - **Connected Device Verification**: Tested, verified, and captured screenshots directly on connected Xiaomi device (`cb5fdfb5`), confirming 100% visual parity with the interactive HTML preview across both List and Grid views, collapsible valuation drawer, and stock cards.
 - **Release Deliverable**:
-  - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220973, versionName "2.6.94-Final-V21-10-2026"), built with R8 minification and resource shrinking, signed with the debug keystore and installed as an in-place update on the connected device in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+  - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220975, versionName "2.6.94-Final-V21-10-2026"), built with R8 minification and resource shrinking, signed with the debug keystore and installed as an in-place update on the connected device in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+
+### Release Final-V22-10-2026: Category Badge Symmetry & Interactive Category-Tap Filtering (Version 2.6.95-Final-V22-10-2026, Build Final-V22-10-2026)
+- **Category Badge Visual Symmetry & Alignment**:
+  - **Cohesive Shape & Elevation**: Standardized the category badge across `ProductItemRow` and `ProductGridCard` using `RoundedCornerShape(6.dp)`, border stroke `0.7.dp` with indigo outline (`Color(0xFFC7D2FE)` light / `Color(0xFF6366F1)` dark), and soft indigo tinted background (`Color(0xFFEEF2FF)` light / `Color(0xFF312E81)` dark).
+  - **Leading Tag Icon**: Added a prominent leading `Icons.Default.Sell` icon (size 10.dp) to establish instant visual affordance as a category tag.
+  - **Baseline & Height Matching**: Harmonized vertical height, internal padding (`horizontal = 6.dp, vertical = 2.dp`), and baseline alignment between the category badge and the 3D laser hologram barcode chip (`Realistic3DHologramLaserCodeIcon`).
+  - **Grid Card Height Disparity Fixed**: Replaced unconstrained multi-line `FlowRow` wrapping in `ProductGridCard` with a single-line weighted `Row` (`Modifier.weight(fill = false)`), and enforced `minLines = 2, maxLines = 2` on `product.name`. Cards across both columns now exhibit uniform row heights and vertical baseline symmetry.
+- **Interactive Category-Tap Filtering Engine**:
+  - **Bidirectional Tap Interaction**: Tapping the category badge on any product card in either List View or Grid View instantly filters the entire product catalog by that category.
+  - **Case-Insensitive Trimmed Matching**: Filter logic enforces `.equals(selectedCategory?.trim(), ignoreCase = true)` with fallback to full catalog when toggled off.
+  - **Dynamic Active Filter Banner**: Displays a persistent summary strip (`Filtered: <Category> ✕ Clear`) showing the localized Bengali category name (e.g. `Filtered: সস ✕ Clear`).
+  - **Active State Visual Feedback**: Highlights the tapped category badge with `MaterialTheme.colorScheme.primary` container color, crisp white text, and white tag icon.
+  - **Haptic Feedback & List Reset**: Emits `HapticFeedbackType.LongPress` feedback upon category selection and smoothly scrolls the list or grid back to the top item (`animateScrollToItem(0)`).
+  - **One-Tap Reset & Toggle-Off**: Tapping the highlighted category badge a second time or clicking `✕ Clear` resets the filter, restoring the full SKU catalog.
+- **On-Device Physical Hardware Verification**:
+  - Verified on physical Xiaomi device (`cb5fdfb5`) across both List View and Grid View, confirming card alignment, category tap filtering, clear filter actions, and valuation drawer animations.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220976, versionName "2.6.95-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with the update-compatible keystore for direct in-place installation.
 
 ## Maintenance note
 
