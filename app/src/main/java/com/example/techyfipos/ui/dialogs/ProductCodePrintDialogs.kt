@@ -4404,24 +4404,87 @@ fun ProductCodeImageDialog(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        FilterChip(
-                                            selected = showStoreName,
-                                            onClick = { showStoreName = !showStoreName },
-                                            label = { Text("Show Store Name") },
-                                            leadingIcon = if (showStoreName) {
-                                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                            } else null,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        FilterChip(
-                                            selected = showLogo,
-                                            onClick = { showLogo = !showLogo },
-                                            label = { Text(stringResource(R.string.show_store_logo)) },
-                                            leadingIcon = if (showLogo) {
-                                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                            } else null,
-                                            modifier = Modifier.weight(1f)
-                                        )
+                                        Surface(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(38.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .clickable { showStoreName = !showStoreName },
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (showStoreName) studioPrimaryContainer else studioFieldBg,
+                                            border = BorderStroke(
+                                                if (showStoreName) 1.5.dp else 1.dp,
+                                                if (showStoreName) studioPrimaryBorder else studioCardBorder
+                                            )
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(horizontal = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                if (showStoreName) {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = null,
+                                                        tint = studioPrimary,
+                                                        modifier = Modifier.size(15.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                }
+                                                Text(
+                                                    text = stringResource(R.string.products_show_store_name),
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (showStoreName) FontWeight.Bold else FontWeight.SemiBold,
+                                                    color = if (showStoreName) studioPrimary else studioTextMuted,
+                                                    textAlign = TextAlign.Center,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+
+                                        Surface(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(38.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .clickable { showLogo = !showLogo },
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (showLogo) studioPrimaryContainer else studioFieldBg,
+                                            border = BorderStroke(
+                                                if (showLogo) 1.5.dp else 1.dp,
+                                                if (showLogo) studioPrimaryBorder else studioCardBorder
+                                            )
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(horizontal = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                if (showLogo) {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = null,
+                                                        tint = studioPrimary,
+                                                        modifier = Modifier.size(15.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                }
+                                                Text(
+                                                    text = stringResource(R.string.show_store_logo),
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (showLogo) FontWeight.Bold else FontWeight.SemiBold,
+                                                    color = if (showLogo) studioPrimary else studioTextMuted,
+                                                    textAlign = TextAlign.Center,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
                                     }
 
                                     AnimatedVisibility(visible = showStoreName) {

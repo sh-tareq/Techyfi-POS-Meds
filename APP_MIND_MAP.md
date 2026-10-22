@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-22 (app version 2.7.00-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220981; DB schema version 38)
+Last updated: 2026-10-22 (app version 2.7.01-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220982; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3319,6 +3319,17 @@ mindmap
   - Installed and verified live on Xiaomi MI 8 hardware; captured on-device screenshots confirming clean layout without duplicate controls.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220981, versionName "2.7.00-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with update-compatible keystore and verified live on device.
+
+### Release Final-V22-10-2026-R6: Store Branding Toggle Chips Formatting & Text Centering (Version 2.7.01-Final-V22-10-2026, Build Final-V22-10-2026)
+- **Store Branding Toggle Chips Centering & Single-Line Formatting**:
+  - Replaced Material 3 `FilterChip` in `ProductCodeImageDialog` (Tab 2: Store & Fields) with custom `Surface` toggle chips.
+  - Set fixed, symmetric 38dp height on both `Show Store Name` and `Show Store Logo` chips, preventing awkward multi-line text wrapping.
+  - Centered text and checkmark layout horizontally and vertically (`Arrangement.Center` and `TextAlign.Center`).
+  - Synced formatting with `.micro-switch-chip` in `interactive_preview/generate_code_image_redesign_preview.html`.
+- **Physical Device Live Verification (Xiaomi Device `cb5fdfb5`)**:
+  - Deployed release build and verified live on Xiaomi MI 8 display: confirmed single-line, perfectly centered, identical-height chips in Tab 2.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220982, versionName "2.7.01-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with update-compatible keystore and verified live on device.
 
 ## Maintenance note
 
