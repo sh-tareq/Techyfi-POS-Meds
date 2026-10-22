@@ -1179,7 +1179,10 @@ fun ProductsScreen(
                                     modifier = Modifier.weight(1.18f)
                                 ) {
                                     Column(
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 4.dp, vertical = 7.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         Text(
@@ -1187,9 +1190,11 @@ fun ProductsScreen(
                                             fontSize = 8.5.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
-                                            letterSpacing = (-0.2).sp
+                                            letterSpacing = (-0.2).sp,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
@@ -1197,8 +1202,10 @@ fun ProductsScreen(
                                             fontSize = 11.5.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = MaterialTheme.colorScheme.onSurface,
+                                            textAlign = TextAlign.Center,
                                             maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                     }
                                 }
@@ -1215,7 +1222,10 @@ fun ProductsScreen(
                                         modifier = Modifier.weight(0.82f)
                                     ) {
                                         Column(
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 4.dp, vertical = 7.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
                                             verticalArrangement = Arrangement.Center
                                         ) {
                                             Text(
@@ -1223,9 +1233,11 @@ fun ProductsScreen(
                                                 fontSize = 8.5.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                letterSpacing = (-0.2).sp
+                                                letterSpacing = (-0.2).sp,
+                                                modifier = Modifier.fillMaxWidth()
                                             )
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(
@@ -1233,8 +1245,10 @@ fun ProductsScreen(
                                                 fontSize = 11.5.sp,
                                                 fontWeight = FontWeight.ExtraBold,
                                                 color = Color(0xFF059669),
+                                                textAlign = TextAlign.Center,
                                                 maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.fillMaxWidth()
                                             )
                                         }
                                     }
@@ -1249,7 +1263,10 @@ fun ProductsScreen(
                                     modifier = Modifier.weight(0.95f)
                                 ) {
                                     Column(
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 4.dp, vertical = 7.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         Text(
@@ -1257,9 +1274,11 @@ fun ProductsScreen(
                                             fontSize = 8.5.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
-                                            letterSpacing = (-0.2).sp
+                                            letterSpacing = (-0.2).sp,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
@@ -1267,8 +1286,10 @@ fun ProductsScreen(
                                             fontSize = 11.5.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = MaterialTheme.colorScheme.primary,
+                                            textAlign = TextAlign.Center,
                                             maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                     }
                                 }
@@ -1282,7 +1303,10 @@ fun ProductsScreen(
                                     modifier = Modifier.weight(1.05f)
                                 ) {
                                     Column(
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 4.dp, vertical = 7.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         Text(
@@ -1290,9 +1314,11 @@ fun ProductsScreen(
                                             fontSize = 8.5.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
-                                            letterSpacing = (-0.2).sp
+                                            letterSpacing = (-0.2).sp,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
@@ -1300,8 +1326,10 @@ fun ProductsScreen(
                                             fontSize = 11.5.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color(0xFF059669),
+                                            textAlign = TextAlign.Center,
                                             maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                     }
                                 }

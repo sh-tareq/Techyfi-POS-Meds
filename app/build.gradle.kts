@@ -14,7 +14,7 @@ android {
         applicationId = "com.techyfi.pos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 220973
+        versionCode = 220974
         versionName = "2.6.94-Final-V21-10-2026"
 
         javaCompileOptions {
