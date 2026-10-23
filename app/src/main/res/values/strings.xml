@@ -3417,6 +3417,20 @@
     <string name="show_store_logo">Show Store Logo</string>
     <string name="store_logo_scale">Store Logo Scale</string>
     <string name="extra_field_scale">Extra Field Scale</string>
+    <!-- Barcode Label Designs (LBL-DESIGNS) -->
+    <string name="barcode_label_designs_title">Label Design Style</string>
+    <string name="barcode_label_swipe_hint">Swipe left or right to switch design</string>
+    <string name="barcode_design_standard">Standard Retail</string>
+    <string name="barcode_design_standard_desc">Classic full-width horizontal barcode, balanced divider &amp; prominent price (No Logo)</string>
+    <string name="barcode_design_boutique_crest">Boutique Crest</string>
+    <string name="barcode_design_boutique_crest_desc">Circular store logo crest, inverted price pill &amp; wide horizontal barcode (With Logo)</string>
+    <string name="barcode_design_brand_split">Brand Split Card</string>
+    <string name="barcode_design_brand_split_desc">Brand shield logo &amp; hero price box on left, tall barcode on right (With Logo)</string>
+    <string name="barcode_design_compact_minimalist">Compact Grid</string>
+    <string name="barcode_design_compact_minimalist_desc">Clean centered title with geometric diamond rule for small roll tags (No Logo)</string>
+    <string name="barcode_design_shelf_edge">Shelf-Edge Tag</string>
+    <string name="barcode_design_shelf_edge_desc">60% extra-thick barcode for 50cm scanner gun reads &amp; giant price display (No Logo)</string>
+    <string name="barcode_design_counter">%1$d of %2$d</string>
 </resources>
 
 

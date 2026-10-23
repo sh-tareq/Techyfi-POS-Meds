@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -1053,6 +1055,8 @@ fun BatchProductCodePrintDialog(
     var barcodeGraphicScale by rememberSaveable {
         mutableFloatStateOf(preferences.getFloat("barcode_graphic_scale", 1f))
     }
+    val batchDesignName = preferences.getString("barcode_label_design", BarcodeLabelDesign.STANDARD_RETAIL.name)
+    val batchDesign = BarcodeLabelDesign.entries.firstOrNull { it.name == batchDesignName } ?: BarcodeLabelDesign.STANDARD_RETAIL
 
     var showAdvancedStyling by rememberSaveable { mutableStateOf(false) }
     var labelSizeMenuExpanded by remember { mutableStateOf(false) }
@@ -1206,7 +1210,8 @@ fun BatchProductCodePrintDialog(
                     extraFieldLabel = extraFieldTitle,
                     extraFieldValue = extraFieldValue,
                     dpi = invoiceSettings.labelDpi,
-                    showBanglaDigits = showBanglaDigits
+                    showBanglaDigits = showBanglaDigits,
+                    labelDesign = batchDesign
                 )
             } else null
         }
@@ -1319,7 +1324,8 @@ fun BatchProductCodePrintDialog(
                                     extraFieldLabel = itemExtraLabel,
                                     extraFieldValue = itemExtraVal,
                                     dpi = invoiceSettings.labelDpi,
-                                    showBanglaDigits = showBanglaDigits
+                                    showBanglaDigits = showBanglaDigits,
+                                    labelDesign = batchDesign
                                 )
                                 if (bitmap != null) {
                                     activeBitmaps.add(bitmap)
@@ -1445,7 +1451,8 @@ fun BatchProductCodePrintDialog(
                                 extraFieldLabel = itemExtraLabel,
                                 extraFieldValue = itemExtraVal,
                                 dpi = invoiceSettings.labelDpi,
-                                showBanglaDigits = showBanglaDigits
+                                showBanglaDigits = showBanglaDigits,
+                                labelDesign = batchDesign
                             )
                             if (bitmap != null) {
                                 try {
@@ -3156,6 +3163,32 @@ fun ProductCodeImageDialog(
         }
     }
 
+    val availableDesigns = BarcodeLabelDesign.entries
+    var selectedDesignName by rememberSaveable {
+        mutableStateOf(
+            preferences.getString("barcode_label_design", BarcodeLabelDesign.STANDARD_RETAIL.name)
+                ?: BarcodeLabelDesign.STANDARD_RETAIL.name
+        )
+    }
+    val selectedDesignIndex = availableDesigns.indexOfFirst { it.name == selectedDesignName }.takeIf { it >= 0 } ?: 0
+    var selectedDesign by remember(selectedDesignName) {
+        mutableStateOf(availableDesigns.getOrNull(selectedDesignIndex) ?: BarcodeLabelDesign.STANDARD_RETAIL)
+    }
+
+    val designPagerState = rememberPagerState(
+        initialPage = selectedDesignIndex,
+        pageCount = { availableDesigns.size }
+    )
+    val designBitmaps = remember { mutableStateMapOf<BarcodeLabelDesign, Bitmap>() }
+
+    LaunchedEffect(designPagerState.currentPage) {
+        val newDesign = availableDesigns[designPagerState.currentPage]
+        if (selectedDesign != newDesign) {
+            selectedDesign = newDesign
+            selectedDesignName = newDesign.name
+        }
+    }
+
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     LaunchedEffect(
         currentProduct, codeType, labelSize, showPrice, priceTierName, isDualPrice, showUnit, showBanglaDigits,
@@ -3163,7 +3196,7 @@ fun ProductCodeImageDialog(
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
         codeNumberTextScale, storeLogoScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
-        extraFieldTitle, extraFieldValue, extraFieldTextScale, selectedDpi
+        extraFieldTitle, extraFieldValue, extraFieldTextScale, selectedDpi, selectedDesign
     ) {
         val old = bitmap
         val newBmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
@@ -3195,25 +3228,79 @@ fun ProductCodeImageDialog(
                 extraFieldTextScale = extraFieldTextScale,
                 showLogo = showLogo,
                 dpi = selectedDpi,
-                showBanglaDigits = showBanglaDigits
+                showBanglaDigits = showBanglaDigits,
+                labelDesign = selectedDesign
             )
         }
         bitmap = newBmp
-        if (old != null && !old.isRecycled && old != newBmp) {
+        if (newBmp != null) {
+            designBitmaps[selectedDesign] = newBmp
+        }
+        if (old != null && !old.isRecycled && old != newBmp && !designBitmaps.containsValue(old)) {
             old.recycle()
+        }
+
+        // Pre-generate remaining designs in background for buttery smooth 60fps swiping
+        if (codeType == ProductCodeType.BARCODE) {
+            for (design in availableDesigns) {
+                if (design != selectedDesign) {
+                    val preBmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                        generateProductCodeLabelBitmap(
+                            productName = currentProduct.name,
+                            barcode = currentProduct.barcode,
+                            formattedPrice = formattedPriceString,
+                            codeType = codeType,
+                            labelSize = labelSize,
+                            showPrice = showPrice,
+                            showCodeNumber = showCodeNumber,
+                            customWidthMm = customWidthMm,
+                            customHeightMm = customHeightMm,
+                            productNameTextScale = productNameTextScale,
+                            priceTextScale = priceTextScale,
+                            codeNumberTextScale = codeNumberTextScale,
+                            showStoreName = showStoreName,
+                            storeName = effectiveStoreName,
+                            storeNameTextScale = storeNameTextScale,
+                            showDateTracking = showDateTracking,
+                            mfgOrPkgType = mfgOrPkgType,
+                            mfgOrPkgDate = mfgOrPkgDate,
+                            expDate = expDate,
+                            dateTrackingTextScale = dateTrackingTextScale,
+                            barcodeGraphicScale = barcodeGraphicScale,
+                            showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+                            extraFieldLabel = extraFieldTitle,
+                            extraFieldValue = extraFieldValue,
+                            extraFieldTextScale = extraFieldTextScale,
+                            showLogo = showLogo,
+                            dpi = selectedDpi,
+                            showBanglaDigits = showBanglaDigits,
+                            labelDesign = design
+                        )
+                    }
+                    if (preBmp != null) {
+                        designBitmaps[design] = preBmp
+                    }
+                }
+            }
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            bitmap?.recycle()
+            designBitmaps.values.forEach { bmp ->
+                if (!bmp.isRecycled) bmp.recycle()
+            }
+            designBitmaps.clear()
+            if (bitmap != null && !bitmap!!.isRecycled) {
+                bitmap?.recycle()
+            }
             singlePrintJob?.cancel()
             sharePdfJob?.cancel()
         }
     }
 
     LaunchedEffect(
-        codeTypeName, labelSizeName, showPrice, priceTierName, isDualPrice, showUnit, showBanglaDigits,
+        codeTypeName, selectedDesignName, labelSizeName, showPrice, priceTierName, isDualPrice, showUnit, showBanglaDigits,
         showCodeNumber, showStoreName, showLogo, storeNameInput,
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthInput, customHeightInput, productNameTextScale, priceTextScale,
@@ -3222,6 +3309,7 @@ fun ProductCodeImageDialog(
     ) {
         val editor = preferences.edit()
             .putString("code_type", codeTypeName)
+            .putString("barcode_label_design", selectedDesignName)
             .putString("label_size", labelSizeName)
             .putBoolean("show_price", showPrice)
             .putString("price_tier", if (isDualPrice) ProductCodePriceTier.DUAL.name else priceTierName)
@@ -3341,26 +3429,480 @@ fun ProductCodeImageDialog(
                             color = studioPrimary
                         )
                     }
-                    Surface(
+                    IconButton(
                         onClick = onDismiss,
                         enabled = !isPrinting && !isSharingPdf,
-                        shape = CircleShape,
-                        color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9),
-                        border = BorderStroke(1.dp, studioCardBorder),
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.dismiss),
-                                tint = studioTextMuted,
-                                modifier = Modifier.size(16.dp)
-                            )
+                        Surface(
+                            shape = CircleShape,
+                            color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9),
+                            border = BorderStroke(1.dp, studioCardBorder),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.dismiss),
+                                    tint = studioTextMuted,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
 
-                // 2. UNIFIED SCROLLABLE DIALOG BODY (Matching preview: Hero, Preview with Presets, Tabs, and Tab Controls)
+                // 2. COMPACT PRODUCT HERO & CAROUSEL STRIP (Pinned at top)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = studioCardBg,
+                    border = BorderStroke(1.dp, studioCardBorder)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Category Badge
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isDark) Color(0xFF0369A1).copy(alpha = 0.25f) else Color(0xFFE0F2FE)
+                            ) {
+                                Text(
+                                    text = currentProduct.category.ifBlank { "General" }.uppercase(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontSize = 9.sp
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = currentProduct.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = studioTextMain,
+                                    fontSize = 13.5.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = currentProduct.barcode,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 10.sp,
+                                        color = studioTextMuted
+                                    )
+                                    Text("•", fontSize = 10.sp, color = studioTextMuted)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(5.dp)
+                                            .clip(CircleShape)
+                                            .background(if (currentProduct.stockQty > 0) Color(0xFF10B981) else Color(0xFFEF4444))
+                                    )
+                                    Text(
+                                        text = if (currentProduct.stockQty > 0) "Stock: ${currentProduct.stockQty.toInt()} pcs" else "Out of Stock",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        color = if (currentProduct.stockQty > 0) Color(0xFF10B981) else Color(0xFFEF4444)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Carousel Controls (If products available)
+                        if (allProducts.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        if (hasPrev) {
+                                            val prev = allProducts[productIndex - 1]
+                                            currentProduct = prev
+                                            onProductSelected?.invoke(prev)
+                                        }
+                                    },
+                                    enabled = hasPrev,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ChevronLeft,
+                                        contentDescription = stringResource(R.string.product_prev),
+                                        modifier = Modifier.size(18.dp),
+                                        tint = if (hasPrev) studioTextMain else studioTextMuted.copy(alpha = 0.35f)
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(R.string.product_carousel_counter, productIndex + 1, allProducts.size),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = studioTextMuted,
+                                    fontSize = 10.5.sp
+                                )
+                                IconButton(
+                                    onClick = {
+                                        if (hasNext) {
+                                            val next = allProducts[productIndex + 1]
+                                            currentProduct = next
+                                            onProductSelected?.invoke(next)
+                                        }
+                                    },
+                                    enabled = hasNext,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ChevronRight,
+                                        contentDescription = stringResource(R.string.product_next),
+                                        modifier = Modifier.size(18.dp),
+                                        tint = if (hasNext) studioTextMain else studioTextMuted.copy(alpha = 0.35f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. PINNED LIVE STICKER PREVIEW (Always pinned & visible at top in real-time)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = studioCardBg,
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(1.5.dp, Color(0xFF14B8A6).copy(alpha = if (isDark) 0.40f else 0.45f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    if (isDark) listOf(Color(0xFF0F766E).copy(alpha = 0.16f), Color(0xFF1E293B))
+                                    else listOf(Color(0xFF0F766E).copy(alpha = 0.06f), Color(0xFFFFFFFF))
+                                )
+                            )
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // Preview Top Bar: Dimensions Badge + Active Design Name + Zoom Inspect Button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = studioPrimaryContainer,
+                                border = BorderStroke(1.dp, Color(0xFF14B8A6).copy(alpha = 0.6f))
+                            ) {
+                                Text(
+                                    text = "📐 ${selectedLabelWidthMm.toInt()} × ${selectedLabelHeightMm.toInt()} mm • $selectedDpi DPI",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 10.sp,
+                                    color = studioPrimary,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
+                                )
+                            }
+
+                            if (codeType == ProductCodeType.BARCODE) {
+                                val canPrev = designPagerState.currentPage > 0
+                                val canNext = designPagerState.currentPage < availableDesigns.size - 1
+                                val designTitle = when (selectedDesign) {
+                                    BarcodeLabelDesign.STANDARD_RETAIL -> stringResource(R.string.barcode_design_standard)
+                                    BarcodeLabelDesign.BOUTIQUE_CREST -> stringResource(R.string.barcode_design_boutique_crest)
+                                    BarcodeLabelDesign.BRAND_HERO_SPLIT -> stringResource(R.string.barcode_design_brand_split)
+                                    BarcodeLabelDesign.COMPACT_MINIMALIST -> stringResource(R.string.barcode_design_compact_minimalist)
+                                    BarcodeLabelDesign.SHELF_EDGE_TAG -> stringResource(R.string.barcode_design_shelf_edge)
+                                }
+                                val designEmoji = when (selectedDesign) {
+                                    BarcodeLabelDesign.STANDARD_RETAIL -> "🏷️"
+                                    BarcodeLabelDesign.BOUTIQUE_CREST -> "👑"
+                                    BarcodeLabelDesign.BRAND_HERO_SPLIT -> "🛡️"
+                                    BarcodeLabelDesign.COMPACT_MINIMALIST -> "✦"
+                                    BarcodeLabelDesign.SHELF_EDGE_TAG -> "🏬"
+                                }
+                                Row(
+                                    modifier = Modifier
+                                        .weight(1f, fill = false)
+                                        .padding(horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            val prevPage = (designPagerState.currentPage - 1).coerceAtLeast(0)
+                                            scope.launch { designPagerState.animateScrollToPage(prevPage) }
+                                        },
+                                        enabled = canPrev,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ChevronLeft,
+                                            contentDescription = "Previous Design",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = if (canPrev) studioPrimary else studioTextMuted.copy(alpha = 0.35f)
+                                        )
+                                    }
+                                    Text(
+                                        text = "$designEmoji $designTitle",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = studioTextMain,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            val nextPage = (designPagerState.currentPage + 1).coerceAtMost(availableDesigns.size - 1)
+                                            scope.launch { designPagerState.animateScrollToPage(nextPage) }
+                                        },
+                                        enabled = canNext,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ChevronRight,
+                                            contentDescription = "Next Design",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = if (canNext) studioPrimary else studioTextMuted.copy(alpha = 0.35f)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Zoom Inspect Button
+                            Surface(
+                                onClick = { showZoomModal = true },
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9),
+                                border = BorderStroke(1.dp, studioCardBorder)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ZoomIn,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(12.dp),
+                                        tint = studioTextMain
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.zoom_inspect_label),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.5.sp,
+                                        color = studioTextMain
+                                    )
+                                }
+                            }
+                        }
+
+                        // Live Physical Sticker Canvas (Swipable Pager for Barcode, Image for QR)
+                        if (codeType == ProductCodeType.BARCODE) {
+                            HorizontalPager(
+                                state = designPagerState,
+                                pageSpacing = 10.dp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 2.dp)
+                            ) { page ->
+                                val pageDesign = availableDesigns[page]
+                                val displayBmp = designBitmaps[pageDesign] ?: if (pageDesign == selectedDesign) bitmap else null
+
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 2.dp),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color.White,
+                                    shadowElevation = 6.dp,
+                                    border = BorderStroke(1.5.dp, Color.Black.copy(alpha = 0.12f))
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 85.dp, max = 118.dp)
+                                            .clickable { showZoomModal = true }
+                                            .padding(6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (displayBmp != null) {
+                                            Image(
+                                                bitmap = displayBmp.asImageBitmap(),
+                                                contentDescription = stringResource(R.string.product_code_image_preview),
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        } else {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(22.dp),
+                                                strokeWidth = 2.dp,
+                                                color = studioPrimary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Dot Indicators & Compact Design Chips Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                availableDesigns.forEachIndexed { index, design ->
+                                    val isSelected = designPagerState.currentPage == index
+                                    val chipTitle = when (design) {
+                                        BarcodeLabelDesign.STANDARD_RETAIL -> stringResource(R.string.barcode_design_standard)
+                                        BarcodeLabelDesign.BOUTIQUE_CREST -> stringResource(R.string.barcode_design_boutique_crest)
+                                        BarcodeLabelDesign.BRAND_HERO_SPLIT -> stringResource(R.string.barcode_design_brand_split)
+                                        BarcodeLabelDesign.COMPACT_MINIMALIST -> stringResource(R.string.barcode_design_compact_minimalist)
+                                        BarcodeLabelDesign.SHELF_EDGE_TAG -> stringResource(R.string.barcode_design_shelf_edge)
+                                    }
+                                    val chipIcon = when (design) {
+                                        BarcodeLabelDesign.STANDARD_RETAIL -> "🏷️"
+                                        BarcodeLabelDesign.BOUTIQUE_CREST -> "👑"
+                                        BarcodeLabelDesign.BRAND_HERO_SPLIT -> "🛡️"
+                                        BarcodeLabelDesign.COMPACT_MINIMALIST -> "✦"
+                                        BarcodeLabelDesign.SHELF_EDGE_TAG -> "🏬"
+                                    }
+
+                                    Surface(
+                                        onClick = {
+                                            scope.launch { designPagerState.animateScrollToPage(index) }
+                                        },
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = if (isSelected) studioPrimaryContainer else (if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)),
+                                        border = BorderStroke(
+                                            width = if (isSelected) 1.5.dp else 1.dp,
+                                            color = if (isSelected) studioPrimary else studioCardBorder
+                                        )
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                        ) {
+                                            Text(text = chipIcon, fontSize = 10.sp)
+                                            Text(
+                                                text = chipTitle,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                                fontSize = 10.sp,
+                                                color = if (isSelected) studioPrimary else studioTextMain
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // QR Code Physical Sticker Surface
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 2.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color.White,
+                                shadowElevation = 6.dp,
+                                border = BorderStroke(1.5.dp, Color.Black.copy(alpha = 0.12f))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 85.dp, max = 118.dp)
+                                        .clickable { showZoomModal = true }
+                                        .padding(6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val currentBmp = bitmap
+                                    if (currentBmp != null) {
+                                        Image(
+                                            bitmap = currentBmp.asImageBitmap(),
+                                            contentDescription = stringResource(R.string.product_code_image_preview),
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    } else {
+                                        Text(
+                                            stringResource(R.string.code_generation_failed),
+                                            color = MaterialTheme.colorScheme.error,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. PINNED SEGMENTED 3-TAB SELECTOR (Always accessible right below preview)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isDark) Color(0xFF111A2C) else Color(0xFFE2E8F0).copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, studioCardBorder)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(2.5.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        val tabs = listOf(
+                            "🏷️" to stringResource(R.string.tab_label_setup),
+                            "🏢" to stringResource(R.string.tab_store_info),
+                            "📅" to stringResource(R.string.tab_dates_scale)
+                        )
+                        tabs.forEachIndexed { index, (icon, title) ->
+                            val isSelected = selectedTab == index
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) studioPrimaryGradient else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
+                                    .clickable { selectedTab = index }
+                                    .padding(vertical = 7.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(text = icon, fontSize = 11.sp)
+                                    Spacer(Modifier.width(3.dp))
+                                    Text(
+                                        text = title,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                        color = if (isSelected) Color.White else studioTextMuted,
+                                        fontSize = 10.5.sp,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 5. SCROLLABLE TAB CONTENT BODY (Users scroll down to adjust setups while live preview remains pinned above!)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -3368,423 +3910,127 @@ fun ProductCodeImageDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // A. PRODUCT HERO CARD & CAROUSEL
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = studioCardBg,
-                        shadowElevation = 2.dp,
-                        border = BorderStroke(1.dp, studioCardBorder)
+                    // Quick Template Presets Carousel (LBL-18: Standard, Grocery, Jewelry, Apparel, Warehouse)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(11.dp),
-                            verticalArrangement = Arrangement.spacedBy(7.dp)
-                        ) {
-                            // Top Carousel Navigation Row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                // Category Badge
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = if (isDark) Color(0xFF0369A1).copy(alpha = 0.25f) else Color(0xFFE0F2FE)
-                                ) {
-                                    Text(
-                                        text = currentProduct.category.ifBlank { "General" }.uppercase(),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
-                                        fontSize = 9.5.sp
-                                    )
-                                }
-
-                                // Carousel Controls (If products available)
-                                if (allProducts.isNotEmpty()) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Surface(
-                                            onClick = {
-                                                if (hasPrev) {
-                                                    val prev = allProducts[productIndex - 1]
-                                                    currentProduct = prev
-                                                    onProductSelected?.invoke(prev)
-                                                }
-                                            },
-                                            enabled = hasPrev,
-                                            shape = RoundedCornerShape(7.dp),
-                                            color = if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9),
-                                            border = BorderStroke(1.dp, studioCardBorder),
-                                            modifier = Modifier.size(26.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    Icons.Default.ChevronLeft,
-                                                    contentDescription = stringResource(R.string.product_prev),
-                                                    modifier = Modifier.size(16.dp),
-                                                    tint = if (hasPrev) studioTextMain else studioTextMuted.copy(alpha = 0.4f)
-                                                )
-                                            }
+                        val presetPills = listOf(
+                            Triple("standard", "🏷️", "Standard Retail"),
+                            Triple("grocery", "🥫", "Grocery & Expiry"),
+                            Triple("jewelry", "💍", "Jewelry Mini"),
+                            Triple("apparel", "👗", "Apparel Dual-Price"),
+                            Triple("warehouse", "📦", "Warehouse Code 128")
+                        )
+                        presetPills.forEach { (key, icon, name) ->
+                            val isActive = activePresetKey == key
+                            Surface(
+                                onClick = {
+                                    activePresetKey = key
+                                    when (key) {
+                                        "standard" -> {
+                                            labelSizeName = ProductCodeLabelSize.SIZE_50_X_30.name
+                                            priceTierName = ProductCodePriceTier.SELLING.name
+                                            showPrice = true
+                                            showCodeNumber = true
+                                            showStoreName = true
+                                            showDateTracking = false
+                                            isDualPrice = false
+                                            productNameTextScale = 1.0f
+                                            priceTextScale = 1.0f
+                                            codeNumberTextScale = 1.0f
+                                            storeNameTextScale = 1.0f
+                                            dateTrackingTextScale = 1.0f
+                                            barcodeGraphicScale = 1.0f
+                                            extraFieldTextScale = 1.0f
                                         }
-                                        Text(
-                                            text = stringResource(R.string.product_carousel_counter, productIndex + 1, allProducts.size),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = studioTextMuted,
-                                            modifier = Modifier.padding(horizontal = 4.dp)
-                                        )
-                                        Surface(
-                                            onClick = {
-                                                if (hasNext) {
-                                                    val next = allProducts[productIndex + 1]
-                                                    currentProduct = next
-                                                    onProductSelected?.invoke(next)
-                                                }
-                                            },
-                                            enabled = hasNext,
-                                            shape = RoundedCornerShape(7.dp),
-                                            color = if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9),
-                                            border = BorderStroke(1.dp, studioCardBorder),
-                                            modifier = Modifier.size(26.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    Icons.Default.ChevronRight,
-                                                    contentDescription = stringResource(R.string.product_next),
-                                                    modifier = Modifier.size(16.dp),
-                                                    tint = if (hasNext) studioTextMain else studioTextMuted.copy(alpha = 0.4f)
-                                                )
-                                            }
+                                        "grocery" -> {
+                                            labelSizeName = ProductCodeLabelSize.SIZE_40_X_25.name
+                                            priceTierName = ProductCodePriceTier.SELLING.name
+                                            showPrice = true
+                                            showCodeNumber = true
+                                            showDateTracking = true
+                                            isDualPrice = false
+                                            productNameTextScale = 1.0f
+                                            priceTextScale = 1.0f
+                                            codeNumberTextScale = 1.0f
+                                            storeNameTextScale = 1.0f
+                                            dateTrackingTextScale = 1.0f
+                                            barcodeGraphicScale = 1.0f
+                                            extraFieldTextScale = 1.0f
+                                        }
+                                        "jewelry" -> {
+                                            labelSizeName = ProductCodeLabelSize.SIZE_25_X_15.name
+                                            priceTierName = ProductCodePriceTier.SELLING.name
+                                            showPrice = true
+                                            showCodeNumber = false
+                                            showDateTracking = false
+                                            isDualPrice = false
+                                            productNameTextScale = 1.0f
+                                            priceTextScale = 1.0f
+                                            codeNumberTextScale = 1.0f
+                                            storeNameTextScale = 1.0f
+                                            dateTrackingTextScale = 1.0f
+                                            barcodeGraphicScale = 0.8f
+                                            extraFieldTextScale = 1.0f
+                                        }
+                                        "apparel" -> {
+                                            labelSizeName = ProductCodeLabelSize.SIZE_60_X_40.name
+                                            isDualPrice = true
+                                            showPrice = true
+                                            showUnit = true
+                                            showStoreName = true
+                                            showCodeNumber = true
+                                            showDateTracking = false
+                                            productNameTextScale = 1.0f
+                                            priceTextScale = 1.0f
+                                            codeNumberTextScale = 1.0f
+                                            storeNameTextScale = 1.0f
+                                            dateTrackingTextScale = 1.0f
+                                            barcodeGraphicScale = 1.0f
+                                            extraFieldTextScale = 1.0f
+                                        }
+                                        "warehouse" -> {
+                                            labelSizeName = ProductCodeLabelSize.SIZE_100_X_150.name
+                                            codeTypeName = ProductCodeType.BARCODE.name
+                                            showPrice = false
+                                            showStoreName = true
+                                            showCodeNumber = true
+                                            showDateTracking = true
+                                            isDualPrice = false
+                                            productNameTextScale = 1.0f
+                                            priceTextScale = 1.0f
+                                            codeNumberTextScale = 1.0f
+                                            storeNameTextScale = 1.0f
+                                            dateTrackingTextScale = 1.0f
+                                            barcodeGraphicScale = 1.0f
+                                            extraFieldTextScale = 1.0f
                                         }
                                     }
-                                }
-                            }
-
-                            // Product Details Row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // 3D Product Avatar Box
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(Color(0xFF4338CA), Color(0xFF6366F1))
-                                            )
-                                        )
-                                        .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .fillMaxHeight(0.5f)
-                                            .align(Alignment.TopCenter)
-                                            .background(
-                                                Brush.verticalGradient(
-                                                    listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)
-                                                )
-                                            )
-                                    )
-                                    Text(
-                                        text = "📦",
-                                        fontSize = 22.sp
-                                    )
-                                }
-                                Spacer(Modifier.width(10.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = currentProduct.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = studioTextMain,
-                                        fontSize = 14.5.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Row(
-                                        modifier = Modifier.padding(top = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Surface(
-                                            shape = RoundedCornerShape(4.dp),
-                                            color = if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9)
-                                        ) {
-                                            Text(
-                                                text = currentProduct.barcode,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 10.5.sp,
-                                                color = studioTextMuted,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
-                                            )
-                                        }
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(6.dp)
-                                                    .clip(CircleShape)
-                                                    .background(if (currentProduct.stockQty > 0) Color(0xFF10B981) else Color(0xFFEF4444))
-                                            )
-                                            Text(
-                                                text = if (currentProduct.stockQty > 0) "In Stock: ${currentProduct.stockQty.toInt()} pcs" else "Out of Stock",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (currentProduct.stockQty > 0) Color(0xFF10B981) else Color(0xFFEF4444)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // 4. PINNED STICKER PREVIEW WITH ZOOM INSPECT
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = studioCardBg,
-                        shadowElevation = 2.dp,
-                        border = BorderStroke(1.5.dp, Color(0xFF14B8A6).copy(alpha = if (isDark) 0.40f else 0.45f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    Brush.verticalGradient(
-                                        if (isDark) listOf(Color(0xFF0F766E).copy(alpha = 0.16f), Color(0xFF1E293B))
-                                        else listOf(Color(0xFF0F766E).copy(alpha = 0.06f), Color(0xFFFFFFFF))
-                                    )
+                                    Toast.makeText(context, context.getString(R.string.label_preset_saved_toast), Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (isActive) studioPrimaryContainer else (if (isDark) Color(0xFF1E293B) else Color(0xFFFFFFFF)),
+                                border = BorderStroke(
+                                    if (isActive) 1.5.dp else 1.dp,
+                                    if (isActive) studioPrimaryBorder else studioCardBorder
                                 )
-                                .padding(10.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                // Preview Header (Dimensions + Zoom Inspect Button)
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Surface(
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = studioPrimaryContainer,
-                                        border = BorderStroke(1.dp, Color(0xFF14B8A6).copy(alpha = 0.6f))
-                                    ) {
-                                        Text(
-                                            text = "📐 ${selectedLabelWidthMm.toInt()} × ${selectedLabelHeightMm.toInt()} mm • $selectedDpi DPI",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 10.5.sp,
-                                            color = studioPrimary,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                        )
-                                    }
-
-                                    // Zoom Inspect Button
-                                    Surface(
-                                        onClick = { showZoomModal = true },
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9),
-                                        border = BorderStroke(1.dp, studioCardBorder)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.5.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.ZoomIn,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(13.dp),
-                                                tint = studioTextMain
-                                            )
-                                            Text(
-                                                text = stringResource(R.string.zoom_inspect_label),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 10.5.sp,
-                                                color = studioTextMain
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // REALISTIC PHYSICAL STICKER CANVAS WITH PAPER DROP SHADOW
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Color.White,
-                                    shadowElevation = 8.dp,
-                                    border = BorderStroke(1.5.dp, Color.Black.copy(alpha = 0.14f))
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .heightIn(min = 96.dp, max = 155.dp)
-                                            .clickable { showZoomModal = true }
-                                            .padding(8.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        val currentBmp = bitmap
-                                        if (currentBmp != null) {
-                                            Image(
-                                                bitmap = currentBmp.asImageBitmap(),
-                                                contentDescription = stringResource(R.string.product_code_image_preview),
-                                                modifier = Modifier.fillMaxSize(),
-                                                contentScale = ContentScale.Fit
-                                            )
-                                        } else {
-                                            Text(
-                                                stringResource(R.string.code_generation_failed),
-                                                color = MaterialTheme.colorScheme.error,
-                                                fontSize = 12.sp
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // Quick Template Presets Carousel (LBL-18: Standard, Grocery, Jewelry, Apparel, Warehouse)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val presetPills = listOf(
-                                        Triple("standard", "🏷️", "Standard Retail"),
-                                        Triple("grocery", "🥫", "Grocery & Expiry"),
-                                        Triple("jewelry", "💍", "Jewelry Mini"),
-                                        Triple("apparel", "👗", "Apparel Dual-Price"),
-                                        Triple("warehouse", "📦", "Warehouse Code 128")
+                                    Text(icon, fontSize = 11.sp)
+                                    Text(
+                                        text = name,
+                                        fontSize = 10.5.sp,
+                                        fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                        color = if (isActive) studioPrimary else studioTextMuted
                                     )
-                                    presetPills.forEach { (key, icon, name) ->
-                                        val isActive = activePresetKey == key
-                                        Surface(
-                                            onClick = {
-                                                activePresetKey = key
-                                                when (key) {
-                                                    "standard" -> {
-                                                        labelSizeName = ProductCodeLabelSize.SIZE_50_X_30.name
-                                                        priceTierName = ProductCodePriceTier.SELLING.name
-                                                        showPrice = true
-                                                        showCodeNumber = true
-                                                        showStoreName = true
-                                                        showDateTracking = false
-                                                        isDualPrice = false
-                                                        productNameTextScale = 1.0f
-                                                        priceTextScale = 1.0f
-                                                        codeNumberTextScale = 1.0f
-                                                        storeNameTextScale = 1.0f
-                                                        dateTrackingTextScale = 1.0f
-                                                        barcodeGraphicScale = 1.0f
-                                                        extraFieldTextScale = 1.0f
-                                                    }
-                                                    "grocery" -> {
-                                                        labelSizeName = ProductCodeLabelSize.SIZE_40_X_25.name
-                                                        priceTierName = ProductCodePriceTier.SELLING.name
-                                                        showPrice = true
-                                                        showCodeNumber = true
-                                                        showDateTracking = true
-                                                        isDualPrice = false
-                                                        productNameTextScale = 1.0f
-                                                        priceTextScale = 1.0f
-                                                        codeNumberTextScale = 1.0f
-                                                        storeNameTextScale = 1.0f
-                                                        dateTrackingTextScale = 1.0f
-                                                        barcodeGraphicScale = 1.0f
-                                                        extraFieldTextScale = 1.0f
-                                                    }
-                                                    "jewelry" -> {
-                                                        labelSizeName = ProductCodeLabelSize.SIZE_25_X_15.name
-                                                        priceTierName = ProductCodePriceTier.SELLING.name
-                                                        showPrice = true
-                                                        showCodeNumber = false
-                                                        showDateTracking = false
-                                                        isDualPrice = false
-                                                        productNameTextScale = 1.0f
-                                                        priceTextScale = 1.0f
-                                                        codeNumberTextScale = 1.0f
-                                                        storeNameTextScale = 1.0f
-                                                        dateTrackingTextScale = 1.0f
-                                                        barcodeGraphicScale = 0.8f
-                                                        extraFieldTextScale = 1.0f
-                                                    }
-                                                    "apparel" -> {
-                                                        labelSizeName = ProductCodeLabelSize.SIZE_60_X_40.name
-                                                        isDualPrice = true
-                                                        showPrice = true
-                                                        showUnit = true
-                                                        showStoreName = true
-                                                        showCodeNumber = true
-                                                        showDateTracking = false
-                                                        productNameTextScale = 1.0f
-                                                        priceTextScale = 1.0f
-                                                        codeNumberTextScale = 1.0f
-                                                        storeNameTextScale = 1.0f
-                                                        dateTrackingTextScale = 1.0f
-                                                        barcodeGraphicScale = 1.0f
-                                                        extraFieldTextScale = 1.0f
-                                                    }
-                                                    "warehouse" -> {
-                                                        labelSizeName = ProductCodeLabelSize.SIZE_100_X_150.name
-                                                        codeTypeName = ProductCodeType.BARCODE.name
-                                                        showPrice = false
-                                                        showStoreName = true
-                                                        showCodeNumber = true
-                                                        showDateTracking = true
-                                                        isDualPrice = false
-                                                        productNameTextScale = 1.0f
-                                                        priceTextScale = 1.0f
-                                                        codeNumberTextScale = 1.0f
-                                                        storeNameTextScale = 1.0f
-                                                        dateTrackingTextScale = 1.0f
-                                                        barcodeGraphicScale = 1.0f
-                                                        extraFieldTextScale = 1.0f
-                                                    }
-                                                }
-                                                Toast.makeText(context, context.getString(R.string.label_preset_saved_toast), Toast.LENGTH_SHORT).show()
-                                            },
-                                            shape = RoundedCornerShape(20.dp),
-                                            color = if (isActive) studioPrimaryContainer else (if (isDark) Color(0xFF1E293B) else Color(0xFFFFFFFF)),
-                                            border = BorderStroke(
-                                                if (isActive) 1.5.dp else 1.dp,
-                                                if (isActive) studioPrimaryBorder else studioCardBorder
-                                            )
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Text(icon, fontSize = 12.sp)
-                                                Text(
-                                                    text = name,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                                    color = if (isActive) studioPrimary else studioTextMuted
-                                                )
-                                            }
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -3815,54 +4061,6 @@ fun ProductCodeImageDialog(
                                 )
                                 TextButton(onClick = { codeTypeName = ProductCodeType.QR_CODE.name }) {
                                     Text(stringResource(R.string.switch_to_qr), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-
-                    // 5. SEGMENTED 3-TAB SELECTOR (Vibrant Pill Tabs)
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isDark) Color(0xFF111A2C) else Color(0xFFE2E8F0).copy(alpha = 0.85f),
-                        border = BorderStroke(1.dp, studioCardBorder)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(3.dp),
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            val tabs = listOf(
-                                "🏷️" to stringResource(R.string.tab_label_setup),
-                                "🏢" to stringResource(R.string.tab_store_info),
-                                "📅" to stringResource(R.string.tab_dates_scale)
-                            )
-                            tabs.forEachIndexed { index, (icon, title) ->
-                                val isSelected = selectedTab == index
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(9.dp))
-                                        .background(if (isSelected) studioPrimaryGradient else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
-                                        .clickable { selectedTab = index }
-                                        .padding(vertical = 8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(text = icon, fontSize = 12.sp)
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(
-                                            text = title,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                            color = if (isSelected) Color.White else studioTextMuted,
-                                            maxLines = 1
-                                        )
-                                    }
                                 }
                             }
                         }
@@ -5344,7 +5542,7 @@ private fun LabelTextSizeControl(
             IconButton(
                 onClick = onReset,
                 enabled = enabled && isModified,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(48.dp)
             ) {
                 Icon(
                     Icons.Default.Refresh,

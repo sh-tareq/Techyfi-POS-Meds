@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-22 (app version 2.7.01-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220982; DB schema version 38)
+Last updated: 2026-10-23 (app version 2.7.02-Final-V23-10-2026, build `Techyfi-POS-Final-V23-10-2026.apk`; versionCode 220983; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3326,10 +3326,24 @@ mindmap
   - Set fixed, symmetric 38dp height on both `Show Store Name` and `Show Store Logo` chips, preventing awkward multi-line text wrapping.
   - Centered text and checkmark layout horizontally and vertically (`Arrangement.Center` and `TextAlign.Center`).
   - Synced formatting with `.micro-switch-chip` in `interactive_preview/generate_code_image_redesign_preview.html`.
-- **Physical Device Live Verification (Xiaomi Device `cb5fdfb5`)**:
-  - Deployed release build and verified live on Xiaomi MI 8 display: confirmed single-line, perfectly centered, identical-height chips in Tab 2.
-- **Release Deliverable**:
-  - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220982, versionName "2.7.01-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with update-compatible keystore and verified live on device.
+### Release Final-V23-10-2026-R7: Pinned Live Sticker Preview Stage & 5 Definitive Barcode Label Designs (Version 2.7.02-Final-V23-10-2026, Build Final-V23-10-2026)
+- **Pinned Live Sticker Preview Stage (`ProductCodeImageDialog` in `ProductCodePrintDialogs.kt`)**:
+  - Restructured the single-scroll layout into a pinned header + pinned sticker preview + pinned segmented 3-tab selector + scrollable setup controls architecture.
+  - Prevents the sticker preview from scrolling off-screen when users scroll down to adjust text scales, barcode graphic heights, custom label dimensions, dates, price tiers, and store branding switches.
+  - Real-time instant visual feedback: any changes made in the scrollable tab body update the pinned sticker preview immediately via background coroutine rendering.
+- **5 Definitive Barcode Label Designs (`ProductCodeImageUtils.kt`)**:
+  - `STANDARD_RETAIL`: Original standard retail label featuring bold centered title, horizontal barcode, price pill, and store name footer.
+  - `BOUTIQUE_CREST`: Premium fashion/boutique layout featuring circular crest monogram, price pill, 2-line title, horizontal barcode, and authentic date footer.
+  - `BRAND_HERO_SPLIT`: 38%/62% split layout featuring brand emblem shield, solid price card, and horizontal barcode.
+  - `COMPACT_MINIMALIST`: Clean text-centric layout without logo featuring diamond rule separator (`── ◆ ──`), horizontal barcode, and 2-column bottom price & dates.
+  - `SHELF_EDGE_TAG`: Supermarket shelf tag layout featuring category pill, 60% extra-wide high-contrast barcode, 40% large retail price card, and inverted black footer.
+- **Touch Targets & Accessibility**:
+  - Enhanced dialog header close button and scaler reset buttons to meet >= 48dp Material 3 touch target standards.
+  - Responsive design switcher row with `weight(1f, fill = false)` and `TextOverflow.Ellipsis` preventing any overflow on narrow 360dp phone viewports.
+- **R8 Minification & Resource Shrinking**:
+  - Built with full R8 code optimization (`isMinifyEnabled = true`), resource shrinking (`isShrinkResources = true`), and update-compatible signing certificate (`signingConfigs.debug`).
+- **Release Deliverables**:
+  - `Techyfi-POS-Final-V23-10-2026.apk` (versionCode 220983, versionName "2.7.02-Final-V23-10-2026"), installed as seamless update on connected Xiaomi hardware (`cb5fdfb5`).
 
 ## Maintenance note
 

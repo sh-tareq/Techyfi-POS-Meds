@@ -1,0 +1,2868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Techyfi POS — 5 Barcode Label Designs & 3D Swipe Studio (Interactive Preview)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&family=Cinzel:wght@700;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #080D1A;
+      --bg-card: #0F172A;
+      --bg-card-subtle: #1E293B;
+      --bg-card-hover: #273549;
+      --primary: #38BDF8;
+      --primary-rgb: 56, 189, 248;
+      --primary-gradient: linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #818CF8 100%);
+      --accent-purple: #8B5CF6;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-rose: #F43F5E;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(56, 189, 248, 0.35);
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-dim: #64748B;
+      --font-ui: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --font-bn: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-serif: 'Playfair Display', serif;
+      --font-brand: 'Cinzel', serif;
+      --sticker-width: 440px;
+      --sticker-height: 264px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 12% 15%, rgba(56, 189, 248, 0.09) 0%, transparent 45%),
+        radial-gradient(circle at 88% 70%, rgba(139, 92, 246, 0.09) 0%, transparent 45%),
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* TOP HEADER BAR */
+    header.studio-header {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 28px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon-3d {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--primary-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 22px;
+      font-weight: 900;
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.45), inset 0 1px 1px rgba(255,255,255,0.6);
+      transform: perspective(600px) rotateX(8deg) rotateY(-8deg);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .brand-icon-3d:hover {
+      transform: perspective(600px) rotateX(0deg) rotateY(0deg) scale(1.08);
+    }
+
+    .brand-info h1 {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-info p {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .header-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2.5px 9px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.15);
+      color: #38BDF8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      letter-spacing: 0.5px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-header {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 8px 15px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .btn-header:hover {
+      background: rgba(51, 65, 85, 0.9);
+      border-color: rgba(255,255,255,0.2);
+      transform: translateY(-1.5px);
+    }
+    .btn-header:active {
+      transform: scale(0.96);
+    }
+    .btn-header.active {
+      background: var(--primary);
+      color: #090D16;
+      border-color: var(--primary);
+      font-weight: 700;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+    }
+
+    /* SCANNER TEST TRIGGER BUTTON */
+    .btn-scanner-action {
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      color: #FFFFFF;
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45);
+      transition: all 0.2s ease;
+    }
+    .btn-scanner-action:hover {
+      transform: translateY(-1.5px) scale(1.02);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
+    }
+    .btn-scanner-action:active {
+      transform: scale(0.96);
+    }
+
+    /* MAIN CONTAINER */
+    main.studio-main {
+      flex: 1;
+      width: 100%;
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1.18fr 0.82fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 1120px) {
+      main.studio-main {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+    }
+
+    /* LEFT COLUMN: 3D SWIPE CAROUSEL STAGE */
+    .carousel-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .stage-wrapper {
+      background: linear-gradient(145deg, #111A2E, #0C1220);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-radius: 26px;
+      padding: 24px 22px 22px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255,255,255,0.12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stage-wrapper::before {
+      content: '';
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 380px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.16) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .stage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 22px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stage-title-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stage-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stage-subtitle {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .swipe-instruction-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #38BDF8;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+    }
+
+    /* 3D CAROUSEL VIEWPORT */
+    .carousel-viewport {
+      position: relative;
+      width: 100%;
+      min-height: 380px;
+      perspective: 1400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: pan-y;
+      z-index: 2;
+    }
+
+    .carousel-viewport:active {
+      cursor: grabbing;
+    }
+
+    .carousel-stage-3d {
+      position: relative;
+      width: var(--sticker-width);
+      height: var(--sticker-height);
+      transform-style: preserve-3d;
+      transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+    }
+
+    /* SCANNER BEAM SIMULATION */
+    .scanner-beam-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #EF4444;
+      box-shadow: 0 0 16px #EF4444, 0 0 28px #EF4444;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      border-radius: 999px;
+    }
+    .scanner-active .scanner-beam-line {
+      opacity: 1;
+      animation: scanner-sweep 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+    }
+    @keyframes scanner-sweep {
+      0% { top: 10%; }
+      100% { top: 90%; }
+    }
+
+    /* SCAN SUCCESS HUD OVERLAY */
+    .scanner-hud-alert {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(16, 185, 129, 0.95);
+      backdrop-filter: blur(10px);
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 6px 16px;
+      border-radius: 999px;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 60;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .scanner-hud-alert.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* CAROUSEL CARDS */
+    .carousel-card {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 14px;
+      background: #FFFFFF;
+      color: #000000;
+      box-shadow: 
+        0 18px 40px rgba(0, 0, 0, 0.55),
+        0 4px 12px rgba(0, 0, 0, 0.35),
+        inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+      transform-style: preserve-3d;
+      transition: all 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      backface-visibility: hidden;
+    }
+
+    .card-sheen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(125deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 45%, rgba(0,0,0,0.06) 100%);
+      pointer-events: none;
+      z-index: 10;
+      border-radius: 14px;
+    }
+
+    .peel-corner {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 44px;
+      height: 44px;
+      pointer-events: none;
+      z-index: 20;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .peel-corner::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 40px 40px 0;
+      border-color: transparent #E2E8F0 transparent transparent;
+      filter: drop-shadow(-3px 3px 5px rgba(0,0,0,0.35));
+    }
+    .peel-active .peel-corner {
+      opacity: 1;
+    }
+
+    .carousel-card[data-pos="0"] {
+      transform: translate3d(0, 0, 0) scale(1) rotateY(0deg);
+      opacity: 1;
+      z-index: 10;
+      filter: drop-shadow(0 25px 45px rgba(0, 0, 0, 0.75));
+    }
+    .carousel-card[data-pos="1"] {
+      transform: translate3d(64%, 0, -180px) scale(0.86) rotateY(-28deg);
+      opacity: 0.6;
+      z-index: 5;
+      pointer-events: none;
+      filter: blur(0.5px) brightness(0.72);
+    }
+    .carousel-card[data-pos="-1"] {
+      transform: translate3d(-64%, 0, -180px) scale(0.86) rotateY(28deg);
+      opacity: 0.6;
+      z-index: 5;
+      pointer-events: none;
+      filter: blur(0.5px) brightness(0.72);
+    }
+    .carousel-card[data-pos="2"],
+    .carousel-card[data-pos="-2"] {
+      transform: translate3d(0, 0, -320px) scale(0.7);
+      opacity: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .carousel-nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      cursor: pointer;
+      z-index: 30;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .carousel-nav-btn:hover {
+      background: var(--primary);
+      color: #090D16;
+      border-color: var(--primary);
+      transform: translateY(-50%) scale(1.12);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.55);
+    }
+    .carousel-nav-btn:active {
+      transform: translateY(-50%) scale(0.96);
+    }
+    .carousel-nav-btn.prev-btn { left: 8px; }
+    .carousel-nav-btn.next-btn { right: 8px; }
+
+    .carousel-indicator-bar {
+      margin-top: 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      z-index: 5;
+    }
+
+    .carousel-dots {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.75);
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .dot-item {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .dot-item.active {
+      width: 34px;
+      background: var(--primary);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.65);
+    }
+
+    .design-quick-selector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .design-tab-btn {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: all 0.25s ease;
+      min-width: 110px;
+      text-align: center;
+    }
+    .design-tab-btn:hover {
+      background: rgba(51, 65, 85, 0.8);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    .design-tab-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--primary);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+    }
+    .design-tab-btn .tab-num {
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .design-tab-btn.active .tab-num {
+      color: var(--primary);
+    }
+    .design-tab-btn .tab-name {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .design-tab-btn .tab-tag {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-dim);
+    }
+    .design-tab-btn.active .tab-tag {
+      background: rgba(56, 189, 248, 0.2);
+      color: #38BDF8;
+    }
+
+    .interactive-fx-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .fx-btn {
+      background: rgba(17, 24, 39, 0.7);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 7px 14px;
+      border-radius: 9px;
+      font-size: 11.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .fx-btn:hover {
+      background: rgba(30, 41, 59, 0.9);
+      color: #fff;
+    }
+    .fx-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    /* COMMON LABEL INNER WRAPPER (100% THERMAL SAFE MONOCHROME) */
+    .label-outer-border {
+      width: 100%;
+      height: 100%;
+      padding: 7px;
+      display: flex;
+      flex-direction: column;
+      background: #FFFFFF;
+      border: 2px solid #000000;
+      border-radius: 12px;
+      position: relative;
+      box-sizing: border-box;
+      font-family: var(--font-ui);
+      color: #000000;
+    }
+
+    /* =========================================================
+       DESIGN 1: STANDARD RETAIL (RESTORED ORIGINAL — FIRST IN LIST)
+       - No Store Logo
+       - Full Width Horizontal Barcode
+       - Dot Divider with Price
+       ========================================================= */
+    .tpl-standard-retail {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      justify-content: space-between;
+      align-items: center;
+      text-align: center;
+      padding: 5px 8px;
+    }
+
+    .std-header {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .std-product-title {
+      font-family: var(--font-ui);
+      font-size: 18px;
+      font-weight: 800;
+      color: #000000;
+      line-height: 1.25;
+      max-height: 48px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      width: 100%;
+      text-align: center;
+    }
+
+    .std-divider-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      gap: 10px;
+      margin: 4px 0 2px 0;
+    }
+
+    .std-divider-line {
+      flex: 1;
+      height: 1.5px;
+      background: #000000;
+    }
+
+    .std-divider-dot {
+      font-size: 11px;
+      color: #000000;
+      line-height: 1;
+    }
+
+    .std-price-tag {
+      font-family: var(--font-ui);
+      font-size: 20px;
+      font-weight: 900;
+      color: #000000;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .std-barcode-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 2px 0;
+    }
+
+    .std-horizontal-barcode-svg {
+      width: 95%;
+      height: 54px;
+    }
+
+    .std-barcode-digits {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 4px;
+      font-weight: 800;
+      color: #000000;
+      margin-top: 2px;
+    }
+
+    .std-store-name {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #000000;
+      margin-top: 2px;
+    }
+
+    .std-date-footer {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: #000000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      border-top: 1.5px dashed rgba(0,0,0,0.4);
+      padding-top: 4px;
+      margin-top: 2px;
+    }
+
+    /* =========================================================
+       DESIGN 2: BOUTIQUE MONOGRAM CREST (WITH STORE LOGO #1)
+       ========================================================= */
+    .tpl-boutique-crest {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      justify-content: space-between;
+      padding: 6px 10px;
+    }
+
+    .boutique-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1.5px solid #000000;
+      padding-bottom: 5px;
+      gap: 8px;
+    }
+
+    .boutique-logo-seal {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .crest-svg-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .boutique-store-meta {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+    .boutique-store-name-text {
+      font-family: var(--font-brand);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #000;
+    }
+    .boutique-store-tagline {
+      font-family: var(--font-ui);
+      font-size: 8px;
+      font-weight: 700;
+      color: #333;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .boutique-price-pill {
+      background: #000000;
+      color: #FFFFFF;
+      padding: 4px 12px;
+      border-radius: 999px;
+      display: flex;
+      align-items: baseline;
+      gap: 3px;
+      line-height: 1;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .boutique-price-curr {
+      font-family: var(--font-ui);
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .boutique-price-val {
+      font-family: var(--font-ui);
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .boutique-title-row {
+      text-align: center;
+      padding: 4px 2px 2px;
+    }
+    .boutique-prod-title {
+      font-family: var(--font-ui);
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #000000;
+      max-height: 48px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .boutique-barcode-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      margin: 2px 0;
+    }
+    .boutique-barcode-svg {
+      width: 90%;
+      height: 52px;
+    }
+    .boutique-barcode-digits {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      font-weight: 800;
+      letter-spacing: 3.5px;
+      color: #000;
+      margin-top: 1px;
+    }
+
+    .boutique-footer-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1.5px solid #000000;
+      padding-top: 4px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+
+    /* =========================================================
+       DESIGN 3: BRAND HERO SPLIT CARD (WITH STORE LOGO #2)
+       ========================================================= */
+    .tpl-brand-split {
+      display: flex;
+      height: 100%;
+      width: 100%;
+    }
+
+    .split-brand-hero-col {
+      width: 38%;
+      border-right: 2px solid #000000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 6px;
+      text-align: center;
+      background: #F8FAFC;
+      border-radius: 8px 0 0 8px;
+    }
+
+    .split-logo-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .brand-shield-svg {
+      width: 44px;
+      height: 44px;
+    }
+    .split-store-name {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      line-height: 1.15;
+      color: #000;
+      max-width: 130px;
+    }
+
+    .split-hero-price-card {
+      width: 100%;
+      border: 2px solid #000000;
+      background: #000000;
+      color: #FFFFFF;
+      border-radius: 8px;
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1;
+    }
+    .split-price-label {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: 0.9;
+      margin-bottom: 2px;
+    }
+    .split-price-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 2px;
+    }
+    .split-price-curr {
+      font-family: var(--font-ui);
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .split-price-val {
+      font-family: var(--font-ui);
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: -1px;
+    }
+
+    .split-main-col {
+      width: 62%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 6px 10px;
+    }
+
+    .split-prod-title {
+      font-family: var(--font-ui);
+      font-size: 17px;
+      font-weight: 800;
+      color: #000;
+      line-height: 1.25;
+      max-height: 46px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .split-barcode-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      margin: 4px 0;
+    }
+    .split-barcode-svg {
+      width: 98%;
+      height: 60px;
+    }
+    .split-barcode-digits {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 2.5px;
+      color: #000;
+      margin-top: 2px;
+    }
+
+    .split-date-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1.5px dashed rgba(0,0,0,0.5);
+      padding-top: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      color: #000;
+    }
+
+    /* =========================================================
+       DESIGN 4: COMPACT MINIMALIST GRID (NO STORE LOGO #1)
+       ========================================================= */
+    .tpl-compact-minimal {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      justify-content: space-between;
+      padding: 6px 12px;
+      text-align: center;
+    }
+
+    .minimal-prod-title {
+      font-family: var(--font-ui);
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #000000;
+      max-height: 48px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .minimal-diamond-rule {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 4px 0 2px 0;
+      width: 100%;
+    }
+    .minimal-diamond-rule::before,
+    .minimal-diamond-rule::after {
+      content: '';
+      flex: 1;
+      height: 1.5px;
+      background: #000;
+    }
+    .diamond-icon-glyph {
+      font-size: 10px;
+      line-height: 1;
+    }
+
+    .minimal-barcode-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      margin: 2px 0;
+    }
+    .minimal-barcode-svg {
+      width: 90%;
+      height: 54px;
+    }
+    .minimal-barcode-digits {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 3.5px;
+      color: #000;
+      margin-top: 2px;
+    }
+
+    .minimal-bottom-grid {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1.5px solid #000;
+      padding-top: 4px;
+      margin-top: 2px;
+    }
+    .minimal-price-box {
+      display: flex;
+      align-items: baseline;
+      gap: 3px;
+    }
+    .minimal-price-curr {
+      font-family: var(--font-ui);
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .minimal-price-val {
+      font-family: var(--font-ui);
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+    .minimal-store-tag {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: #000;
+      text-align: right;
+    }
+    .minimal-dates-subtext {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #444;
+      margin-top: 1px;
+    }
+
+    /* =========================================================
+       DESIGN 5: SUPERMARKET SHELF-EDGE TAG (NO STORE LOGO #2)
+       ========================================================= */
+    .tpl-shelf-edge {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      border-radius: 9px;
+      overflow: hidden;
+      justify-content: space-between;
+    }
+
+    .shelf-edge-top {
+      padding: 5px 8px 3px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #000;
+      gap: 8px;
+    }
+    .shelf-edge-title {
+      font-family: var(--font-ui);
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #000;
+      flex: 1;
+      max-height: 44px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .shelf-badge-cat {
+      border: 1.5px solid #000;
+      background: #000;
+      color: #fff;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .shelf-edge-body {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      padding: 4px 6px;
+    }
+    .shelf-barcode-col {
+      width: 60%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-right: 2px solid #000;
+      padding-right: 6px;
+    }
+    .shelf-barcode-svg {
+      width: 100%;
+      height: 60px;
+    }
+    .shelf-barcode-digits {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #000;
+      margin-top: 2px;
+    }
+
+    .shelf-price-col {
+      width: 40%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-left: 6px;
+      text-align: center;
+    }
+    .shelf-price-lbl {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #000;
+      line-height: 1;
+    }
+    .shelf-price-digits-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      line-height: 0.95;
+      margin: 3px 0;
+    }
+    .shelf-price-curr {
+      font-family: var(--font-ui);
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .shelf-price-val {
+      font-family: var(--font-ui);
+      font-size: 40px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+    }
+    .shelf-mrp-subtext {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      font-weight: 700;
+      color: #333;
+    }
+
+    .shelf-edge-footer {
+      background: #000000;
+      color: #FFFFFF;
+      padding: 5px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .shelf-store-name {
+      font-family: var(--font-ui);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+    .shelf-dates-text {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+    }
+
+    /* CONTROLS COLUMN */
+    .controls-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .control-panel-card {
+      background: rgba(17, 24, 39, 0.88);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 12px;
+    }
+
+    .panel-header h2 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-header-badge {
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 2.5px 8px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.15);
+      color: #38BDF8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .form-group.full-width {
+      grid-column: span 2;
+    }
+
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .form-label .hint {
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 10.5px;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .form-input {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 13px;
+      font-family: var(--font-ui);
+      transition: all 0.2s ease;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: rgba(15, 23, 42, 0.95);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+    }
+
+    .preset-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .chip-item {
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .chip-item:hover {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38BDF8;
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+
+    /* TOGGLE SWITCHES GRID */
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .toggle-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .toggle-card:hover {
+      background: rgba(30, 41, 59, 0.8);
+      border-color: rgba(255,255,255,0.18);
+    }
+    .toggle-card.active {
+      border-color: rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.08);
+    }
+    .toggle-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .toggle-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .toggle-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .switch-ui {
+      width: 36px;
+      height: 20px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.15);
+      position: relative;
+      transition: background 0.25s ease;
+      flex-shrink: 0;
+    }
+    .switch-ui::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .toggle-card.active .switch-ui {
+      background: var(--primary);
+    }
+    .toggle-card.active .switch-ui::after {
+      transform: translateX(16px);
+    }
+
+    /* LOGO STYLE SELECTOR IN CUSTOMIZER */
+    .logo-style-picker {
+      margin-top: 14px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .logo-style-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .logo-options-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .logo-opt-btn {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 8px 6px;
+      color: var(--text-main);
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+    .logo-opt-btn:hover {
+      background: rgba(51, 65, 85, 0.9);
+      border-color: rgba(255,255,255,0.2);
+    }
+    .logo-opt-btn.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--primary);
+      color: #38BDF8;
+    }
+    .logo-opt-btn svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    /* FEATURE LIST */
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .feature-item::before {
+      content: '✓';
+      color: var(--primary);
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+
+    /* BOTTOM ROW: SIDE-BY-SIDE MATRIX & TECHNICAL CONFIRMATION */
+    .bottom-section {
+      width: 100%;
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 0 24px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .matrix-card {
+      background: rgba(17, 24, 39, 0.85);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .matrix-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1200px) {
+      .comparison-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (max-width: 768px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .design-comp-card {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.25s ease;
+    }
+    .design-comp-card:hover {
+      background: rgba(30, 41, 59, 0.8);
+      border-color: rgba(56, 189, 248, 0.3);
+      transform: translateY(-3px);
+    }
+    .comp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .comp-num {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: 0.5px;
+    }
+    .comp-name {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .comp-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+    .comp-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+    .badge-with-logo {
+      background: rgba(139, 92, 246, 0.15);
+      color: #A78BFA;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+    .badge-no-logo {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    /* CONFIRMATION BANNER */
+    .confirm-banner {
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 20px;
+      padding: 22px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    @media (max-width: 800px) {
+      .confirm-banner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+    .confirm-text h3 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .confirm-text p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .btn-confirm-primary {
+      background: var(--primary-gradient);
+      border: none;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      white-space: nowrap;
+    }
+    .btn-confirm-primary:hover {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 8px 25px rgba(56, 189, 248, 0.6);
+    }
+
+    /* THERMAL SIMULATION MODE */
+    .thermal-mode .carousel-card {
+      background: #F4F3EE !important;
+      filter: contrast(1.25) brightness(0.97) !important;
+      background-image: 
+        radial-gradient(#111 0.4px, transparent 0.4px),
+        radial-gradient(#111 0.4px, #F4F3EE 0.4px) !important;
+      background-size: 4px 4px !important;
+      background-position: 0 0, 2px 2px !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header class="studio-header">
+    <div class="brand-group">
+      <div class="brand-icon-3d">🏷️</div>
+      <div class="brand-info">
+        <h1>
+          <span>Techyfi POS</span>
+          <span class="header-badge" id="lblBadge">5 BARCODE DESIGNS</span>
+        </h1>
+        <p id="lblSubtitle">3D Swipeable Barcode Label Studio (Interactive Preview)</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Scanner Simulator Trigger -->
+      <button class="btn-scanner-action" id="btnScannerTest" onclick="triggerLaserScan()">
+        <span>🔫</span>
+        <span id="txtScannerBtn">Test Scanner Gun</span>
+      </button>
+
+      <!-- Thermal Simulation Toggle -->
+      <button class="btn-header" id="btnThermalMode" onclick="toggleThermalMode()">
+        <span>🖨️</span>
+        <span id="thermalBtnText">Thermal Sim</span>
+      </button>
+
+      <!-- 3D Sticker Peel Effect Toggle -->
+      <button class="btn-header" id="btnPeelToggle" onclick="togglePeelEffect()">
+        <span>🏷️</span>
+        <span>Peel 3D</span>
+      </button>
+
+      <!-- Language Toggle -->
+      <button class="btn-header" id="btnLangToggle" onclick="toggleLanguage()">
+        <span>🌐</span>
+        <span id="langBtnText">ENG / বাংলা</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN APPLICATION STAGE -->
+  <main class="studio-main">
+
+    <!-- LEFT COLUMN: 3D SWIPE CAROUSEL STAGE -->
+    <section class="carousel-column">
+
+      <div class="stage-wrapper">
+        <div class="stage-header">
+          <div class="stage-title-wrap">
+            <div class="stage-title">
+              <span id="currentDesignTitle">Design 1: Standard Retail (Original Restored Design)</span>
+            </div>
+            <div class="stage-subtitle" id="currentDesignSubtitle">
+              Classic Full-Width Barcode, Balanced Divider, Bold Title &amp; Clear Price (No Logo)
+            </div>
+          </div>
+          <div class="swipe-instruction-badge" id="swipeBadge">
+            <span>👈</span> <span id="swipeBadgeText">Swipe Left / Right to Change Design</span> <span>👉</span>
+          </div>
+        </div>
+
+        <!-- 3D CAROUSEL VIEWPORT -->
+        <div class="carousel-viewport" id="carouselViewport">
+
+          <!-- Left / Right Chevron Controls -->
+          <button class="carousel-nav-btn prev-btn" id="prevBtn" onclick="prevSlide()" aria-label="Previous Design">❮</button>
+          <button class="carousel-nav-btn next-btn" id="nextBtn" onclick="nextSlide()" aria-label="Next Design">❯</button>
+
+          <!-- Laser Scanner Beam -->
+          <div class="scanner-beam-line" id="scannerBeam"></div>
+
+          <!-- Scanner Verified HUD Alert -->
+          <div class="scanner-hud-alert" id="scannerHud">
+            <span>✓</span>
+            <span id="scannerHudText">100% Instant Read — 245282434658 Verified</span>
+          </div>
+
+          <!-- 3D Transform Stage -->
+          <div class="carousel-stage-3d" id="carouselStage">
+
+            <!-- ================= CARD 0: STANDARD RETAIL (ORIGINAL RESTORED — FIRST IN LIST) ================= -->
+            <div class="carousel-card" id="card0" data-pos="0">
+              <div class="card-sheen"></div>
+              <div class="peel-corner"></div>
+              <div class="label-outer-border">
+                <div class="tpl-standard-retail">
+
+                  <!-- Header: Product Title -->
+                  <div class="std-header">
+                    <div class="std-product-title live-prod-title">Organic Brown Sugar 250g</div>
+                    <!-- Delicate Dot Divider + Price -->
+                    <div class="std-divider-row">
+                      <div class="std-divider-line"></div>
+                      <div class="std-divider-dot">●</div>
+                      <div class="std-price-tag">
+                        <span class="live-currency">৳</span>
+                        <span class="live-price-val">120</span>
+                      </div>
+                      <div class="std-divider-dot">●</div>
+                      <div class="std-divider-line"></div>
+                    </div>
+                  </div>
+
+                  <!-- Full-Width Horizontal Barcode -->
+                  <div class="std-barcode-section">
+                    <svg class="std-horizontal-barcode-svg live-horizontal-barcode-svg" viewBox="0 0 200 55" preserveAspectRatio="none">
+                      <g fill="#000">
+                        <rect x="0" y="0" width="3" height="55"/><rect x="5" y="0" width="1.5" height="55"/><rect x="8" y="0" width="4" height="55"/><rect x="14" y="0" width="2" height="55"/><rect x="18" y="0" width="3" height="55"/><rect x="23" y="0" width="1.5" height="55"/><rect x="26" y="0" width="5" height="55"/><rect x="33" y="0" width="2" height="55"/><rect x="37" y="0" width="3.5" height="55"/><rect x="42" y="0" width="1.5" height="55"/><rect x="45" y="0" width="4.5" height="55"/><rect x="52" y="0" width="2" height="55"/><rect x="56" y="0" width="3" height="55"/><rect x="61" y="0" width="1.5" height="55"/><rect x="64" y="0" width="4" height="55"/><rect x="70" y="0" width="2.5" height="55"/><rect x="74" y="0" width="3.5" height="55"/><rect x="80" y="0" width="1.5" height="55"/><rect x="83" y="0" width="4" height="55"/><rect x="89" y="0" width="2" height="55"/><rect x="93" y="0" width="3" height="55"/><rect x="98" y="0" width="1.5" height="55"/><rect x="101" y="0" width="5" height="55"/><rect x="108" y="0" width="2" height="55"/><rect x="112" y="0" width="3.5" height="55"/><rect x="117" y="0" width="1.5" height="55"/><rect x="120" y="0" width="4" height="55"/><rect x="126" y="0" width="2.5" height="55"/><rect x="131" y="0" width="3" height="55"/><rect x="136" y="0" width="1.5" height="55"/><rect x="140" y="0" width="4" height="55"/><rect x="146" y="0" width="2" height="55"/><rect x="150" y="0" width="3.5" height="55"/><rect x="156" y="0" width="2.5" height="55"/><rect x="162" y="0" width="4" height="55"/><rect x="168" y="0" width="2" height="55"/><rect x="173" y="0" width="3.5" height="55"/><rect x="179" y="0" width="1.5" height="55"/><rect x="183" y="0" width="4" height="55"/><rect x="190" y="0" width="2" height="55"/><rect x="195" y="0" width="3" height="55"/>
+                      </g>
+                    </svg>
+                    <div class="std-barcode-digits live-horizontal-digits">245282434658</div>
+                  </div>
+
+                  <!-- Store Branding -->
+                  <div class="std-store-name live-store-name">MAKS KAWSAR STORE</div>
+
+                  <!-- Date Footer -->
+                  <div class="std-date-footer live-dates-footer">
+                    <span class="live-mfg-val">MFG: 17-08-26</span>
+                    <span>•</span>
+                    <span class="live-exp-val">EXP: 29-08-26</span>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= CARD 1: BOUTIQUE MONOGRAM CREST (WITH STORE LOGO #1) ================= -->
+            <div class="carousel-card" id="card1" data-pos="1">
+              <div class="card-sheen"></div>
+              <div class="peel-corner"></div>
+              <div class="label-outer-border">
+                <div class="tpl-boutique-crest">
+
+                  <!-- Top Bar: Logo Crest + Store Meta + Price Pill -->
+                  <div class="boutique-top-bar">
+                    <div class="boutique-logo-seal">
+                      <!-- Dynamic Store Logo Crest -->
+                      <div class="dynamic-logo-host" id="crestLogoHost">
+                        <svg class="crest-svg-icon" viewBox="0 0 40 40">
+                          <circle cx="20" cy="20" r="18" fill="none" stroke="#000" stroke-width="2"/>
+                          <circle cx="20" cy="20" r="15" fill="none" stroke="#000" stroke-width="1" stroke-dasharray="2,2"/>
+                          <circle cx="20" cy="20" r="11" fill="#000"/>
+                          <text x="20" y="24" fill="#FFF" font-family="'Cinzel', serif" font-weight="900" font-size="10" text-anchor="middle">MK</text>
+                        </svg>
+                      </div>
+                      <div class="boutique-store-meta">
+                        <span class="boutique-store-name-text live-store-name">MAKS KAWSAR STORE</span>
+                        <span class="boutique-store-tagline">BOUTIQUE &amp; LIFESTYLE</span>
+                      </div>
+                    </div>
+
+                    <div class="boutique-price-pill">
+                      <span class="boutique-price-curr live-currency">৳</span>
+                      <span class="boutique-price-val live-price-val">120</span>
+                    </div>
+                  </div>
+
+                  <!-- 2-Line Product Title -->
+                  <div class="boutique-title-row">
+                    <div class="boutique-prod-title live-prod-title">Organic Brown Sugar 250g</div>
+                  </div>
+
+                  <!-- Full Horizontal Barcode with Ample Quiet Zones -->
+                  <div class="boutique-barcode-container">
+                    <svg class="boutique-barcode-svg live-horizontal-barcode-svg" viewBox="0 0 200 55" preserveAspectRatio="none">
+                      <g fill="#000">
+                        <rect x="0" y="0" width="3" height="55"/><rect x="5" y="0" width="1.5" height="55"/><rect x="8" y="0" width="4" height="55"/><rect x="14" y="0" width="2" height="55"/><rect x="18" y="0" width="3" height="55"/><rect x="23" y="0" width="1.5" height="55"/><rect x="26" y="0" width="5" height="55"/><rect x="33" y="0" width="2" height="55"/><rect x="37" y="0" width="3.5" height="55"/><rect x="42" y="0" width="1.5" height="55"/><rect x="45" y="0" width="4.5" height="55"/><rect x="52" y="0" width="2" height="55"/><rect x="56" y="0" width="3" height="55"/><rect x="61" y="0" width="1.5" height="55"/><rect x="64" y="0" width="4" height="55"/><rect x="70" y="0" width="2.5" height="55"/><rect x="74" y="0" width="3.5" height="55"/><rect x="80" y="0" width="1.5" height="55"/><rect x="83" y="0" width="4" height="55"/><rect x="89" y="0" width="2" height="55"/><rect x="93" y="0" width="3" height="55"/><rect x="98" y="0" width="1.5" height="55"/><rect x="101" y="0" width="5" height="55"/><rect x="108" y="0" width="2" height="55"/><rect x="112" y="0" width="3.5" height="55"/><rect x="117" y="0" width="1.5" height="55"/><rect x="120" y="0" width="4" height="55"/><rect x="126" y="0" width="2.5" height="55"/><rect x="131" y="0" width="3" height="55"/><rect x="136" y="0" width="1.5" height="55"/><rect x="140" y="0" width="4" height="55"/><rect x="146" y="0" width="2" height="55"/><rect x="150" y="0" width="3.5" height="55"/><rect x="156" y="0" width="2.5" height="55"/><rect x="162" y="0" width="4" height="55"/><rect x="168" y="0" width="2" height="55"/><rect x="173" y="0" width="3.5" height="55"/><rect x="179" y="0" width="1.5" height="55"/><rect x="183" y="0" width="4" height="55"/><rect x="190" y="0" width="2" height="55"/><rect x="195" y="0" width="3" height="55"/>
+                      </g>
+                    </svg>
+                    <div class="boutique-barcode-digits live-horizontal-digits">245282434658</div>
+                  </div>
+
+                  <!-- Footer: Batch Dates -->
+                  <div class="boutique-footer-bar live-dates-footer">
+                    <span class="live-mfg-val">MFG: 17-08-26</span>
+                    <span>• 100% AUTHENTIC •</span>
+                    <span class="live-exp-val">EXP: 29-08-26</span>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= CARD 2: BRAND HERO SPLIT CARD (WITH STORE LOGO #2) ================= -->
+            <div class="carousel-card" id="card2" data-pos="2">
+              <div class="card-sheen"></div>
+              <div class="peel-corner"></div>
+              <div class="label-outer-border" style="padding: 0;">
+                <div class="tpl-brand-split">
+
+                  <!-- Left 38% Hero Brand & Price Column -->
+                  <div class="split-brand-hero-col">
+                    <div class="split-logo-badge">
+                      <div class="dynamic-logo-host" id="splitLogoHost">
+                        <!-- Shield Emblem SVG -->
+                        <svg class="brand-shield-svg" viewBox="0 0 50 50">
+                          <polygon points="25,4 46,12 46,30 25,46 4,30 4,12" fill="none" stroke="#000" stroke-width="2"/>
+                          <polygon points="25,8 42,15 42,28 25,41 8,28 8,15" fill="#000"/>
+                          <text x="25" y="28" fill="#FFF" font-family="'Cinzel', serif" font-weight="900" font-size="12" text-anchor="middle">MK</text>
+                        </svg>
+                      </div>
+                      <div class="split-store-name live-store-name">MAKS KAWSAR STORE</div>
+                    </div>
+
+                    <div class="split-hero-price-card">
+                      <span class="split-price-label">PRICE / MRP</span>
+                      <div class="split-price-row">
+                        <span class="split-price-curr live-currency">৳</span>
+                        <span class="split-price-val live-price-val">120</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Right 62% Product Title & Horizontal Barcode -->
+                  <div class="split-main-col">
+                    <div class="split-prod-title live-prod-title">Organic Brown Sugar 250g</div>
+
+                    <div class="split-barcode-box">
+                      <svg class="split-barcode-svg live-horizontal-barcode-svg" viewBox="0 0 160 55" preserveAspectRatio="none">
+                        <g fill="#000">
+                          <rect x="0" y="0" width="3" height="55"/><rect x="5" y="0" width="1.5" height="55"/><rect x="8" y="0" width="4" height="55"/><rect x="14" y="0" width="2" height="55"/><rect x="18" y="0" width="3" height="55"/><rect x="23" y="0" width="1.5" height="55"/><rect x="26" y="0" width="5" height="55"/><rect x="33" y="0" width="2" height="55"/><rect x="37" y="0" width="3.5" height="55"/><rect x="42" y="0" width="1.5" height="55"/><rect x="45" y="0" width="4.5" height="55"/><rect x="52" y="0" width="2" height="55"/><rect x="56" y="0" width="3" height="55"/><rect x="61" y="0" width="1.5" height="55"/><rect x="64" y="0" width="4" height="55"/><rect x="70" y="0" width="2.5" height="55"/><rect x="74" y="0" width="3.5" height="55"/><rect x="80" y="0" width="1.5" height="55"/><rect x="83" y="0" width="4" height="55"/><rect x="89" y="0" width="2" height="55"/><rect x="93" y="0" width="3" height="55"/><rect x="98" y="0" width="1.5" height="55"/><rect x="101" y="0" width="5" height="55"/><rect x="108" y="0" width="2" height="55"/><rect x="112" y="0" width="3.5" height="55"/><rect x="117" y="0" width="1.5" height="55"/><rect x="120" y="0" width="4" height="55"/><rect x="126" y="0" width="2.5" height="55"/><rect x="131" y="0" width="3" height="55"/><rect x="136" y="0" width="1.5" height="55"/><rect x="140" y="0" width="4" height="55"/><rect x="146" y="0" width="2" height="55"/><rect x="150" y="0" width="3.5" height="55"/><rect x="156" y="0" width="2.5" height="55"/>
+                        </g>
+                      </svg>
+                      <div class="split-barcode-digits live-horizontal-digits">245282434658</div>
+                    </div>
+
+                    <div class="split-date-footer live-dates-footer">
+                      <span class="live-mfg-val">MFG: 17-08-26</span>
+                      <span class="live-exp-val">EXP: 29-08-26</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= CARD 3: COMPACT MINIMALIST GRID (NO STORE LOGO #1) ================= -->
+            <div class="carousel-card" id="card3" data-pos="-2">
+              <div class="card-sheen"></div>
+              <div class="peel-corner"></div>
+              <div class="label-outer-border">
+                <div class="tpl-compact-minimal">
+
+                  <!-- Header: Product Title -->
+                  <div class="minimal-prod-title live-prod-title">Organic Brown Sugar 250g</div>
+
+                  <!-- Geometric Diamond Rule -->
+                  <div class="minimal-diamond-rule">
+                    <span class="diamond-icon-glyph">◆</span>
+                  </div>
+
+                  <!-- Center Horizontal Barcode -->
+                  <div class="minimal-barcode-box">
+                    <svg class="minimal-barcode-svg live-horizontal-barcode-svg" viewBox="0 0 200 55" preserveAspectRatio="none">
+                      <g fill="#000">
+                        <rect x="0" y="0" width="3" height="55"/><rect x="5" y="0" width="1.5" height="55"/><rect x="8" y="0" width="4" height="55"/><rect x="14" y="0" width="2" height="55"/><rect x="18" y="0" width="3" height="55"/><rect x="23" y="0" width="1.5" height="55"/><rect x="26" y="0" width="5" height="55"/><rect x="33" y="0" width="2" height="55"/><rect x="37" y="0" width="3.5" height="55"/><rect x="42" y="0" width="1.5" height="55"/><rect x="45" y="0" width="4.5" height="55"/><rect x="52" y="0" width="2" height="55"/><rect x="56" y="0" width="3" height="55"/><rect x="61" y="0" width="1.5" height="55"/><rect x="64" y="0" width="4" height="55"/><rect x="70" y="0" width="2.5" height="55"/><rect x="74" y="0" width="3.5" height="55"/><rect x="80" y="0" width="1.5" height="55"/><rect x="83" y="0" width="4" height="55"/><rect x="89" y="0" width="2" height="55"/><rect x="93" y="0" width="3" height="55"/><rect x="98" y="0" width="1.5" height="55"/><rect x="101" y="0" width="5" height="55"/><rect x="108" y="0" width="2" height="55"/><rect x="112" y="0" width="3.5" height="55"/><rect x="117" y="0" width="1.5" height="55"/><rect x="120" y="0" width="4" height="55"/><rect x="126" y="0" width="2.5" height="55"/><rect x="131" y="0" width="3" height="55"/><rect x="136" y="0" width="1.5" height="55"/><rect x="140" y="0" width="4" height="55"/><rect x="146" y="0" width="2" height="55"/><rect x="150" y="0" width="3.5" height="55"/><rect x="156" y="0" width="2.5" height="55"/><rect x="162" y="0" width="4" height="55"/><rect x="168" y="0" width="2" height="55"/><rect x="173" y="0" width="3.5" height="55"/><rect x="179" y="0" width="1.5" height="55"/><rect x="183" y="0" width="4" height="55"/><rect x="190" y="0" width="2" height="55"/><rect x="195" y="0" width="3" height="55"/>
+                      </g>
+                    </svg>
+                    <div class="minimal-barcode-digits live-horizontal-digits">245282434658</div>
+                  </div>
+
+                  <!-- Bottom Grid: Left Price, Right Store Name & Dates -->
+                  <div class="minimal-bottom-grid">
+                    <div class="minimal-price-box">
+                      <span class="minimal-price-curr live-currency">৳</span>
+                      <span class="minimal-price-val live-price-val">120</span>
+                    </div>
+
+                    <div style="text-align: right;">
+                      <div class="minimal-store-tag live-store-name">MAKS KAWSAR STORE</div>
+                      <div class="minimal-dates-subtext live-dates-footer">
+                        <span class="live-mfg-val">MFG: 17-08-26</span> | <span class="live-exp-val">EXP: 29-08-26</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= CARD 4: SUPERMARKET SHELF-EDGE TAG (NO STORE LOGO #2) ================= -->
+            <div class="carousel-card" id="card4" data-pos="-1">
+              <div class="card-sheen"></div>
+              <div class="peel-corner"></div>
+              <div class="label-outer-border" style="padding: 0;">
+                <div class="tpl-shelf-edge">
+
+                  <!-- Header: Title + Category Pill -->
+                  <div class="shelf-edge-top">
+                    <div class="shelf-edge-title live-prod-title">Organic Brown Sugar 250g</div>
+                    <div class="shelf-badge-cat">GROCERY</div>
+                  </div>
+
+                  <!-- Body: 60% Wide Barcode for Guns + 40% Giant Price -->
+                  <div class="shelf-edge-body">
+                    <div class="shelf-barcode-col">
+                      <svg class="shelf-barcode-svg live-horizontal-barcode-svg" viewBox="0 0 160 55" preserveAspectRatio="none">
+                        <g fill="#000">
+                          <rect x="0" y="0" width="3.5" height="55"/><rect x="5.5" y="0" width="1.5" height="55"/><rect x="9" y="0" width="4" height="55"/><rect x="15" y="0" width="2" height="55"/><rect x="19" y="0" width="3" height="55"/><rect x="24" y="0" width="1.5" height="55"/><rect x="27" y="0" width="5" height="55"/><rect x="34" y="0" width="2" height="55"/><rect x="38" y="0" width="3.5" height="55"/><rect x="43" y="0" width="1.5" height="55"/><rect x="46" y="0" width="4.5" height="55"/><rect x="53" y="0" width="2" height="55"/><rect x="57" y="0" width="3" height="55"/><rect x="62" y="0" width="1.5" height="55"/><rect x="65" y="0" width="4" height="55"/><rect x="71" y="0" width="2.5" height="55"/><rect x="75" y="0" width="3.5" height="55"/><rect x="81" y="0" width="1.5" height="55"/><rect x="84" y="0" width="4" height="55"/><rect x="90" y="0" width="2" height="55"/><rect x="94" y="0" width="3" height="55"/><rect x="99" y="0" width="1.5" height="55"/><rect x="102" y="0" width="5" height="55"/><rect x="109" y="0" width="2" height="55"/><rect x="113" y="0" width="3.5" height="55"/><rect x="118" y="0" width="1.5" height="55"/><rect x="121" y="0" width="4" height="55"/><rect x="127" y="0" width="2.5" height="55"/><rect x="132" y="0" width="3" height="55"/><rect x="137" y="0" width="1.5" height="55"/><rect x="141" y="0" width="4" height="55"/><rect x="147" y="0" width="2" height="55"/><rect x="151" y="0" width="3.5" height="55"/><rect x="157" y="0" width="2.5" height="55"/>
+                        </g>
+                      </svg>
+                      <div class="shelf-barcode-digits live-horizontal-digits">245282434658</div>
+                    </div>
+
+                    <div class="shelf-price-col">
+                      <span class="shelf-price-lbl">RETAIL PRICE</span>
+                      <div class="shelf-price-digits-row">
+                        <span class="shelf-price-curr live-currency">৳</span>
+                        <span class="shelf-price-val live-price-val">120</span>
+                      </div>
+                      <span class="shelf-mrp-subtext">INCL. ALL TAXES</span>
+                    </div>
+                  </div>
+
+                  <!-- Inverted Solid Black Footer Bar -->
+                  <div class="shelf-edge-footer">
+                    <span class="shelf-store-name live-store-name">MAKS KAWSAR STORE</span>
+                    <span class="shelf-dates-text live-dates-footer">
+                      <span class="live-mfg-val">MFG: 17-08-26</span> | <span class="live-exp-val">EXP: 29-08-26</span>
+                    </span>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- INDICATOR DOTS & QUICK PILLS -->
+        <div class="carousel-indicator-bar">
+          <div class="carousel-dots" id="carouselDots">
+            <div class="dot-item active" onclick="goToSlide(0)"></div>
+            <div class="dot-item" onclick="goToSlide(1)"></div>
+            <div class="dot-item" onclick="goToSlide(2)"></div>
+            <div class="dot-item" onclick="goToSlide(3)"></div>
+            <div class="dot-item" onclick="goToSlide(4)"></div>
+          </div>
+
+          <div class="design-quick-selector">
+            <div class="design-tab-btn active" id="tab0" onclick="goToSlide(0)">
+              <span class="tab-num">STYLE 1</span>
+              <span class="tab-name">Standard Retail</span>
+              <span class="tab-tag">Original Restored</span>
+            </div>
+            <div class="design-tab-btn" id="tab1" onclick="goToSlide(1)">
+              <span class="tab-num">STYLE 2</span>
+              <span class="tab-name">Boutique Crest</span>
+              <span class="tab-tag">With Store Logo</span>
+            </div>
+            <div class="design-tab-btn" id="tab2" onclick="goToSlide(2)">
+              <span class="tab-num">STYLE 3</span>
+              <span class="tab-name">Brand Split</span>
+              <span class="tab-tag">With Store Logo</span>
+            </div>
+            <div class="design-tab-btn" id="tab3" onclick="goToSlide(3)">
+              <span class="tab-num">STYLE 4</span>
+              <span class="tab-name">Compact Grid</span>
+              <span class="tab-tag">No Store Logo</span>
+            </div>
+            <div class="design-tab-btn" id="tab4" onclick="goToSlide(4)">
+              <span class="tab-num">STYLE 5</span>
+              <span class="tab-name">Shelf-Edge Tag</span>
+              <span class="tab-tag">No Store Logo</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 3D INTERACTION CONTROLS -->
+      <div class="interactive-fx-bar">
+        <button class="fx-btn active" id="btn3DTilt" onclick="toggle3DTilt()">
+          <span>🎛️</span> <span id="lbl3DTilt">3D Gyro / Mouse Tilt ON</span>
+        </button>
+        <button class="fx-btn active" id="btnSizePreset5030" onclick="setLabelSize('50x30')">
+          <span>📏</span> <span>50 × 30 mm (Standard Roll)</span>
+        </button>
+        <button class="fx-btn" id="btnSizePreset4025" onclick="setLabelSize('40x25')">
+          <span>📐</span> <span>40 × 25 mm (Compact Roll)</span>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- RIGHT COLUMN: LIVE CUSTOMIZER & FORM CONTROLS -->
+    <section class="controls-column">
+
+      <div class="control-panel-card">
+        <div class="panel-header">
+          <h2>
+            <span>⚙️</span>
+            <span id="txtLiveCustomizerTitle">Live Label Customizer &amp; Studio</span>
+          </h2>
+          <span class="panel-header-badge" id="txtLiveBadge">REAL-TIME</span>
+        </div>
+
+        <div class="form-grid">
+          <!-- Product Name -->
+          <div class="form-group full-width">
+            <label class="form-label">
+              <span id="lblInputProdName">Product Title</span>
+              <span class="hint" onclick="setSamplePreset(0)">Sample 1</span>
+            </label>
+            <div class="input-wrapper">
+              <input type="text" class="form-input" id="inputProdTitle" value="Organic Brown Sugar 250g" oninput="updateLiveText()">
+            </div>
+            <div class="preset-chips-row">
+              <span class="chip-item" onclick="setSamplePreset(0)">Organic Brown Sugar 250g</span>
+              <span class="chip-item" onclick="setSamplePreset(1)">Aroma Katari Rice 1kg</span>
+              <span class="chip-item" onclick="setSamplePreset(2)">Pure Mustard Oil 500ml</span>
+              <span class="chip-item" onclick="setSamplePreset(3)">Premium Ghee 200g</span>
+              <span class="chip-item" onclick="setSamplePreset(4)">আখের গুড় ২৫০ গ্রাম</span>
+            </div>
+          </div>
+
+          <!-- Price -->
+          <div class="form-group">
+            <label class="form-label">
+              <span id="lblInputPrice">Price / MRP</span>
+            </label>
+            <div class="input-wrapper">
+              <input type="text" class="form-input" id="inputPrice" value="120" oninput="updateLiveText()">
+            </div>
+            <div class="preset-chips-row">
+              <span class="chip-item" onclick="setPrice('120')">120</span>
+              <span class="chip-item" onclick="setPrice('350')">350</span>
+              <span class="chip-item" onclick="setPrice('1450')">1,450</span>
+            </div>
+          </div>
+
+          <!-- Barcode String -->
+          <div class="form-group">
+            <label class="form-label">
+              <span id="lblInputBarcode">Barcode Number</span>
+            </label>
+            <div class="input-wrapper">
+              <input type="text" class="form-input" id="inputBarcode" value="245282434658" oninput="updateLiveText()">
+            </div>
+            <div class="preset-chips-row">
+              <span class="chip-item" onclick="setBarcode('245282434658')">245282434658</span>
+              <span class="chip-item" onclick="setBarcode('250720250001')">250720250001</span>
+            </div>
+          </div>
+
+          <!-- Store Name -->
+          <div class="form-group full-width">
+            <label class="form-label">
+              <span id="lblInputStore">Store Name</span>
+            </label>
+            <div class="input-wrapper">
+              <input type="text" class="form-input" id="inputStoreName" value="MAKS KAWSAR STORE" oninput="updateLiveText()">
+            </div>
+            <div class="preset-chips-row">
+              <span class="chip-item" onclick="setStoreName('MAKS KAWSAR STORE')">MAKS KAWSAR STORE</span>
+              <span class="chip-item" onclick="setStoreName('TECHYFI SUPER SHOP')">TECHYFI SUPER SHOP</span>
+              <span class="chip-item" onclick="setStoreName('AL KAWSAR STORE')">AL KAWSAR STORE</span>
+            </div>
+          </div>
+
+          <!-- MFG Date -->
+          <div class="form-group">
+            <label class="form-label">
+              <span id="lblInputMfg">MFG Date</span>
+            </label>
+            <div class="input-wrapper">
+              <input type="text" class="form-input" id="inputMfg" value="17-08-26" oninput="updateLiveText()">
+            </div>
+          </div>
+
+          <!-- EXP Date -->
+          <div class="form-group">
+            <label class="form-label">
+              <span id="lblInputExp">EXP Date</span>
+            </label>
+            <div class="input-wrapper">
+              <input type="text" class="form-input" id="inputExp" value="29-08-26" oninput="updateLiveText()">
+            </div>
+          </div>
+        </div>
+
+        <!-- LOGO STYLE PICKER (AFFECTS DESIGNS 2 & 3) -->
+        <div class="logo-style-picker">
+          <div class="logo-style-label">
+            <span>Store Logo Style (Designs 2 &amp; 3):</span>
+            <span id="currentLogoStyleName" style="color: #38BDF8;">Circular Monogram Crest</span>
+          </div>
+          <div class="logo-options-grid">
+            <button class="logo-opt-btn active" id="btnLogoCircle" onclick="setLogoStyle('circle')">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="5"/>
+              </svg>
+              <span>Circular Crest</span>
+            </button>
+            <button class="logo-opt-btn" id="btnLogoShield" onclick="setLogoStyle('shield')">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="12,2 21,6 21,15 12,22 3,15 3,6" fill="none" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <span>Brand Shield</span>
+            </button>
+            <button class="logo-opt-btn" id="btnLogoHexagon" onclick="setLogoStyle('hexagon')">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" fill="none" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <span>Hexagon Seal</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TOGGLES -->
+        <div class="toggle-grid">
+          <div class="toggle-card" id="toggleBanglaDigits" onclick="toggleBanglaDigits()">
+            <div class="toggle-info">
+              <div class="toggle-title" id="txtToggleBanglaTitle">Bangla Digits (বাংলা সংখ্যা)</div>
+              <div class="toggle-desc" id="txtToggleBanglaDesc">120 vs ১২০ numerals</div>
+            </div>
+            <div class="switch-ui"></div>
+          </div>
+
+          <div class="toggle-card active" id="toggleShowDates" onclick="toggleOption('dates')">
+            <div class="toggle-info">
+              <div class="toggle-title" id="txtToggleDatesTitle">Show MFG &amp; EXP</div>
+              <div class="toggle-desc" id="txtToggleDatesDesc">Batch date footer</div>
+            </div>
+            <div class="switch-ui"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- DESIGN SUGGESTIONS & UX VALUE HIGHLIGHTS -->
+      <div class="control-panel-card">
+        <div class="panel-header">
+          <h2>
+            <span>💡</span>
+            <span id="txtInnovationsTitle">Key UX Innovations &amp; Advantages</span>
+          </h2>
+          <span class="panel-header-badge" style="background: rgba(139, 92, 246, 0.15); color: #A78BFA; border-color: rgba(139, 92, 246, 0.3);">
+            RETAIL VALUE
+          </span>
+        </div>
+
+        <ul class="feature-list" style="gap: 10px;">
+          <li class="feature-item">
+            <div>
+              <b style="color: #38BDF8;" id="f1Title">100% Reliable Horizontal Barcodes:</b>
+              <span id="f1Desc" style="color: #94A3B8;"> All new designs use horizontal barcodes with tall bar height and wide quiet zones, ensuring instant 1st-pass reads on all standard laser/CCD retail scanner guns.</span>
+            </div>
+          </li>
+          <li class="feature-item">
+            <div>
+              <b style="color: #38BDF8;" id="f2Title">Multi-Line 2-Row Title Wrapping:</b>
+              <span id="f2Desc" style="color: #94A3B8;"> Long product names with packet sizes comfortably wrap across 2 lines with comfortable line height and zero clipping.</span>
+            </div>
+          </li>
+          <li class="feature-item">
+            <div>
+              <b style="color: #38BDF8;" id="f3Title">Balanced Logo Choice:</b>
+              <span id="f3Desc" style="color: #94A3B8;"> Exactly 2 designs feature prominent store logos (for boutique &amp; flagship retail) and 2 designs are streamlined without logos (for supermarket &amp; compact roll speed).</span>
+            </div>
+          </li>
+          <li class="feature-item">
+            <div>
+              <b style="color: #38BDF8;" id="f4Title">100% Thermal Monochrome Safe (ESC/POS 203 DPI):</b>
+              <span id="f4Desc" style="color: #94A3B8;"> Pure black-and-white vector graphics ensure ultra-crisp, smudge-free printing on all Bluetooth &amp; USB thermal roll printers.</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+    </section>
+
+    <!-- BOTTOM ROW: SIDE-BY-SIDE MATRIX & TECHNICAL CONFIRMATION -->
+    <div class="bottom-section">
+
+      <!-- COMPARISON MATRIX -->
+      <div class="matrix-card">
+        <div class="matrix-title">
+          <span>📊</span>
+          <span id="txtMatrixTitle">Side-by-Side Comparison of the 5 Barcode Designs</span>
+        </div>
+
+        <div class="comparison-grid">
+          <!-- Design 1: Standard Retail -->
+          <div class="design-comp-card">
+            <div class="comp-header">
+              <span class="comp-num">DESIGN 1</span>
+              <span class="comp-badge-pill badge-no-logo">NO LOGO</span>
+            </div>
+            <div class="comp-name">1. Standard Retail (Original Restored)</div>
+            <p class="comp-desc">Classic full-width barcode, balanced dot divider, bold title, and clean text branding.</p>
+            <ul class="feature-list">
+              <li class="feature-item">Store Logo: None</li>
+              <li class="feature-item">Full-Width Horizontal Barcode</li>
+              <li class="feature-item">Dot Divider (── • ৳ 120 • ──)</li>
+              <li class="feature-item">Balanced Classic Retail Style</li>
+              <li class="feature-item">Scan Accuracy: 100%</li>
+            </ul>
+          </div>
+
+          <!-- Design 2: Boutique Monogram Crest -->
+          <div class="design-comp-card">
+            <div class="comp-header">
+              <span class="comp-num">DESIGN 2</span>
+              <span class="comp-badge-pill badge-with-logo">WITH LOGO</span>
+            </div>
+            <div class="comp-name">2. Boutique Crest (Lifestyle &amp; Fashion)</div>
+            <p class="comp-desc">Circular logo seal with store initials, inverted price pill, wide barcode, and date footer.</p>
+            <ul class="feature-list">
+              <li class="feature-item">Store Logo: Yes (Circular/Diamond Crest)</li>
+              <li class="feature-item">Inverted Dark Price Pill</li>
+              <li class="feature-item">Wide Horizontal Barcode</li>
+              <li class="feature-item">Ideal for Boutique, Fashion &amp; Organic</li>
+              <li class="feature-item">Scan Accuracy: 100%</li>
+            </ul>
+          </div>
+
+          <!-- Design 3: Brand Hero Split Card -->
+          <div class="design-comp-card">
+            <div class="comp-header">
+              <span class="comp-num">DESIGN 3</span>
+              <span class="comp-badge-pill badge-with-logo">WITH LOGO</span>
+            </div>
+            <div class="comp-name">3. Brand Split Card (Branded Retail)</div>
+            <p class="comp-desc">38% brand shield &amp; hero price column on left; wide barcode &amp; 2-line title on right.</p>
+            <ul class="feature-list">
+              <li class="feature-item">Store Logo: Yes (Shield/Monogram Badge)</li>
+              <li class="feature-item">Hero Boxed Price Card (৳ 120)</li>
+              <li class="feature-item">Tall Horizontal Barcode</li>
+              <li class="feature-item">Electronics, Flagship &amp; Dept Stores</li>
+              <li class="feature-item">Scan Accuracy: 100%</li>
+            </ul>
+          </div>
+
+          <!-- Design 4: Compact Minimalist Grid -->
+          <div class="design-comp-card">
+            <div class="comp-header">
+              <span class="comp-num">DESIGN 4</span>
+              <span class="comp-badge-pill badge-no-logo">NO LOGO</span>
+            </div>
+            <div class="comp-name">4. Compact Minimalist Grid (Grocery)</div>
+            <p class="comp-desc">Clean Swiss grid for compact rolls (25–40mm). Diamond divider rule &amp; 2-column footer.</p>
+            <ul class="feature-list">
+              <li class="feature-item">Store Logo: None</li>
+              <li class="feature-item">Centered Title &amp; Diamond Rule</li>
+              <li class="feature-item">Compact 2-Column Bottom Grid</li>
+              <li class="feature-item">Grocery &amp; Pharmacy Roll Tags</li>
+              <li class="feature-item">Scan Accuracy: 100%</li>
+            </ul>
+          </div>
+
+          <!-- Design 5: Supermarket Shelf-Edge Tag -->
+          <div class="design-comp-card">
+            <div class="comp-header">
+              <span class="comp-num">DESIGN 5</span>
+              <span class="comp-badge-pill badge-no-logo">NO LOGO</span>
+            </div>
+            <div class="comp-name">5. Supermarket Shelf-Edge Tag</div>
+            <p class="comp-desc">60% wide extra-thick barcode (scans from 50cm distance) + 40% giant price display.</p>
+            <ul class="feature-list">
+              <li class="feature-item">Store Logo: None</li>
+              <li class="feature-item">Extra-Thick Barcode Modules</li>
+              <li class="feature-item">Giant Price Display (৳ 120)</li>
+              <li class="feature-item">Inverted Black Bottom Bar</li>
+              <li class="feature-item">Scan Accuracy: 100% (Long-Range)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMPLEMENTATION CONFIRMATION CARD -->
+      <div class="confirm-banner">
+        <div class="confirm-text">
+          <h3 id="txtConfirmTitle">Ready to implement in Jetpack Compose upon your confirmation</h3>
+          <p id="txtConfirmDesc">
+            No Kotlin code has been modified yet. Once you review and confirm this preview, these 5 designs will be implemented in <code>ProductCodePrintDialogs.kt</code> (HorizontalPager swipe) and <code>ProductCodeImageUtils.kt</code> (bitmap drawing).
+          </p>
+        </div>
+        <button class="btn-confirm-primary" onclick="alert('Thank you! Please submit your feedback or confirmation in the chat so implementation can begin safely.')">
+          <span>🚀</span> <span id="txtConfirmBtn">Ready for Confirmation</span>
+        </button>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // CAROUSEL STATE - DEFAULT TO ENGLISH & ENGLISH DIGITS
+    let currentSlide = 0;
+    const totalSlides = 5;
+    let isBangla = false;
+    let isThermalMode = false;
+    let isPeelMode = false;
+    let isTiltEnabled = true;
+    let useBanglaDigits = false;
+    let activeLogoStyle = 'circle';
+
+    // DESIGN METADATA
+    const designData = [
+      {
+        titleBn: "ডিজাইন ১: স্ট্যান্ডার্ড রিটেইল (Standard Retail — মূল ডিজাইন)",
+        titleEn: "Design 1: Standard Retail (Original Restored Design)",
+        subBn: "ক্লাসিক ফুল-উইডথ বারকোড, ব্যালান্সড ডিভাইডার ও স্পষ্ট মূল্য (লোগো ছাড়া)",
+        subEn: "Classic Full-Width Barcode, Balanced Divider, Bold Title & Clear Price (No Logo)"
+      },
+      {
+        titleBn: "ডিজাইন ২: বুটিক মনোগ্রাম ক্রেস্ট (Boutique Crest — লোগো সহ)",
+        titleEn: "Design 2: Boutique Monogram Crest (With Store Logo)",
+        subBn: "সার্কুলার লোগো ক্রেস্ট + ইনভার্টেড প্রাইস পিল + ১০০% অনুভূমিক নিরাপদ বারকোড",
+        subEn: "Circular Store Logo Crest + Inverted Price Pill + 100% Horizontal Safe Barcode"
+      },
+      {
+        titleBn: "ডিজাইন ৩: ব্র্যান্ড হিরো স্প্লিট (Brand Split Card — লোগো সহ)",
+        titleEn: "Design 3: Brand Hero Split Card (With Store Logo)",
+        subBn: "৩৮% ব্র্যান্ড শিল্ড লোগো ও হিরো প্রাইস কলাম + ডানে বড় বারকোড ও ২-লাইন টাইটেল",
+        subEn: "38% Brand Shield Logo & Hero Price Card + Right Wide Barcode & 2-Line Title"
+      },
+      {
+        titleBn: "ডিজাইন ৪: কমপ্যাক্ট মিনিমালিস্ট গ্রিড (Compact Grid — লোগো ছাড়া)",
+        titleEn: "Design 4: Compact Minimalist Grid (No Store Logo)",
+        subBn: "সেন্টারড টাইটেল + জিওমেট্রিক ডায়মন্ড রুল + ছোট স্টিকারে দ্রুত স্ক্যানিং বান্ধব",
+        subEn: "Centered Title + Geometric Diamond Rule + Ultra Fast Print on Small Roll Tags"
+      },
+      {
+        titleBn: "ডিজাইন ৫: সুপারশপ শেল্ফ-ট্যাগ (Shelf-Edge Tag — লোগো ছাড়া)",
+        titleEn: "Design 5: Supermarket Shelf-Edge Tag (No Store Logo)",
+        subBn: "৬০% চওড়া লং-রেঞ্জ বারকোড (দূর থেকে স্ক্যান গান দিয়ে পড়া যায়) ও বড় প্রাইস ডিসপ্লে",
+        subEn: "60% Wide Long-Range Barcode (Scans from 50cm Gun Range) + Giant Shelf Price"
+      }
+    ];
+
+    // SLIDE NAVIGATION
+    function updateSlidePositions() {
+      for (let i = 0; i < totalSlides; i++) {
+        const card = document.getElementById(`card${i}`);
+        const tab = document.getElementById(`tab${i}`);
+        
+        let diff = i - currentSlide;
+        // Wrap around logic
+        if (diff > totalSlides / 2) diff -= totalSlides;
+        if (diff < -totalSlides / 2) diff += totalSlides;
+
+        card.setAttribute('data-pos', diff);
+
+        if (i === currentSlide) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      }
+
+      // Update dots
+      const dots = document.querySelectorAll('.dot-item');
+      dots.forEach((dot, idx) => {
+        if (idx === currentSlide) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+
+      // Update title & subtitle
+      const current = designData[currentSlide];
+      document.getElementById('currentDesignTitle').innerText = isBangla ? current.titleBn : current.titleEn;
+      document.getElementById('currentDesignSubtitle').innerText = isBangla ? current.subBn : current.subEn;
+    }
+
+    function nextSlide() {
+      currentSlide = (currentSlide + 1) % totalSlides;
+      updateSlidePositions();
+    }
+
+    function prevSlide() {
+      currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+      updateSlidePositions();
+    }
+
+    function goToSlide(index) {
+      currentSlide = index;
+      updateSlidePositions();
+    }
+
+    // TOUCH SWIPE DETECTION
+    const viewport = document.getElementById('carouselViewport');
+    let startX = 0;
+    let currentX = 0;
+    let isSwiping = false;
+
+    viewport.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      isSwiping = true;
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', (e) => {
+      if (!isSwiping) return;
+      currentX = e.touches[0].clientX;
+    }, { passive: true });
+
+    viewport.addEventListener('touchend', (e) => {
+      if (!isSwiping) return;
+      isSwiping = false;
+      const diffX = currentX - startX;
+      if (Math.abs(diffX) > 40) {
+        if (diffX < 0) {
+          nextSlide();
+        } else {
+          prevSlide();
+        }
+      }
+      startX = 0;
+      currentX = 0;
+    });
+
+    // MOUSE DRAG DETECTION FOR DESKTOP
+    let isMouseDown = false;
+    viewport.addEventListener('mousedown', (e) => {
+      isMouseDown = true;
+      startX = e.clientX;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isMouseDown) return;
+      currentX = e.clientX;
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (!isMouseDown) return;
+      isMouseDown = false;
+      const diffX = currentX - startX;
+      if (Math.abs(diffX) > 50) {
+        if (diffX < 0) {
+          nextSlide();
+        } else {
+          prevSlide();
+        }
+      }
+      startX = 0;
+      currentX = 0;
+    });
+
+    // KEYBOARD NAVIGATION
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        triggerLaserScan();
+      }
+    });
+
+    // 3D TILT EFFECT WITH MOUSE
+    const stage = document.getElementById('carouselStage');
+    viewport.addEventListener('mousemove', (e) => {
+      if (!isTiltEnabled || isMouseDown) return;
+      const rect = viewport.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - rect.height / 2;
+      const rotateX = -(y / rect.height) * 16;
+      const rotateY = (x / rect.width) * 20;
+
+      stage.style.transform = `perspective(1400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    });
+
+    viewport.addEventListener('mouseleave', () => {
+      if (isTiltEnabled) {
+        stage.style.transform = `perspective(1400px) rotateX(0deg) rotateY(0deg)`;
+      }
+    });
+
+    function toggle3DTilt() {
+      isTiltEnabled = !isTiltEnabled;
+      const btn = document.getElementById('btn3DTilt');
+      const lbl = document.getElementById('lbl3DTilt');
+      if (isTiltEnabled) {
+        btn.classList.add('active');
+        lbl.innerText = isBangla ? "3D গাইরো / মাউস টিল্ট চালু" : "3D Gyro / Mouse Tilt ON";
+      } else {
+        btn.classList.remove('active');
+        lbl.innerText = isBangla ? "3D টিল্ট বন্ধ" : "3D Tilt OFF";
+        stage.style.transform = `perspective(1400px) rotateX(0deg) rotateY(0deg)`;
+      }
+    }
+
+    // LASER SCANNER SIMULATOR TRIGGER
+    let isScanning = false;
+    function triggerLaserScan() {
+      if (isScanning) return;
+      isScanning = true;
+      const vp = document.getElementById('carouselViewport');
+      const hud = document.getElementById('scannerHud');
+      vp.classList.add('scanner-active');
+
+      // Audio Beep Synthesis
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        setTimeout(() => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1760, audioCtx.currentTime); // High pitch retail scanner beep
+          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.12);
+        }, 500);
+      } catch (e) {
+        console.log("Audio not supported or blocked");
+      }
+
+      setTimeout(() => {
+        const rawBarcode = document.getElementById('inputBarcode').value || "245282434658";
+        document.getElementById('scannerHudText').innerText = `✓ 100% Instant Read — ${rawBarcode} Verified!`;
+        hud.classList.add('show');
+      }, 550);
+
+      setTimeout(() => {
+        vp.classList.remove('scanner-active');
+        hud.classList.remove('show');
+        isScanning = false;
+      }, 1600);
+    }
+
+    // THERMAL SIMULATION TOGGLE
+    function toggleThermalMode() {
+      isThermalMode = !isThermalMode;
+      document.body.classList.toggle('thermal-mode', isThermalMode);
+      const btn = document.getElementById('btnThermalMode');
+      btn.classList.toggle('active', isThermalMode);
+      document.getElementById('thermalBtnText').innerText = isThermalMode ? "Thermal Mode ON" : "Thermal Sim";
+    }
+
+    // PEEL 3D EFFECT TOGGLE
+    function togglePeelEffect() {
+      isPeelMode = !isPeelMode;
+      const cards = document.querySelectorAll('.carousel-card');
+      cards.forEach(c => c.classList.toggle('peel-active', isPeelMode));
+      const btn = document.getElementById('btnPeelToggle');
+      btn.classList.toggle('active', isPeelMode);
+    }
+
+    // BANGLA NUMBER UTILS
+    function toBanglaDigits(str) {
+      const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+      return str.toString().replace(/\d/g, d => bnDigits[parseInt(d)]);
+    }
+
+    // LIVE TEXT UPDATE LOGIC
+    function updateLiveText() {
+      const prodTitle = document.getElementById('inputProdTitle').value || "Organic Brown Sugar 250g";
+      const rawPrice = document.getElementById('inputPrice').value || "120";
+      const rawBarcode = document.getElementById('inputBarcode').value || "245282434658";
+      const storeName = document.getElementById('inputStoreName').value || "MAKS KAWSAR STORE";
+      const rawMfg = document.getElementById('inputMfg').value || "17-08-26";
+      const rawExp = document.getElementById('inputExp').value || "29-08-26";
+
+      // Price Formatting
+      const displayPrice = useBanglaDigits ? toBanglaDigits(rawPrice) : rawPrice;
+      const displayMfg = useBanglaDigits ? toBanglaDigits(rawMfg) : rawMfg;
+      const displayExp = useBanglaDigits ? toBanglaDigits(rawExp) : rawExp;
+
+      // Update Product Titles
+      document.querySelectorAll('.live-prod-title').forEach(el => {
+        el.innerText = prodTitle;
+      });
+
+      // Update Prices
+      document.querySelectorAll('.live-price-val').forEach(el => {
+        el.innerText = displayPrice;
+      });
+
+      // Update Store Names
+      document.querySelectorAll('.live-store-name').forEach(el => {
+        el.innerText = storeName;
+      });
+
+      // Update Dates
+      document.querySelectorAll('.live-mfg-val').forEach(el => {
+        el.innerText = (isBangla ? "উৎপাদন: " : "MFG: ") + displayMfg;
+      });
+      document.querySelectorAll('.live-exp-val').forEach(el => {
+        el.innerText = (isBangla ? "মেয়াদ: " : "EXP: ") + displayExp;
+      });
+
+      // Update Horizontal Barcode Digits
+      const cleanDigits = rawBarcode.replace(/\D/g, '').padEnd(12, '0').slice(0, 12);
+      document.querySelectorAll('.live-horizontal-digits').forEach(el => {
+        el.innerText = useBanglaDigits ? toBanglaDigits(cleanDigits) : cleanDigits;
+      });
+
+      // Update Initials in Logo if Store Name Changed
+      const words = storeName.trim().split(/\s+/);
+      let initials = "MK";
+      if (words.length >= 2) {
+        initials = (words[0][0] + words[1][0]).toUpperCase();
+      } else if (words.length === 1 && words[0].length >= 2) {
+        initials = words[0].substring(0, 2).toUpperCase();
+      }
+      document.querySelectorAll('#crestLogoHost text, #splitLogoHost text').forEach(t => {
+        t.textContent = initials;
+      });
+    }
+
+    // LOGO STYLE SWITCHER
+    function setLogoStyle(style) {
+      activeLogoStyle = style;
+      const btnC = document.getElementById('btnLogoCircle');
+      const btnS = document.getElementById('btnLogoShield');
+      const btnH = document.getElementById('btnLogoHexagon');
+      btnC.classList.toggle('active', style === 'circle');
+      btnS.classList.toggle('active', style === 'shield');
+      btnH.classList.toggle('active', style === 'hexagon');
+
+      const nameMap = {
+        'circle': 'Circular Monogram Crest',
+        'shield': 'Brand Shield Emblem',
+        'hexagon': 'Geometric Hexagon Seal'
+      };
+      document.getElementById('currentLogoStyleName').innerText = nameMap[style];
+
+      // Extract current initials
+      const storeName = document.getElementById('inputStoreName').value || "MAKS KAWSAR STORE";
+      const words = storeName.trim().split(/\s+/);
+      const initials = (words.length >= 2 ? words[0][0] + words[1][0] : words[0].substring(0, 2)).toUpperCase();
+
+      let crestSvg = '';
+      let shieldSvg = '';
+
+      if (style === 'circle') {
+        crestSvg = `
+          <svg class="crest-svg-icon" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="18" fill="none" stroke="#000" stroke-width="2"/>
+            <circle cx="20" cy="20" r="15" fill="none" stroke="#000" stroke-width="1" stroke-dasharray="2,2"/>
+            <circle cx="20" cy="20" r="11" fill="#000"/>
+            <text x="20" y="24" fill="#FFF" font-family="'Cinzel', serif" font-weight="900" font-size="10" text-anchor="middle">${initials}</text>
+          </svg>
+        `;
+        shieldSvg = `
+          <svg class="brand-shield-svg" viewBox="0 0 50 50">
+            <polygon points="25,4 46,12 46,30 25,46 4,30 4,12" fill="none" stroke="#000" stroke-width="2"/>
+            <polygon points="25,8 42,15 42,28 25,41 8,28 8,15" fill="#000"/>
+            <text x="25" y="28" fill="#FFF" font-family="'Cinzel', serif" font-weight="900" font-size="12" text-anchor="middle">${initials}</text>
+          </svg>
+        `;
+      } else if (style === 'shield') {
+        crestSvg = `
+          <svg class="crest-svg-icon" viewBox="0 0 40 40">
+            <polygon points="20,2 38,8 38,24 20,38 2,24 2,8" fill="none" stroke="#000" stroke-width="2"/>
+            <polygon points="20,6 34,11 34,22 20,33 6,22 6,11" fill="#000"/>
+            <text x="20" y="23" fill="#FFF" font-family="'Cinzel', serif" font-weight="900" font-size="10" text-anchor="middle">${initials}</text>
+          </svg>
+        `;
+        shieldSvg = crestSvg;
+      } else if (style === 'hexagon') {
+        crestSvg = `
+          <svg class="crest-svg-icon" viewBox="0 0 40 40">
+            <polygon points="20,3 36,11 36,29 20,37 4,29 4,11" fill="none" stroke="#000" stroke-width="2"/>
+            <polygon points="20,7 32,13 32,27 20,33 8,27 8,13" fill="#000"/>
+            <text x="20" y="23.5" fill="#FFF" font-family="'Cinzel', serif" font-weight="900" font-size="10" text-anchor="middle">${initials}</text>
+          </svg>
+        `;
+        shieldSvg = crestSvg;
+      }
+
+      document.getElementById('crestLogoHost').innerHTML = crestSvg;
+      document.getElementById('splitLogoHost').innerHTML = shieldSvg;
+    }
+
+    // BANGLA DIGITS TOGGLE
+    function toggleBanglaDigits() {
+      useBanglaDigits = !useBanglaDigits;
+      const card = document.getElementById('toggleBanglaDigits');
+      card.classList.toggle('active', useBanglaDigits);
+      updateLiveText();
+    }
+
+    // SHOW / HIDE DATES
+    function toggleOption(type) {
+      if (type === 'dates') {
+        const card = document.getElementById('toggleShowDates');
+        card.classList.toggle('active');
+        const show = card.classList.contains('active');
+        document.querySelectorAll('.live-dates-footer').forEach(el => {
+          el.style.display = show ? 'flex' : 'none';
+        });
+      }
+    }
+
+    // PRESET BUTTONS
+    function setSamplePreset(index) {
+      const presets = [
+        "Organic Brown Sugar 250g",
+        "Aroma Katari Rice 1kg",
+        "Pure Mustard Oil 500ml",
+        "Premium Ghee 200g",
+        "আখের গুড় ২৫০ গ্রাম"
+      ];
+      document.getElementById('inputProdTitle').value = presets[index];
+      updateLiveText();
+    }
+
+    function setPrice(val) {
+      document.getElementById('inputPrice').value = val;
+      updateLiveText();
+    }
+
+    function setBarcode(val) {
+      document.getElementById('inputBarcode').value = val;
+      updateLiveText();
+    }
+
+    function setStoreName(val) {
+      document.getElementById('inputStoreName').value = val;
+      updateLiveText();
+    }
+
+    function setLabelSize(size) {
+      const btn50 = document.getElementById('btnSizePreset5030');
+      const btn40 = document.getElementById('btnSizePreset4025');
+      if (size === '50x30') {
+        btn50.classList.add('active');
+        btn40.classList.remove('active');
+        document.documentElement.style.setProperty('--sticker-width', '440px');
+        document.documentElement.style.setProperty('--sticker-height', '264px');
+      } else {
+        btn40.classList.add('active');
+        btn50.classList.remove('active');
+        document.documentElement.style.setProperty('--sticker-width', '400px');
+        document.documentElement.style.setProperty('--sticker-height', '250px');
+      }
+    }
+
+    // BILINGUAL LANGUAGE TOGGLE
+    function toggleLanguage() {
+      isBangla = !isBangla;
+      const btnText = document.getElementById('langBtnText');
+      btnText.innerText = isBangla ? "বাংলা / ENG" : "ENG / বাংলা";
+
+      if (isBangla) {
+        document.getElementById('lblBadge').innerText = "৫টি বারকোড ডিজাইন";
+        document.getElementById('lblSubtitle').innerText = "3D সোয়াইপযোগ্য বারকোড লেবেল স্টুডিও (Interactive Preview)";
+        document.getElementById('swipeBadgeText').innerText = "সোয়াইপ করুন (Swipe Left / Right)";
+        document.getElementById('txtLiveCustomizerTitle').innerText = "Live Label Customizer (লাইভ প্রিভিউ)";
+        document.getElementById('txtInnovationsTitle').innerText = "মূল ডিজাইন সুবিধা ও ইনোভেশন";
+        document.getElementById('txtMatrixTitle').innerText = "৫টি বারকোড লেবেল ডিজাইনের বিস্তারিত তুলনা (Comparison Matrix)";
+        document.getElementById('lblInputProdName').innerText = "Product Title (পণ্যের নাম)";
+        document.getElementById('lblInputPrice').innerText = "Price / MRP (মূল্য)";
+        document.getElementById('lblInputBarcode').innerText = "Barcode (বারকোড)";
+        document.getElementById('lblInputStore').innerText = "Store Name (দোকানের নাম)";
+        document.getElementById('lblInputMfg').innerText = "MFG Date (উৎপাদন তারিখ)";
+        document.getElementById('lblInputExp').innerText = "EXP Date (মেয়াদ উত্তীর্ণ)";
+        document.getElementById('txtScannerBtn').innerText = "টেস্ট স্ক্যান (Scan Beam)";
+        document.getElementById('tab0').querySelector('.tab-name').innerText = "স্ট্যান্ডার্ড রিটেইল";
+        document.getElementById('tab1').querySelector('.tab-name').innerText = "বুটিক ক্রেস্ট";
+        document.getElementById('tab2').querySelector('.tab-name').innerText = "ব্র্যান্ড স্প্লিট";
+        document.getElementById('tab3').querySelector('.tab-name').innerText = "কমপ্যাক্ট গ্রিড";
+        document.getElementById('tab4').querySelector('.tab-name').innerText = "শেল্ফ-ট্যাগ";
+      } else {
+        document.getElementById('lblBadge').innerText = "5 BARCODE DESIGNS";
+        document.getElementById('lblSubtitle').innerText = "3D Swipeable Barcode Label Studio (Interactive Preview)";
+        document.getElementById('swipeBadgeText').innerText = "Swipe Left / Right to Change Design";
+        document.getElementById('txtLiveCustomizerTitle').innerText = "Live Label Customizer & Studio";
+        document.getElementById('txtInnovationsTitle').innerText = "Key UX Innovations & Advantages";
+        document.getElementById('txtMatrixTitle').innerText = "Side-by-Side Comparison of the 5 Barcode Designs";
+        document.getElementById('lblInputProdName').innerText = "Product Title";
+        document.getElementById('lblInputPrice').innerText = "Price / MRP";
+        document.getElementById('lblInputBarcode').innerText = "Barcode Number";
+        document.getElementById('lblInputStore').innerText = "Store Name";
+        document.getElementById('lblInputMfg').innerText = "MFG Date";
+        document.getElementById('lblInputExp').innerText = "EXP Date";
+        document.getElementById('txtScannerBtn').innerText = "Test Scanner Gun";
+        document.getElementById('tab0').querySelector('.tab-name').innerText = "Standard Retail";
+        document.getElementById('tab1').querySelector('.tab-name').innerText = "Boutique Crest";
+        document.getElementById('tab2').querySelector('.tab-name').innerText = "Brand Split";
+        document.getElementById('tab3').querySelector('.tab-name').innerText = "Compact Grid";
+        document.getElementById('tab4').querySelector('.tab-name').innerText = "Shelf-Edge Tag";
+      }
+
+      updateSlidePositions();
+      updateLiveText();
+    }
+
+    // INITIALIZATION
+    window.addEventListener('DOMContentLoaded', () => {
+      updateSlidePositions();
+      updateLiveText();
+    });
+  </script>
+</body>
+</html>

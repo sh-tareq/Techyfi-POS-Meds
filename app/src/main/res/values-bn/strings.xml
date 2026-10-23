@@ -3419,4 +3419,18 @@
     <string name="show_store_logo">দোকানের লোগো দেখান</string>
     <string name="store_logo_scale">দোকানের লোগোর সাইজ</string>
     <string name="extra_field_scale">অতিরিক্ত ফিল্ড সাইজ</string>
+    <!-- Barcode Label Designs (LBL-DESIGNS) -->
+    <string name="barcode_label_designs_title">লেবেল ডিজাইন স্টাইল</string>
+    <string name="barcode_label_swipe_hint">ডিজাইন পরিবর্তন করতে ডানে বা বামে সোয়াইপ করুন</string>
+    <string name="barcode_design_standard">স্ট্যান্ডার্ড রিটেইল</string>
+    <string name="barcode_design_standard_desc">ক্লাসিক ফুল-উইডথ বারকোড, ব্যালান্সড ডিভাইডার ও স্পষ্ট মূল্য (লোগো ছাড়া)</string>
+    <string name="barcode_design_boutique_crest">বুটিক ক্রেস্ট</string>
+    <string name="barcode_design_boutique_crest_desc">সার্কুলার স্টোর লোগো ক্রেস্ট, ইনভার্টেড প্রাইস পিল ও চওড়া বারকোড (লোগো সহ)</string>
+    <string name="barcode_design_brand_split">ব্র্যান্ড স্প্লিট কার্ড</string>
+    <string name="barcode_design_brand_split_desc">বামে ব্র্যান্ড শিল্ড লোগো ও হিরো প্রাইস বক্স, ডানে বড় বারকোড (লোগো সহ)</string>
+    <string name="barcode_design_compact_minimalist">কমপ্যাক্ট গ্রিড</string>
+    <string name="barcode_design_compact_minimalist_desc">ছোট স্টিকারে পরিষ্কার সেন্টারড টাইটেল ও জিওমেট্রিক ডায়মন্ড রুল (লোগো ছাড়া)</string>
+    <string name="barcode_design_shelf_edge">শেল্ফ-ট্যাগ</string>
+    <string name="barcode_design_shelf_edge_desc">৫০ সেমি দূর থেকে স্ক্যান গান দিয়ে পড়া উপযোগী ৬০% চওড়া বারকোড ও বড় মূল্য (লোগো ছাড়া)</string>
+    <string name="barcode_design_counter">%1$d এর %2$d</string>
 </resources>
