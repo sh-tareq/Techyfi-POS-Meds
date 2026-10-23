@@ -30,9 +30,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.techyfipos.R
+import com.example.techyfipos.theme.LocalDarkTheme
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.isAppBangla
 import com.example.techyfipos.utils.toBanglaDigits
@@ -371,28 +373,29 @@ fun StockStatus3DBadge(
 ) {
     val isOutOfStock = quantity <= 0.0
     val isLowStock = !isOutOfStock && quantity <= reorderLevel
+    val isDark = isSystemInDarkTheme() || LocalDarkTheme.current
 
     val (bgColor, borderColor, textColor, dotColor, label) = when {
         isOutOfStock -> Tuple5(
-            Color(0xFFFEF2F2),
-            Color(0xFFFECACA),
-            Color(0xFFDC2626),
+            if (isDark) Color(0xFF450A0A) else Color(0xFFFEF2F2),
+            if (isDark) Color(0xFF991B1B) else Color(0xFFFECACA),
+            if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626),
             Color(0xFFEF4444),
-            "Out Of Stock"
+            stringResource(R.string.out_of_stock)
         )
         isLowStock -> Tuple5(
-            Color(0xFFFFFBEB),
-            Color(0xFFFDE68A),
-            Color(0xFFD97706),
+            if (isDark) Color(0xFF451A03) else Color(0xFFFFFBEB),
+            if (isDark) Color(0xFF92400E) else Color(0xFFFDE68A),
+            if (isDark) Color(0xFFFCD34D) else Color(0xFFD97706),
             Color(0xFFF59E0B),
-            "Low Stock"
+            stringResource(R.string.low_stock)
         )
         else -> Tuple5(
-            Color(0xFFECFDF5),
-            Color(0xFFA7F3D0),
-            Color(0xFF047857),
+            if (isDark) Color(0xFF064E3B) else Color(0xFFECFDF5),
+            if (isDark) Color(0xFF047857) else Color(0xFFA7F3D0),
+            if (isDark) Color(0xFF6EE7B7) else Color(0xFF047857),
             Color(0xFF10B981),
-            "In Stock"
+            stringResource(R.string.in_stock)
         )
     }
 

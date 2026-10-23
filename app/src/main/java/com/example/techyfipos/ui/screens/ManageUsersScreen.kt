@@ -1,11 +1,14 @@
 package com.example.techyfipos.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -14,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +74,25 @@ fun ManageUsersScreen(
     var userForPermissions by remember { mutableStateOf<User?>(null) }
     var userToDelete by remember { mutableStateOf<User?>(null) }
 
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedRoleFilter by rememberSaveable { mutableStateOf("ALL") }
+
+    val filteredUsers = remember(users, searchQuery, selectedRoleFilter) {
+        users.filter { user ->
+            val matchesQuery = searchQuery.isBlank() ||
+                user.name.contains(searchQuery, ignoreCase = true)
+            val matchesRole = when (selectedRoleFilter) {
+                "ALL" -> true
+                "OWNER" -> user.role == AppRoles.OWNER
+                "MANAGER" -> user.role == AppRoles.MANAGER
+                "CASHIER" -> user.role == AppRoles.CASHIER
+                "SUSPENDED" -> !user.isActive
+                else -> true
+            }
+            matchesQuery && matchesRole
+        }
+    }
+
     val onlyOwnerMessage = stringResource(R.string.users_only_owner_error)
     val cashierUpdatedMessage = stringResource(R.string.users_edit_cashier_success)
 
@@ -110,25 +133,152 @@ fun ManageUsersScreen(
             }
         }
     ) { padding ->
-        if (users.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.users_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            Box(
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.TopCenter
+                    .widthIn(max = 800.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 80.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .widthIn(max = 800.dp),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 80.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(users, key = { it.id }) { user ->
+                // Search Box
+                item {
+                    PosSearchBox(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        placeholderText = stringResource(R.string.users_search_hint),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Role Filter Chips
+                item {
+                    val filterOptions = listOf(
+                        "ALL" to stringResource(R.string.users_filter_all),
+                        "OWNER" to stringResource(R.string.role_owner),
+                        "MANAGER" to stringResource(R.string.role_manager),
+                        "CASHIER" to stringResource(R.string.role_cashier),
+                        "SUSPENDED" to stringResource(R.string.users_status_suspended)
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        filterOptions.forEach { (roleKey, label) ->
+                            val isSelected = selectedRoleFilter == roleKey
+                            val count = remember(users, roleKey) {
+                                when (roleKey) {
+                                    "ALL" -> users.size
+                                    "OWNER" -> users.count { it.role == AppRoles.OWNER }
+                                    "MANAGER" -> users.count { it.role == AppRoles.MANAGER }
+                                    "CASHIER" -> users.count { it.role == AppRoles.CASHIER }
+                                    "SUSPENDED" -> users.count { !it.isActive }
+                                    else -> 0
+                                }
+                            }
+                            Surface(
+                                onClick = { selectedRoleFilter = roleKey },
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                ),
+                                shadowElevation = if (isSelected) 1.dp else 0.dp,
+                                modifier = Modifier.defaultMinSize(minHeight = 40.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                    ) {
+                                        Text(
+                                            text = count.toString(),
+                                            fontSize = 10.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (users.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Realistic3DCustomerHubIcon(size = 56.dp)
+                            Text(
+                                text = stringResource(R.string.users_empty),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (canManageStaff) {
+                                Button(
+                                    onClick = { showAddDialog = true },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.users_add_staff))
+                                }
+                            }
+                        }
+                    }
+                } else if (filteredUsers.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 36.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text("🔍", fontSize = 32.sp)
+                            Text(
+                                text = stringResource(R.string.users_no_staff_found),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            OutlinedButton(
+                                onClick = {
+                                    searchQuery = ""
+                                    selectedRoleFilter = "ALL"
+                                },
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text(stringResource(R.string.clear_filters))
+                            }
+                        }
+                    }
+                } else {
+                    items(filteredUsers, key = { it.id }) { user ->
                         val isTargetOwner = user.role == AppRoles.OWNER
                         val isSelf = currentUser?.id == user.id
                         val canEditUser = isOwner || !isTargetOwner
@@ -345,6 +495,19 @@ private fun StaffUserCard(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                        }
+
+                        if (user.createdAt > 0L) {
+                            val dateStr = remember(user.createdAt) {
+                                val sdf = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
+                                sdf.format(java.util.Date(user.createdAt))
+                            }
+                            Text(
+                                text = stringResource(R.string.users_joined_date, dateStr),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
                         }
                     }
                 }

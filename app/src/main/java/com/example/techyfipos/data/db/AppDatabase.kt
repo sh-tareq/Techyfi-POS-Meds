@@ -371,10 +371,10 @@ val MIGRATION_36_37 = object : Migration(36, 37) {
 
                 // Update survivor's stock
                 if (totalStock != survivor.stockQty) {
-                    db.execSQL("UPDATE products SET stockQty = ? WHERE barcode = ?", arrayOf(totalStock, survivor.barcode))
+                    db.execSQL("UPDATE products SET stockQty = ? WHERE barcode = ?", arrayOf<Any>(totalStock, survivor.barcode))
                     db.execSQL(
                         "INSERT INTO inventory_adjustments (productBarcode, productName, previousStock, newStock, difference, reason, note, timestamp, cashierName) VALUES (?, ?, ?, ?, ?, 'Discrepancy', 'Auto-merged case-variant products during migration', ?, 'System')",
-                        arrayOf(canon, survivor.name, survivor.stockQty, totalStock, totalStock - survivor.stockQty, System.currentTimeMillis())
+                        arrayOf<Any>(canon, survivor.name, survivor.stockQty, totalStock, totalStock - survivor.stockQty, System.currentTimeMillis())
                     )
                 }
             }

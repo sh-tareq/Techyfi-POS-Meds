@@ -3431,6 +3431,14 @@
     <string name="barcode_design_shelf_edge">Shelf-Edge Tag</string>
     <string name="barcode_design_shelf_edge_desc">60% extra-thick barcode for 50cm scanner gun reads &amp; giant price display (No Logo)</string>
     <string name="barcode_design_counter">%1$d of %2$d</string>
+    <!-- App-wide UX Enhancements -->
+    <string name="product_mfg_after_expiry_warning">Warning: Mfg/Pkg date cannot be after Expiry date</string>
+    <string name="product_mfg_future_warning">Warning: Manufacturing date is in the future</string>
+    <string name="users_search_hint">Search staff by name…</string>
+    <string name="users_filter_all">All Staff</string>
+    <string name="users_no_staff_found">No staff found matching query</string>
+    <string name="users_joined_date">Joined: %1$s</string>
+    <string name="sales_report_total_transactions">%1$d transactions</string>
 </resources>
 
 

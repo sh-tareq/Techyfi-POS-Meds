@@ -3433,4 +3433,12 @@
     <string name="barcode_design_shelf_edge">শেল্ফ-ট্যাগ</string>
     <string name="barcode_design_shelf_edge_desc">৫০ সেমি দূর থেকে স্ক্যান গান দিয়ে পড়া উপযোগী ৬০% চওড়া বারকোড ও বড় মূল্য (লোগো ছাড়া)</string>
     <string name="barcode_design_counter">%1$d এর %2$d</string>
+    <!-- App-wide UX Enhancements -->
+    <string name="product_mfg_after_expiry_warning">সতর্কতা: উৎপাদন/প্যাকেজিং তারিখ মেয়াদোত্তীর্ণ তারিখের পরে হতে পারে না</string>
+    <string name="product_mfg_future_warning">সতর্কতা: উৎপাদন তারিখটি ভবিষ্যতের হিসেবে দেওয়া হয়েছে</string>
+    <string name="users_search_hint">নাম দিয়ে কর্মী খুঁজুন…</string>
+    <string name="users_filter_all">সকল কর্মী</string>
+    <string name="users_no_staff_found">কোনো কর্মী পাওয়া যায়নি</string>
+    <string name="users_joined_date">যোগদান: %1$s</string>
+    <string name="sales_report_total_transactions">%1$dটি লেনদেন</string>
 </resources>

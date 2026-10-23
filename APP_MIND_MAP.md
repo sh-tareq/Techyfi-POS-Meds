@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-23 (app version 2.7.02-Final-V23-10-2026, build `Techyfi-POS-Final-V23-10-2026.apk`; versionCode 220983; DB schema version 38)
+Last updated: 2026-10-23 (app version 2.7.03-Final-V23-10-2026, build `Techyfi-POS-Final-V23-10-2026.apk`; versionCode 220984; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -20,6 +20,7 @@ mindmap
             Full master access across all screens, ledgers, settings, and danger zone
             Can toggle on/off any of the 33 permissions per staff account
             Add, edit, deactivate, or delete staff members
+            Staff management search & role filters (PosSearchBox, All/Owner/Manager/Cashier/Suspended chips with live counters, join date, empty search state)
             Multi-owner architecture (can add multiple owners, demote extra owners, last active owner protected, Option B credential protection against silent takeover)
           Store Manager
             Operational oversight: inventory, stock inwarding, suppliers, customer CRM, shift register closing, and P&L reports
@@ -3342,12 +3343,44 @@ mindmap
   - Responsive design switcher row with `weight(1f, fill = false)` and `TextOverflow.Ellipsis` preventing any overflow on narrow 360dp phone viewports.
 - **R8 Minification & Resource Shrinking**:
   - Built with full R8 code optimization (`isMinifyEnabled = true`), resource shrinking (`isShrinkResources = true`), and update-compatible signing certificate (`signingConfigs.debug`).
-- **Release Deliverables**:
-  - `Techyfi-POS-Final-V23-10-2026.apk` (versionCode 220983, versionName "2.7.02-Final-V23-10-2026"), installed as seamless update on connected Xiaomi hardware (`cb5fdfb5`).
+### Release Final-V23-10-2026-R8: App-Wide Comprehensive Quality Audit, Touch Target Hardening, RBAC Search/Filter, Barcode Studio Quick Search, and R8 Minification (Version 2.7.03-Final-V23-10-2026, Build Final-V23-10-2026)
+- **Staff & User Access Control (`ManageUsersScreen.kt`)**:
+  - Added real-time staff name searching with `PosSearchBox` and instant query matching.
+  - Added horizontal role filter chips (`All`, `Owner`, `Manager`, `Cashier`, `Suspended`) with live member counters.
+  - Displayed formatted account join dates (`Joined: dd MMM yyyy`) on `StaffUserCard`.
+  - Added dedicated empty search state with clear filters shortcut button and 3D customer icon empty state with "Add Staff" CTA.
+- **Barcode & QR Label Studio Quick Search (`ProductCodePrintDialogs.kt`)**:
+  - Integrated in-dialog product search modal with `PosSearchBox` directly in the carousel bar, allowing instant jumping to any product in large catalogs without repetitive sequential paging.
+  - Added 2-line title wrapping (`maxLines = 2`) eliminating single-line ellipsis truncation for long product names.
+  - Localized stock quantity badge with `formatStockQuantityBadge` handling fractional stock and `R.string.out_of_stock`.
+- **Sales Report Channel Mix Grand Total (`SalesReportScreen.kt`)**:
+  - Added Grand Total summary row in `PaymentsPanel` aggregating overall transactions and net revenue collected across all payment channels (Cash, bKash, Nagad, Card, Rocket).
+- **Expenses Dynamic Running Sum & Dynamic Header Metric (`ExpensesScreen.kt`)**:
+  - Implemented real-time dynamic running net total pill in the ledger header row showing net cash flow for the currently filtered set (`+৳` for cash in, `-৳` for expenses).
+  - Dynamically updated the TopAppBar metric badge to reflect the active period filter (`Today`, `Week`, `Month`, `All`).
+- **Touch Target & Ergonomics Hardening (Material 3 >= 48dp standard)**:
+  - Enlarged `CopiesStepper` quantity decrement and increment buttons to 48dp.
+  - Enlarged note presets close button in `CustomItemDialogs` to 48dp.
+  - Enlarged product name and barcode clear buttons in `AddEditProductDialog` to 36dp with expanded tap padding.
+  - Enlarged carousel navigation chevrons and close button in `ProductCodeImageDialog` to 44–48dp.
+- **Tablet Responsive Sizing**:
+  - Added `Modifier.widthIn(max = 680.dp)` constraints to `AddEditProductDialog`, `BatchProductCodePrintDialog`, and `ProductCodeImageDialog` surfaces, preventing awkward horizontal stretching on 10"–12" tablet viewports.
+- **Product Date Validation & Crash Hardening**:
+  - Added format parsing (`parseExpiryDateToMillis`) for `mfgOrPkgDate` in `AddEditProductDialog`, preventing malformed date strings from saving into SQLite.
+  - Added warning banner and validation check preventing manufacturing date from being set in the future or after the expiry date.
+  - Added bounds checking `if (idx in presetsList.indices)` in `CustomItemDialogs` preventing `IndexOutOfBoundsException` during preset edits.
+  - Fixed database migration warning in `AppDatabase.kt` by specifying explicit `arrayOf<Any>(...)` types for `db.execSQL`.
+- **Dark Mode & Localization Parity**:
+  - Updated `StockStatus3DBadge` to use `LocalDarkTheme` and `isSystemInDarkTheme` aware container tints and localized strings (`R.string.out_of_stock`, `R.string.low_stock`, `R.string.in_stock`).
+  - Added 7 new string keys with exact 1-to-1 matching across `res/values/strings.xml` and `res/values-bn/strings.xml` (3,444 lines each).
+- **R8 Minification & Seamless Update Deliverable**:
+  - Built with full R8 code optimization (`isMinifyEnabled = true`), resource shrinking (`isShrinkResources = true`), incremented `versionCode = 220984` for in-place update compatibility, and signed with update-compatible keystore.
+  - Saved deliverable in project root: `Techyfi-POS-Final-V23-10-2026.apk`.
 
 ## Maintenance note
 
 Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+
 
 
 

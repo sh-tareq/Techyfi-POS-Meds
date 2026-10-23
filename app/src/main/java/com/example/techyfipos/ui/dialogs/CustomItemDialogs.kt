@@ -1846,8 +1846,8 @@ fun ManageNotePresetsDialog(
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.cart_manage_note_presets_title), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 }
-                IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), modifier = Modifier.size(18.dp))
+                IconButton(onClick = onDismiss, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), modifier = Modifier.size(20.dp))
                 }
             }
         },
@@ -1996,9 +1996,11 @@ fun ManageNotePresetsDialog(
                     onClick = {
                         val trimmed = editingText.trim()
                         if (trimmed.isNotBlank()) {
-                            val updated = presetsList.toMutableList().apply { set(idx, trimmed) }
-                            presetsList = updated
-                            onSavePresets(updated)
+                            if (idx in presetsList.indices) {
+                                val updated = presetsList.toMutableList().apply { set(idx, trimmed) }
+                                presetsList = updated
+                                onSavePresets(updated)
+                            }
                             editingIndex = null
                         }
                     },

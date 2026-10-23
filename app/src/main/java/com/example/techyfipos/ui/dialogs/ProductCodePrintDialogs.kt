@@ -128,7 +128,7 @@ fun CopiesStepper(
                         onCopiesChange(clamped)
                     },
                     enabled = copies > min,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease_copies))
                 }
@@ -181,7 +181,7 @@ fun CopiesStepper(
                         onCopiesChange(clamped)
                     },
                     enabled = copies < max,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase_copies))
                 }
@@ -1652,6 +1652,7 @@ fun BatchProductCodePrintDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.94f)
+                .widthIn(max = 680.dp)
                 .fillMaxHeight(0.92f)
                 .trackUserActivity(),
             shape = RoundedCornerShape(24.dp),
@@ -3019,6 +3020,7 @@ fun ProductCodeImageDialog(
 
     // In-dialog Product Switching State
     var currentProduct by remember(product) { mutableStateOf(product) }
+    var showProductSearchDialog by rememberSaveable { mutableStateOf(false) }
     val productIndex = remember(currentProduct, allProducts) {
         allProducts.indexOfFirst { it.barcode == currentProduct.barcode }
     }
@@ -3367,6 +3369,7 @@ fun ProductCodeImageDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
+                .widthIn(max = 680.dp)
                 .fillMaxHeight(0.94f)
                 .trackUserActivity(),
             shape = RoundedCornerShape(24.dp),
@@ -3438,14 +3441,14 @@ fun ProductCodeImageDialog(
                             shape = CircleShape,
                             color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9),
                             border = BorderStroke(1.dp, studioCardBorder),
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(38.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     Icons.Default.Close,
                                     contentDescription = stringResource(R.string.dismiss),
                                     tint = studioTextMuted,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
@@ -3492,7 +3495,7 @@ fun ProductCodeImageDialog(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = studioTextMain,
                                     fontSize = 13.5.sp,
-                                    maxLines = 1,
+                                    maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Row(
@@ -3513,7 +3516,11 @@ fun ProductCodeImageDialog(
                                             .background(if (currentProduct.stockQty > 0) Color(0xFF10B981) else Color(0xFFEF4444))
                                     )
                                     Text(
-                                        text = if (currentProduct.stockQty > 0) "Stock: ${currentProduct.stockQty.toInt()} pcs" else "Out of Stock",
+                                        text = if (currentProduct.stockQty > 0) {
+                                            stringResource(R.string.stock_badge_fmt, formatStockQuantityBadge(currentProduct.stockQty))
+                                        } else {
+                                            stringResource(R.string.out_of_stock)
+                                        },
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp,
@@ -3538,12 +3545,12 @@ fun ProductCodeImageDialog(
                                         }
                                     },
                                     enabled = hasPrev,
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(44.dp)
                                 ) {
                                     Icon(
                                         Icons.Default.ChevronLeft,
                                         contentDescription = stringResource(R.string.product_prev),
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(20.dp),
                                         tint = if (hasPrev) studioTextMain else studioTextMuted.copy(alpha = 0.35f)
                                     )
                                 }
@@ -3563,13 +3570,24 @@ fun ProductCodeImageDialog(
                                         }
                                     },
                                     enabled = hasNext,
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(44.dp)
                                 ) {
                                     Icon(
                                         Icons.Default.ChevronRight,
                                         contentDescription = stringResource(R.string.product_next),
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(20.dp),
                                         tint = if (hasNext) studioTextMain else studioTextMuted.copy(alpha = 0.35f)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { showProductSearchDialog = true },
+                                    modifier = Modifier.size(44.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = stringResource(R.string.search_product),
+                                        modifier = Modifier.size(19.dp),
+                                        tint = studioPrimary
                                     )
                                 }
                             }
@@ -5492,6 +5510,113 @@ fun ProductCodeImageDialog(
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text(stringResource(R.string.dismiss), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showProductSearchDialog) {
+        var pickerSearchQuery by remember { mutableStateOf("") }
+        val filteredProds = remember(pickerSearchQuery, allProducts) {
+            if (pickerSearchQuery.isBlank()) allProducts
+            else {
+                val q = pickerSearchQuery.trim().lowercase()
+                allProducts.filter {
+                    it.name.lowercase().contains(q) || it.barcode.lowercase().contains(q)
+                }
+            }
+        }
+        Dialog(
+            onDismissRequest = { showProductSearchDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .widthIn(max = 520.dp)
+                    .fillMaxHeight(0.75f),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.batch_print_picker_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(
+                            onClick = { showProductSearchDialog = false },
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    PosSearchBox(
+                        query = pickerSearchQuery,
+                        onQueryChange = { pickerSearchQuery = it },
+                        placeholderText = stringResource(R.string.products_search_product_or_barcode),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(filteredProds, key = { it.barcode }) { p ->
+                            val isCurrent = p.barcode == currentProduct.barcode
+                            Surface(
+                                onClick = {
+                                    currentProduct = p
+                                    onProductSelected?.invoke(p)
+                                    showProductSearchDialog = false
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = p.name,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.sp,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = p.barcode,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                    }
+                                    if (isCurrent) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

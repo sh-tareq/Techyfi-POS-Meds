@@ -2273,6 +2273,60 @@ private fun PaymentsPanel(data: SalesReportData) {
                     )
                 }
             }
+
+            if (data.paymentBreakdown.isNotEmpty()) {
+                val totalAmount = data.paymentBreakdown.sumOf { it.amount }
+                val totalCount = data.paymentBreakdown.sumOf { it.transactionCount }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(Modifier.height(8.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.grand_total),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 13.5.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.sales_report_total_transactions, totalCount),
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = formatTaka(totalAmount),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
         }
     }
 }

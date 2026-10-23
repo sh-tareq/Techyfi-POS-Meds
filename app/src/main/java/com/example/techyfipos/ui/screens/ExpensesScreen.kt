@@ -180,7 +180,14 @@ fun ExpensesScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.expense_screen_title),
-                        metricBadge = stringResource(R.string.today),
+                        metricBadge = stringResource(
+                            when (selectedDateFilter) {
+                                "All" -> R.string.history_period_all
+                                "Week" -> R.string.history_period_week
+                                "Month" -> R.string.history_period_month
+                                else -> R.string.today
+                            }
+                        ),
                         badgeColor = PosSectionColors.Expenses,
                         isTablet = isTablet,
                         icon = { size -> Realistic3DExpensesCashIcon(size = size) }
@@ -413,8 +420,14 @@ fun ExpensesScreen(
                 }
             }
 
-            // 6. Header Row: Ledger records count
+            // 6. Header Row: Ledger records count & running total
             item {
+                val filteredExpSum = remember(filteredExpenses) {
+                    filteredExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                }
+                val filteredCashInSum = remember(filteredExpenses) {
+                    filteredExpenses.filter { it.type == "CASH_IN" }.sumOf { it.amount }
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -422,13 +435,45 @@ fun ExpensesScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = stringResource(R.string.expense_ledger_label),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        letterSpacing = 0.5.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.expense_ledger_label),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 0.5.sp
+                        )
+                        if (filteredExpenses.isNotEmpty()) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            ) {
+                                val sumText = when (selectedTypeFilter) {
+                                    "Cash In" -> "+${formatTaka(filteredCashInSum)}"
+                                    "Expense" -> "-${formatTaka(filteredExpSum)}"
+                                    else -> {
+                                        val net = filteredCashInSum - filteredExpSum
+                                        if (net >= 0) "+${formatTaka(net)}" else "-${formatTaka(kotlin.math.abs(net))}"
+                                    }
+                                }
+                                Text(
+                                    text = sumText,
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = when {
+                                        selectedTypeFilter == "Cash In" -> MaterialTheme.extendedColors.success
+                                        selectedTypeFilter == "Expense" -> MaterialTheme.colorScheme.error
+                                        filteredCashInSum >= filteredExpSum -> MaterialTheme.extendedColors.success
+                                        else -> MaterialTheme.colorScheme.error
+                                    },
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = pluralStringResource(
                             R.plurals.expense_records_count,

@@ -296,6 +296,16 @@ fun AddEditProductDialog(
                 isError = true
                 Toast.makeText(context, context.getString(R.string.products_invalid_expiry_date_warning), Toast.LENGTH_SHORT).show()
             }
+            mfgOrPkgDate.isNotBlank() && com.example.techyfipos.utils.parseExpiryDateToMillis(mfgOrPkgDate) == null -> {
+                isError = true
+                Toast.makeText(context, context.getString(R.string.products_invalid_expiry_date_warning), Toast.LENGTH_SHORT).show()
+            }
+            mfgOrPkgDate.isNotBlank() && expiryDate.isNotBlank() &&
+                (com.example.techyfipos.utils.parseExpiryDateToMillis(mfgOrPkgDate) ?: 0L) >
+                (com.example.techyfipos.utils.parseExpiryDateToMillis(expiryDate) ?: Long.MAX_VALUE) -> {
+                isError = true
+                Toast.makeText(context, context.getString(R.string.product_mfg_after_expiry_warning), Toast.LENGTH_SHORT).show()
+            }
             expiryDate.isNotBlank() && (com.example.techyfipos.utils.parseExpiryDateToMillis(expiryDate) ?: Long.MAX_VALUE) < System.currentTimeMillis() && !showPastExpiryConfirmDialog -> {
                 showPastExpiryConfirmDialog = true
             }
@@ -324,6 +334,7 @@ fun AddEditProductDialog(
             shadowElevation = 16.dp,
             modifier = Modifier
                 .fillMaxWidth(0.96f)
+                .widthIn(max = 680.dp)
                 .fillMaxHeight(0.92f)
                 .padding(vertical = 12.dp)
                 .trackUserActivity()
@@ -432,11 +443,11 @@ fun AddEditProductDialog(
                                                         innerTextField()
                                                     }
                                                     if (name.isNotBlank()) {
-                                                        IconButton(onClick = { name = "" }, modifier = Modifier.size(24.dp)) {
+                                                        IconButton(onClick = { name = "" }, modifier = Modifier.size(36.dp)) {
                                                             Icon(
                                                                 imageVector = Icons.Default.Close,
                                                                 contentDescription = stringResource(R.string.products_clear_cd),
-                                                                modifier = Modifier.size(16.dp),
+                                                                modifier = Modifier.size(18.dp),
                                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                                                             )
                                                         }
@@ -518,16 +529,16 @@ fun AddEditProductDialog(
                                                             )
                                                         }
                                                     } else {
-                                                        IconButton(onClick = { barcode = "" }, modifier = Modifier.size(24.dp)) {
+                                                        IconButton(onClick = { barcode = "" }, modifier = Modifier.size(36.dp)) {
                                                             Icon(
                                                                 imageVector = Icons.Default.Close,
                                                                 contentDescription = stringResource(R.string.products_clear_cd),
-                                                                modifier = Modifier.size(16.dp),
+                                                                modifier = Modifier.size(18.dp),
                                                                 tint = Color(0xFF64748B)
                                                             )
                                                         }
                                                     }
-                                                    IconButton(onClick = { showBarcodeScanModal = true }, modifier = Modifier.size(28.dp)) {
+                                                    IconButton(onClick = { showBarcodeScanModal = true }, modifier = Modifier.size(36.dp)) {
                                                         Animated3DScannerIcon()
                                                     }
                                                 }
@@ -1584,7 +1595,55 @@ fun AddEditProductDialog(
                                     )
                                 }
                                 val expiryMillis = com.example.techyfipos.utils.parseExpiryDateToMillis(expiryDate)
+                                val mfgMillis = com.example.techyfipos.utils.parseExpiryDateToMillis(mfgOrPkgDate)
                                 val isExpired = expiryMillis != null && expiryMillis < System.currentTimeMillis()
+                                val isMfgAfterExpiry = mfgMillis != null && expiryMillis != null && mfgMillis > expiryMillis
+                                val isMfgFuture = mfgMillis != null && mfgMillis > System.currentTimeMillis()
+
+                                if (isMfgAfterExpiry) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.errorContainer,
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text("⚠️", fontSize = 12.sp)
+                                            Text(
+                                                text = stringResource(R.string.product_mfg_after_expiry_warning),
+                                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
+                                } else if (isMfgFuture) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.extendedColors.warningContainer,
+                                        border = BorderStroke(1.dp, MaterialTheme.extendedColors.warning.copy(alpha = 0.5f)),
+                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text("⚠️", fontSize = 12.sp)
+                                            Text(
+                                                text = stringResource(R.string.product_mfg_future_warning),
+                                                color = MaterialTheme.extendedColors.onWarningContainer,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
+                                }
+
                                 if (isExpired) {
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
