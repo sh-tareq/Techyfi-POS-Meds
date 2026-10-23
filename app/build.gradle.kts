@@ -14,8 +14,9 @@ android {
         applicationId = "com.techyfi.pos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 220983
-        versionName = "2.7.02-Final-V23-10-2026"
+        versionCode = 220984
+        versionName = "2.7.03-Final-V23-10-2026"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -73,11 +74,16 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
     }
 }
 
 tasks.withType<Test>().configureEach {
     systemProperty("net.bytebuddy.experimental", "true")
+    // Keep Robolectric runtime downloads and lock files inside this checkout.
+    val testHome = layout.buildDirectory.dir("test-home").get().asFile
+    testHome.mkdirs()
+    systemProperty("user.home", testHome.absolutePath)
 }
 
 tasks.register<Copy>("packageDatedReleaseApk") {
@@ -114,6 +120,8 @@ dependencies {
 
   // Local tests: jUnit, coroutines, Android runner
   testImplementation(libs.junit)
+  testImplementation("org.robolectric:robolectric:4.16")
+  testImplementation(libs.androidx.test.core)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation("org.json:json:20240303")
   testImplementation("org.mockito:mockito-core:5.11.0")
