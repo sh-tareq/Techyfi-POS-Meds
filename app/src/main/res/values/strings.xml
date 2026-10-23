@@ -3431,26 +3431,6 @@
     <string name="barcode_design_shelf_edge">Shelf-Edge Tag</string>
     <string name="barcode_design_shelf_edge_desc">60% extra-thick barcode for 50cm scanner gun reads &amp; giant price display (No Logo)</string>
     <string name="barcode_design_counter">%1$d of %2$d</string>
-    <string name="label_design_classic">Classic</string>
-    <string name="label_design_brand_header">Brand Header · Logo</string>
-    <string name="label_design_brand_signature">Brand Signature · Logo</string>
-    <string name="label_design_retail_grid">Retail Grid</string>
-    <string name="label_design_price_focus">Price Focus</string>
-    <string name="label_design_missing_logo">Add a store logo in Settings to include it on this label.</string>
-    <string name="select_code_format">Select Code Format</string>
-    <string name="print_resolution_label">Print Resolution:</string>
-    <string name="print_copies_title">Print Copies</string>
-    <string name="store_branding_title">Store Branding</string>
-    <string name="top_label_header">Top Label Header</string>
-    <string name="label_dimensions_title">Label Dimensions</string>
-    <string name="standard_thermal_sizes">Standard Thermal Sizes</string>
-    <string name="additional_custom_field">Additional Custom Field</string>
-    <string name="optional_badge">Optional</string>
-    <string name="custom_field_label">Field Label</string>
-    <string name="custom_field_value">Field Value</string>
-    <string name="presets_label">Presets:</string>
-    <string name="dates_and_tracking">Dates &amp; Tracking</string>
-    <string name="enable_dates">Enable Dates</string>
 </resources>
 
 

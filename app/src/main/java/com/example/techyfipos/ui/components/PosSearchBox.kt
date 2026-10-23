@@ -100,19 +100,12 @@ fun PosSearchBox(
                 modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.CenterStart
             ) {
-                val searchTextStyle = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 18.sp
-                )
-
                 if (query.isEmpty()) {
                     Text(
                         text = placeholderText,
-                        style = searchTextStyle.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-                            fontWeight = FontWeight.Normal
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 12.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -127,7 +120,11 @@ fun PosSearchBox(
                     value = query,
                     onValueChange = onQueryChange,
                     singleLine = true,
-                    textStyle = searchTextStyle,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
                     cursorBrush = SolidColor(accentColor),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(
@@ -150,7 +147,7 @@ fun PosSearchBox(
                         onQueryChange("")
                         onClear?.invoke()
                     },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,

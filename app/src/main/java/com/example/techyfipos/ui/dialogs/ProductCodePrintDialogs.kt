@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -30,7 +32,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -370,7 +371,7 @@ fun PriceTierSwitcherCard(
                             )
                             Text(
                                 text = sellingPriceDisplay,
-                                fontSize = 12.5.sp,
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isSellingActive) primaryColor else textMain,
                                 textAlign = TextAlign.Center,
@@ -412,7 +413,7 @@ fun PriceTierSwitcherCard(
                             )
                             Text(
                                 text = mrpPriceDisplay,
-                                fontSize = 12.5.sp,
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isMrpActive) primaryColor else textMain,
                                 textAlign = TextAlign.Center,
@@ -454,7 +455,7 @@ fun PriceTierSwitcherCard(
                             )
                             Text(
                                 text = wholesalePriceDisplay,
-                                fontSize = 12.5.sp,
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isWholesaleActive) primaryColor else textMain,
                                 textAlign = TextAlign.Center,
@@ -492,12 +493,12 @@ fun PriceTierSwitcherCard(
                     ) {
                         Text(
                             text = stringResource(R.string.products_price_tier_dual_title),
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                            style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = if (isDualActive) (if (isDark) Color(0xFFC7D2FE) else Color(0xFF3730A3)) else textMain,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).padding(end = 6.dp)
+                            modifier = Modifier.weight(1f, fill = false)
                         )
 
                         val notSetText = stringResource(R.string.products_price_tier_not_set)
@@ -558,7 +559,6 @@ fun PriceTierSwitcherCard(
                     Surface(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 44.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .clickable(enabled = showPrice) { onShowUnitChange(!showUnit) },
                         shape = RoundedCornerShape(8.dp),
@@ -577,12 +577,11 @@ fun PriceTierSwitcherCard(
                         ) {
                             Text(
                                 text = stringResource(R.string.products_price_opt_unit),
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                                style = MaterialTheme.typography.bodySmall,
                                 fontWeight = if (showUnit) FontWeight.Bold else FontWeight.SemiBold,
                                 color = if (showUnit) textMain else textMuted,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f).padding(end = 4.dp)
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = if (showUnit) stringResource(R.string.opt_on) else stringResource(R.string.opt_off),
@@ -597,7 +596,6 @@ fun PriceTierSwitcherCard(
                     Surface(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 44.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .clickable(enabled = showPrice) { onShowBanglaDigitsChange(!showBanglaDigits) },
                         shape = RoundedCornerShape(8.dp),
@@ -616,12 +614,11 @@ fun PriceTierSwitcherCard(
                         ) {
                             Text(
                                 text = stringResource(R.string.products_price_opt_bangla_digits),
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                                style = MaterialTheme.typography.bodySmall,
                                 fontWeight = if (showBanglaDigits) FontWeight.Bold else FontWeight.SemiBold,
                                 color = if (showBanglaDigits) textMain else textMuted,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f).padding(end = 4.dp)
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = if (showBanglaDigits) stringResource(R.string.opt_on) else stringResource(R.string.opt_off),
@@ -672,8 +669,6 @@ fun BatchProductPickerSheet(
         }
     }
 
-    val isTablet = LocalConfiguration.current.screenWidthDp >= 600
-
     Dialog(
         onDismissRequest = {
             onSelectionAndQuantitiesChange?.invoke(tempSelected, tempQuantities)
@@ -684,10 +679,8 @@ fun BatchProductPickerSheet(
     ) {
         Surface(
             modifier = Modifier
-                .then(
-                    if (isTablet) Modifier.widthIn(max = 640.dp).fillMaxWidth(0.80f).fillMaxHeight(0.88f)
-                    else Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.92f)
-                )
+                .fillMaxWidth(0.96f)
+                .fillMaxHeight(0.88f)
                 .trackUserActivity(),
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -707,8 +700,7 @@ fun BatchProductPickerSheet(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -743,7 +735,7 @@ fun BatchProductPickerSheet(
                             onSelectionChange(tempSelected)
                             onDismiss()
                         },
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
@@ -795,168 +787,140 @@ fun BatchProductPickerSheet(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                if (filteredProducts.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                // Product items list
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(filteredProducts, key = { it.barcode }) { prod ->
+                        val isChecked = prod.barcode in tempSelected
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isChecked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isChecked) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    tempSelected = if (isChecked) {
+                                        tempSelected - prod.barcode
+                                    } else {
+                                        tempSelected + prod.barcode
+                                    }
+                                }
                         ) {
-                            Icon(
-                                Icons.Default.SearchOff,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.no_products_found),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    // Product items list
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        items(filteredProducts, key = { it.barcode }) { prod ->
-                            val isChecked = prod.barcode in tempSelected
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (isChecked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (isChecked) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        tempSelected = if (isChecked) {
-                                            tempSelected - prod.barcode
-                                        } else {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = isChecked,
+                                    onCheckedChange = { checked ->
+                                        tempSelected = if (checked) {
                                             tempSelected + prod.barcode
+                                        } else {
+                                            tempSelected - prod.barcode
+                                        }
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = prod.name,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        val stockColor = if (prod.stockQty <= 0.0) MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.primary
+                                        Surface(
+                                            color = stockColor.copy(alpha = 0.12f),
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.stock_badge_fmt, formatStockQuantityBadge(prod.stockQty)),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = stockColor,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
                                         }
                                     }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(
-                                        checked = isChecked,
-                                        onCheckedChange = { checked ->
-                                            tempSelected = if (checked) {
-                                                tempSelected + prod.barcode
-                                            } else {
-                                                tempSelected - prod.barcode
-                                            }
-                                        },
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = prod.barcode,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 11.sp
+                                        )
                                         Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             Text(
-                                                text = prod.name,
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 13.sp,
-                                                lineHeight = 17.sp,
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.weight(1f).padding(end = 6.dp)
-                                            )
-                                            val stockColor = if (prod.stockQty <= 0.0) MaterialTheme.colorScheme.error
-                                            else MaterialTheme.colorScheme.primary
-                                            Surface(
-                                                color = stockColor.copy(alpha = 0.12f),
-                                                shape = RoundedCornerShape(6.dp)
-                                            ) {
-                                                Text(
-                                                    text = stringResource(R.string.stock_badge_fmt, formatStockQuantityBadge(prod.stockQty)),
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = stockColor,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = prod.barcode,
+                                                text = formatTaka(prod.sellingPrice),
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                fontSize = 11.sp,
-                                                modifier = Modifier.weight(1f, fill = false)
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                fontSize = 12.sp
                                             )
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Text(
-                                                    text = formatTaka(prod.sellingPrice),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurface,
-                                                    fontSize = 12.5.sp
-                                                )
-                                                if (isChecked) {
-                                                    val qty = tempQuantities[prod.barcode] ?: 1
-                                                    Row(
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                                        modifier = Modifier
-                                                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-                                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
-                                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                            if (isChecked) {
+                                                val qty = tempQuantities[prod.barcode] ?: 1
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                                    modifier = Modifier
+                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                ) {
+                                                    IconButton(
+                                                        onClick = {
+                                                            val current = tempQuantities[prod.barcode] ?: 1
+                                                            if (current > 1) {
+                                                                tempQuantities = tempQuantities.toMutableMap().apply { put(prod.barcode, current - 1) }
+                                                            }
+                                                        },
+                                                        modifier = Modifier.size(24.dp)
                                                     ) {
-                                                        IconButton(
-                                                            onClick = {
-                                                                val current = tempQuantities[prod.barcode] ?: 1
-                                                                if (current > 1) {
-                                                                    tempQuantities = tempQuantities.toMutableMap().apply { put(prod.barcode, current - 1) }
-                                                                }
-                                                            },
-                                                            modifier = Modifier.size(32.dp)
-                                                        ) {
-                                                            Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease), modifier = Modifier.size(16.dp))
-                                                        }
-                                                        Text(
-                                                            text = "$qty",
-                                                            fontSize = 12.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = MaterialTheme.colorScheme.primary,
-                                                            modifier = Modifier.padding(horizontal = 4.dp)
-                                                        )
-                                                        IconButton(
-                                                            onClick = {
-                                                                val current = tempQuantities[prod.barcode] ?: 1
-                                                                if (current < 500) {
-                                                                    tempQuantities = tempQuantities.toMutableMap().apply { put(prod.barcode, current + 1) }
-                                                                }
-                                                            },
-                                                            modifier = Modifier.size(32.dp)
-                                                        ) {
-                                                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase), modifier = Modifier.size(16.dp))
-                                                        }
+                                                        Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease), modifier = Modifier.size(14.dp))
+                                                    }
+                                                    Text(
+                                                        text = "$qty",
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.padding(horizontal = 4.dp)
+                                                    )
+                                                    IconButton(
+                                                        onClick = {
+                                                            val current = tempQuantities[prod.barcode] ?: 1
+                                                            if (current < 500) {
+                                                                tempQuantities = tempQuantities.toMutableMap().apply { put(prod.barcode, current + 1) }
+                                                            }
+                                                        },
+                                                        modifier = Modifier.size(24.dp)
+                                                    ) {
+                                                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase), modifier = Modifier.size(14.dp))
                                                     }
                                                 }
                                             }
@@ -992,244 +956,6 @@ fun BatchProductPickerSheet(
                     ) {
                         Text(stringResource(R.string.done), fontWeight = FontWeight.Bold)
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SingleProductPickerModal(
-    allProducts: List<Product>,
-    currentProduct: Product,
-    onProductSelected: (Product) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var searchQuery by rememberSaveable { mutableStateOf("") }
-    val validProducts = remember(allProducts) {
-        allProducts.filter { it.barcode.isNotBlank() }
-    }
-    val filteredProducts = remember(validProducts, searchQuery) {
-        if (searchQuery.isBlank()) {
-            validProducts
-        } else {
-            val q = searchQuery.trim().lowercase(Locale.ROOT)
-            validProducts.filter {
-                it.name.lowercase(Locale.ROOT).contains(q) ||
-                it.barcode.lowercase(Locale.ROOT).contains(q)
-            }
-        }
-    }
-    val isTablet = LocalConfiguration.current.screenWidthDp >= 600
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = Modifier
-                .then(
-                    if (isTablet) Modifier.widthIn(max = 640.dp).fillMaxWidth(0.80f).fillMaxHeight(0.88f)
-                    else Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.92f)
-                )
-                .trackUserActivity(),
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Column {
-                            Text(
-                                text = stringResource(R.string.search_product),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = stringResource(R.string.products_skus_products_count, validProducts.size),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Search field
-                PosSearchBox(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it },
-                    placeholderText = stringResource(R.string.batch_print_search_placeholder),
-                    accentColor = PosSectionColors.Products,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                if (filteredProducts.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.SearchOff,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.no_products_found),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        items(filteredProducts, key = { it.barcode }) { prod ->
-                            val isCurrent = prod.barcode == currentProduct.barcode
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onProductSelected(prod)
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = prod.name,
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 13.5.sp,
-                                                lineHeight = 18.sp,
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.weight(1f).padding(end = 8.dp)
-                                            )
-                                            val stockColor = if (prod.stockQty <= 0.0) MaterialTheme.colorScheme.error
-                                            else MaterialTheme.colorScheme.primary
-                                            Surface(
-                                                color = stockColor.copy(alpha = 0.12f),
-                                                shape = RoundedCornerShape(6.dp)
-                                            ) {
-                                                Text(
-                                                    text = stringResource(R.string.stock_badge_fmt, formatStockQuantityBadge(prod.stockQty)),
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = stockColor,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = prod.barcode,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                fontSize = 11.sp,
-                                                modifier = Modifier.weight(1f, fill = false)
-                                            )
-                                            Text(
-                                                text = formatTaka(prod.sellingPrice),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                fontSize = 12.5.sp
-                                            )
-                                        }
-                                    }
-                                    if (isCurrent) {
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Icon(
-                                            Icons.Default.CheckCircle,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(stringResource(R.string.close), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1302,14 +1028,6 @@ fun BatchProductCodePrintDialog(
     var showBanglaDigits by rememberSaveable { mutableStateOf(preferences.getBoolean("show_bangla_digits", false)) }
     var showCodeNumber by rememberSaveable { mutableStateOf(preferences.getBoolean("show_code_number", true)) }
     var showStoreName by rememberSaveable { mutableStateOf(preferences.getBoolean("show_store_name", true)) }
-    var labelDesignId by rememberSaveable { mutableStateOf(loadLabelDesign(preferences).id) }
-    val labelDesign = LabelDesign.fromId(labelDesignId)
-    val storeLogo by produceState<Bitmap?>(null, invoiceSettings.logoUri) {
-        value = withContext(Dispatchers.IO) { loadLabelStoreLogo(context, invoiceSettings.logoUri) }
-    }
-    var showLogo by rememberSaveable { mutableStateOf(labelDesign.hasLogo && preferences.getBoolean("show_logo", labelDesign.hasLogo)) }
-    var storeLogoScale by rememberSaveable { mutableFloatStateOf(preferences.getFloat("store_logo_scale", 1f)) }
-
     var storeNameInput by rememberSaveable {
         mutableStateOf(preferences.getString("store_name", "") ?: "")
     }
@@ -1337,6 +1055,8 @@ fun BatchProductCodePrintDialog(
     var barcodeGraphicScale by rememberSaveable {
         mutableFloatStateOf(preferences.getFloat("barcode_graphic_scale", 1f))
     }
+    val batchDesignName = preferences.getString("barcode_label_design", BarcodeLabelDesign.STANDARD_RETAIL.name)
+    val batchDesign = BarcodeLabelDesign.entries.firstOrNull { it.name == batchDesignName } ?: BarcodeLabelDesign.STANDARD_RETAIL
 
     var showAdvancedStyling by rememberSaveable { mutableStateOf(false) }
     var labelSizeMenuExpanded by remember { mutableStateOf(false) }
@@ -1373,16 +1093,12 @@ fun BatchProductCodePrintDialog(
     }
 
     LaunchedEffect(
-        labelDesignId, showLogo, storeLogo, storeLogoScale,
         codeTypeName, labelSizeName, showPrice, priceTierName, showUnit, showBanglaDigits, showCodeNumber,
         showStoreName, storeNameInput, showDateTracking, customWidthInput, customHeightInput,
         productNameTextScale, priceTextScale, codeNumberTextScale, storeNameTextScale,
         dateTrackingTextScale, barcodeGraphicScale, extraFieldTitle, extraFieldValue
     ) {
         val editor = preferences.edit()
-            .putString("label_design", labelDesignId)
-            .putBoolean("show_logo", showLogo)
-            .putFloat("store_logo_scale", storeLogoScale)
             .putString("code_type", codeTypeName)
             .putString("label_size", labelSizeName)
             .putBoolean("show_price", showPrice)
@@ -1454,18 +1170,15 @@ fun BatchProductCodePrintDialog(
             )
         } else ""
     }
-    var renderedSampleBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var completedSampleBitmapRequest by remember { mutableStateOf<List<Any?>?>(null) }
-    val sampleBitmapRequest = listOf(
-        labelDesignId, showLogo, storeLogo, storeLogoScale,
-        sampleProd, samplePriceString, codeType, labelSize, showPrice, showCodeNumber, showBanglaDigits, invoiceSettings.labelDpi,
+    var sampleBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(
+        sampleProd, samplePriceString, codeType, labelSize, showPrice, showCodeNumber,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
         codeNumberTextScale, showStoreName, effectiveStoreName, storeNameTextScale,
         showDateTracking, useProductDates, mfgOrPkgType, mfgOrPkgDate, expDate, dateTrackingTextScale, barcodeGraphicScale,
         extraFieldTitle, extraFieldValue
-    )
-    val sampleBitmap = renderedSampleBitmap.takeIf { completedSampleBitmapRequest == sampleBitmapRequest }
-    LaunchedEffect(sampleBitmapRequest) {
+    ) {
+        val old = sampleBitmap
         val newBmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             if (sampleProd != null) {
                 val sampleMfgType = if (useProductDates) (sampleProd.mfgOrPkgType ?: "Mfg") else mfgOrPkgType
@@ -1496,19 +1209,22 @@ fun BatchProductCodePrintDialog(
                     showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
                     extraFieldLabel = extraFieldTitle,
                     extraFieldValue = extraFieldValue,
-                    extraFieldTextScale = preferences.getFloat("extra_field_text_scale", 1f),
                     dpi = invoiceSettings.labelDpi,
                     showBanglaDigits = showBanglaDigits,
-                    labelDesign = labelDesign,
-                    showLogo = showLogo,
-                    storeLogo = storeLogo,
-                    storeLogoScale = storeLogoScale
+                    labelDesign = batchDesign
                 )
             } else null
         }
-        renderedSampleBitmap = newBmp
-        completedSampleBitmapRequest = sampleBitmapRequest
-        // Let GC release old previews after Compose and any active export finish using them.
+        sampleBitmap = newBmp
+        if (old != null && !old.isRecycled && old != newBmp) {
+            old.recycle()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            sampleBitmap?.recycle()
+        }
     }
 
     val isBatchSampleDense = remember(sampleProd?.barcode, codeType, effectiveWidthMm, invoiceSettings.labelDpi) {
@@ -1516,7 +1232,6 @@ fun BatchProductCodePrintDialog(
     }
 
     val currentStyle = remember(
-        labelDesignId, showLogo, storeLogo, storeLogoScale,
         codeType, labelSize, customWidthMm, customHeightMm, showPrice, priceTier,
         showUnit, showBanglaDigits, showCodeNumber, showStoreName, effectiveStoreName,
         showDateTracking, productNameTextScale, priceTextScale, codeNumberTextScale,
@@ -1524,9 +1239,6 @@ fun BatchProductCodePrintDialog(
         extraFieldTitle, extraFieldValue
     ) {
         LabelStyleSettings(
-            labelDesign = labelDesign,
-            showLogo = showLogo,
-            storeLogoScale = storeLogoScale,
             labelSize = labelSize,
             customWidthMm = customWidthMm,
             customHeightMm = customHeightMm,
@@ -1546,8 +1258,7 @@ fun BatchProductCodePrintDialog(
             barcodeGraphicScale = barcodeGraphicScale,
             showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
             extraFieldLabel = extraFieldTitle,
-            extraFieldValue = extraFieldValue,
-            extraFieldTextScale = preferences.getFloat("extra_field_text_scale", 1f)
+            extraFieldValue = extraFieldValue
         )
     }
 
@@ -1612,15 +1323,11 @@ fun BatchProductCodePrintDialog(
                                     showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
                                     extraFieldLabel = itemExtraLabel,
                                     extraFieldValue = itemExtraVal,
-                                    extraFieldTextScale = preferences.getFloat("extra_field_text_scale", 1f),
                                     dpi = invoiceSettings.labelDpi,
                                     showBanglaDigits = showBanglaDigits,
-                                    labelDesign = labelDesign,
-                                    showLogo = showLogo,
-                                    storeLogo = storeLogo,
-                                    storeLogoScale = storeLogoScale
+                                    labelDesign = batchDesign
                                 )
-                                if (bitmap == null) error(context.getString(R.string.batch_print_bitmaps_failed)) else {
+                                if (bitmap != null) {
                                     activeBitmaps.add(bitmap)
                                     var remainingCopies = item.quantity
                                     while (remainingCopies > 0) {
@@ -1743,15 +1450,11 @@ fun BatchProductCodePrintDialog(
                                 showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
                                 extraFieldLabel = itemExtraLabel,
                                 extraFieldValue = itemExtraVal,
-                                extraFieldTextScale = preferences.getFloat("extra_field_text_scale", 1f),
                                 dpi = invoiceSettings.labelDpi,
                                 showBanglaDigits = showBanglaDigits,
-                                labelDesign = labelDesign,
-                                showLogo = showLogo,
-                                storeLogo = storeLogo,
-                                storeLogoScale = storeLogoScale
+                                labelDesign = batchDesign
                             )
-                            if (bitmap == null) error(context.getString(R.string.batch_print_bitmaps_failed)) else {
+                            if (bitmap != null) {
                                 try {
                                     val payload = buildTsplPayload(
                                         labelBitmap = bitmap,
@@ -1852,9 +1555,7 @@ fun BatchProductCodePrintDialog(
                             context = context,
                             items = items,
                             codeType = codeType,
-                            style = currentStyle,
-                            dpi = invoiceSettings.labelDpi,
-                            storeLogo = storeLogo
+                            style = currentStyle
                         )
                         withContext(Dispatchers.Main) {
                             if (pdfResult != null) {
@@ -1876,9 +1577,7 @@ fun BatchProductCodePrintDialog(
                             context = context,
                             items = items,
                             codeType = codeType,
-                            style = currentStyle,
-                            dpi = invoiceSettings.labelDpi,
-                            storeLogo = storeLogo
+                            style = currentStyle
                         )
                         withContext(Dispatchers.Main) {
                             if (pdfResult != null) {
@@ -1908,9 +1607,7 @@ fun BatchProductCodePrintDialog(
                             context = context,
                             items = items,
                             codeType = codeType,
-                            style = currentStyle,
-                            dpi = invoiceSettings.labelDpi,
-                            storeLogo = storeLogo
+                            style = currentStyle
                         )
                         withContext(Dispatchers.Main) {
                             if (pdfResult != null) {
@@ -1952,13 +1649,10 @@ fun BatchProductCodePrintDialog(
         BackHandler(enabled = isPrinting || isGenerating) {
             // Prevent back dismiss while printing or generating
         }
-        val isTablet = LocalConfiguration.current.screenWidthDp >= 600
         Surface(
             modifier = Modifier
-                .then(
-                    if (isTablet) Modifier.widthIn(max = 720.dp).fillMaxWidth(0.76f).fillMaxHeight(0.90f)
-                    else Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.94f)
-                )
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.92f)
                 .trackUserActivity(),
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -1977,10 +1671,7 @@ fun BatchProductCodePrintDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
@@ -2012,7 +1703,7 @@ fun BatchProductCodePrintDialog(
                     IconButton(
                         onClick = onDismiss,
                         enabled = !isGenerating && !isPrinting,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(44.dp)
                     ) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
@@ -2047,7 +1738,7 @@ fun BatchProductCodePrintDialog(
                                         onClick = {
                                             sampleIndex = if (sampleIndex > 0) sampleIndex - 1 else candidateProducts.size - 1
                                         },
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(28.dp)
                                     ) {
                                         @Suppress("DEPRECATION")
                                         Icon(
@@ -2066,7 +1757,7 @@ fun BatchProductCodePrintDialog(
                                         onClick = {
                                             sampleIndex = (sampleIndex + 1) % candidateProducts.size
                                         },
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(28.dp)
                                     ) {
                                         @Suppress("DEPRECATION")
                                         Icon(
@@ -2083,8 +1774,7 @@ fun BatchProductCodePrintDialog(
                                 it.name,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                lineHeight = 17.sp,
-                                maxLines = 2,
+                                maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                             )
@@ -2212,21 +1902,34 @@ fun BatchProductCodePrintDialog(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        LabelDesign.entries.forEach { design ->
+                        val presets = remember { getDefaultLabelPresets() }
+                        presets.forEach { preset ->
+                            val presetName = preset.nameRes?.let { stringResource(it) } ?: preset.name
                             FilterChip(
-                                selected = labelDesign == design,
+                                selected = false,
                                 onClick = {
-                                    labelDesignId = design.id
-                                    showLogo = design.hasLogo
+                                    labelSizeName = preset.style.labelSize.name
+                                    customWidthInput = preset.style.customWidthMm.toString().removeSuffix(".0")
+                                    customHeightInput = preset.style.customHeightMm.toString().removeSuffix(".0")
+                                    showPrice = preset.style.showPrice
+                                    priceTierName = preset.style.priceTier.name
+                                    showCodeNumber = preset.style.showCodeNumber
+                                    showStoreName = preset.style.showStoreName
+                                    showDateTracking = preset.style.showDateTracking
+                                    extraFieldTitle = preset.style.extraFieldLabel
+                                    extraFieldValue = preset.style.extraFieldValue
+                                    productNameTextScale = preset.style.productNameTextScale
+                                    priceTextScale = preset.style.priceTextScale
+                                    codeNumberTextScale = preset.style.codeNumberTextScale
+                                    storeNameTextScale = preset.style.storeNameTextScale
+                                    dateTrackingTextScale = preset.style.dateTrackingTextScale
+                                    barcodeGraphicScale = preset.style.barcodeGraphicScale
+                                    Toast.makeText(context, context.getString(R.string.label_preset_saved_toast), Toast.LENGTH_SHORT).show()
                                 },
-                                modifier = Modifier.heightIn(min = 48.dp),
-                                label = { Text(stringResource(design.titleRes)) }
+                                label = { Text(presetName, fontSize = 11.5.sp) },
+                                leadingIcon = { Icon(Icons.Default.DashboardCustomize, contentDescription = null, modifier = Modifier.size(16.dp)) }
                             )
                         }
-                    }
-
-                    if (labelDesign.hasLogo && showLogo && storeLogo == null) {
-                        Text(stringResource(R.string.label_design_missing_logo), style = MaterialTheme.typography.bodySmall)
                     }
 
                     // Scope: All vs In-Stock Only vs Custom
@@ -2241,96 +1944,96 @@ fun BatchProductCodePrintDialog(
                         SegmentedButton(
                             selected = scopeMode == BatchPrintScope.ALL,
                             onClick = { scopeMode = BatchPrintScope.ALL },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
-                            modifier = Modifier.weight(1f).heightIn(min = 44.dp)
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 3.dp)
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(vertical = 3.dp)
-                            ) {
-                                Text(
-                                    stringResource(R.string.batch_print_scope_all),
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center
-                                )
-                                val allCount = products.count { it.barcode.isNotBlank() }
-                                Text(
-                                    "(${if (isBn) toBanglaDigits(allCount.toString()) else allCount})",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        SegmentedButton(
-                            selected = scopeMode == BatchPrintScope.IN_STOCK,
-                            onClick = { scopeMode = BatchPrintScope.IN_STOCK },
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
-                            modifier = Modifier.weight(1f).heightIn(min = 44.dp)
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(vertical = 3.dp)
-                            ) {
-                                Text(
-                                    stringResource(R.string.batch_print_scope_in_stock),
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center
-                                )
-                                val inStockCount = products.count { it.barcode.isNotBlank() && it.stockQty > 0 }
-                                Text(
-                                    "(${if (isBn) toBanglaDigits(inStockCount.toString()) else inStockCount})",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        SegmentedButton(
-                            selected = scopeMode == BatchPrintScope.CUSTOM,
-                            onClick = {
-                                scopeMode = BatchPrintScope.CUSTOM
-                                if (customSelectedBarcodes.isEmpty()) {
-                                    showProductPickerSheet = true
-                                }
-                            },
-                            shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-                            modifier = Modifier.weight(1f).heightIn(min = 44.dp)
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(vertical = 3.dp)
-                            ) {
-                                Text(
-                                    stringResource(R.string.batch_print_scope_custom),
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center
-                                )
-                                val customCount = customSelectedBarcodes.size
-                                Text(
-                                    "(${if (isBn) toBanglaDigits(customCount.toString()) else customCount})",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                stringResource(R.string.batch_print_scope_all),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
+                            val allCount = products.count { it.barcode.isNotBlank() }
+                            Text(
+                                "(${if (isBn) toBanglaDigits(allCount.toString()) else allCount})",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
+                    SegmentedButton(
+                        selected = scopeMode == BatchPrintScope.IN_STOCK,
+                        onClick = { scopeMode = BatchPrintScope.IN_STOCK },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 3.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.batch_print_scope_in_stock),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
+                            val inStockCount = products.count { it.barcode.isNotBlank() && it.stockQty > 0 }
+                            Text(
+                                "(${if (isBn) toBanglaDigits(inStockCount.toString()) else inStockCount})",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    SegmentedButton(
+                        selected = scopeMode == BatchPrintScope.CUSTOM,
+                        onClick = {
+                            scopeMode = BatchPrintScope.CUSTOM
+                            if (customSelectedBarcodes.isEmpty()) {
+                                showProductPickerSheet = true
+                            }
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 3.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.batch_print_scope_custom),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
+                            val customCount = customSelectedBarcodes.size
+                            Text(
+                                "(${if (isBn) toBanglaDigits(customCount.toString()) else customCount})",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
 
                 AnimatedVisibility(visible = scopeMode == BatchPrintScope.CUSTOM) {
                     Surface(
@@ -2392,29 +2095,17 @@ fun BatchProductCodePrintDialog(
                         selected = copiesMode == "FIXED",
                         onClick = { copiesMode = "FIXED" },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
-                        modifier = Modifier.weight(1f).heightIn(min = 44.dp)
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            stringResource(R.string.batch_print_fixed_copies),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            textAlign = TextAlign.Center
-                        )
+                        Text(stringResource(R.string.batch_print_fixed_copies), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                     SegmentedButton(
                         selected = copiesMode == "STOCK",
                         onClick = { copiesMode = "STOCK" },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
-                        modifier = Modifier.weight(1f).heightIn(min = 44.dp)
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            stringResource(R.string.batch_print_stock_qty),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            textAlign = TextAlign.Center
-                        )
+                        Text(stringResource(R.string.batch_print_stock_qty), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                     SegmentedButton(
                         selected = copiesMode == "PER_PRODUCT",
@@ -2425,15 +2116,9 @@ fun BatchProductCodePrintDialog(
                             }
                         },
                         shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-                        modifier = Modifier.weight(1f).heightIn(min = 44.dp)
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            stringResource(R.string.batch_print_custom_per_product),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            textAlign = TextAlign.Center
-                        )
+                        Text(stringResource(R.string.batch_print_custom_per_product), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -3184,13 +2869,7 @@ fun BatchProductCodePrintDialog(
                     ) {
                         Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            stringResource(R.string.batch_print_direct_print_btn),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Text(stringResource(R.string.batch_print_direct_print_btn), fontWeight = FontWeight.Bold)
                     }
 
                     if (isPrinting || isGenerating) {
@@ -3273,9 +2952,7 @@ fun BatchProductCodePrintDialog(
                                             context = context,
                                             items = batchBuild.items,
                                             codeType = codeType,
-                                            style = currentStyle,
-                                            dpi = invoiceSettings.labelDpi,
-                                            storeLogo = storeLogo
+                                            style = currentStyle
                                         )
                                         withContext(Dispatchers.Main) {
                                             if (result != null) {
@@ -3298,13 +2975,7 @@ fun BatchProductCodePrintDialog(
                         ) {
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text(
-                                stringResource(R.string.batch_print_share_pdf_btn),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            Text(stringResource(R.string.batch_print_share_pdf_btn), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -3353,7 +3024,6 @@ fun ProductCodeImageDialog(
     }
     val hasPrev = productIndex > 0
     val hasNext = productIndex in 0 until allProducts.lastIndex
-    var showProductSearchModal by remember { mutableStateOf(false) }
 
     // Code Format & Settings State
     val recommendedCodeType = remember(currentProduct.barcode) { getRecommendedCodeType(currentProduct.barcode) }
@@ -3387,13 +3057,7 @@ fun ProductCodeImageDialog(
     var showBanglaDigits by rememberSaveable { mutableStateOf(preferences.getBoolean("show_bangla_digits", false)) }
     var showCodeNumber by rememberSaveable { mutableStateOf(preferences.getBoolean("show_code_number", true)) }
     var showStoreName by rememberSaveable { mutableStateOf(preferences.getBoolean("show_store_name", true)) }
-    var labelDesignId by rememberSaveable { mutableStateOf(loadLabelDesign(preferences).id) }
-    val labelDesign = LabelDesign.fromId(labelDesignId)
-    val storeLogo by produceState<Bitmap?>(null, invoiceSettings.logoUri) {
-        value = withContext(Dispatchers.IO) { loadLabelStoreLogo(context, invoiceSettings.logoUri) }
-    }
-
-    var showLogo by rememberSaveable { mutableStateOf(labelDesign.hasLogo && preferences.getBoolean("show_logo", labelDesign.hasLogo)) }
+    var showLogo by rememberSaveable { mutableStateOf(preferences.getBoolean("show_logo", false)) }
     var showDateTracking by rememberSaveable { mutableStateOf(preferences.getBoolean("show_date_tracking", false)) }
     var mfgOrPkgType by rememberSaveable { mutableStateOf(currentProduct.mfgOrPkgType ?: "Mfg") }
     var mfgOrPkgDate by rememberSaveable { mutableStateOf(currentProduct.mfgOrPkgDate ?: "") }
@@ -3425,6 +3089,7 @@ fun ProductCodeImageDialog(
     // Active Segmented Tab (0 = Label Setup, 1 = Store & Fields, 2 = Dates & Scale)
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showZoomModal by remember { mutableStateOf(false) }
+    var activePresetKey by rememberSaveable { mutableStateOf<String?>("standard") }
     var selectedDpi by rememberSaveable { mutableIntStateOf(invoiceSettings.labelDpi.takeIf { it in listOf(203, 300) } ?: 203) }
 
     var storeNameInput by rememberSaveable {
@@ -3498,19 +3163,42 @@ fun ProductCodeImageDialog(
         }
     }
 
-    var renderedBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var completedBitmapRequest by remember { mutableStateOf<List<Any?>?>(null) }
-    val bitmapRequest = listOf(
-        labelDesignId, showLogo, storeLogo, storeLogoScale,
+    val availableDesigns = BarcodeLabelDesign.entries
+    var selectedDesignName by rememberSaveable {
+        mutableStateOf(
+            preferences.getString("barcode_label_design", BarcodeLabelDesign.STANDARD_RETAIL.name)
+                ?: BarcodeLabelDesign.STANDARD_RETAIL.name
+        )
+    }
+    val selectedDesignIndex = availableDesigns.indexOfFirst { it.name == selectedDesignName }.takeIf { it >= 0 } ?: 0
+    var selectedDesign by remember(selectedDesignName) {
+        mutableStateOf(availableDesigns.getOrNull(selectedDesignIndex) ?: BarcodeLabelDesign.STANDARD_RETAIL)
+    }
+
+    val designPagerState = rememberPagerState(
+        initialPage = selectedDesignIndex,
+        pageCount = { availableDesigns.size }
+    )
+    val designBitmaps = remember { mutableStateMapOf<BarcodeLabelDesign, Bitmap>() }
+
+    LaunchedEffect(designPagerState.currentPage) {
+        val newDesign = availableDesigns[designPagerState.currentPage]
+        if (selectedDesign != newDesign) {
+            selectedDesign = newDesign
+            selectedDesignName = newDesign.name
+        }
+    }
+
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(
         currentProduct, codeType, labelSize, showPrice, priceTierName, isDualPrice, showUnit, showBanglaDigits,
-        showCodeNumber, showStoreName, effectiveStoreName,
+        showCodeNumber, showStoreName, showLogo, effectiveStoreName,
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
-        codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
-        extraFieldTitle, extraFieldValue, extraFieldTextScale, selectedDpi
-    )
-    val bitmap = renderedBitmap.takeIf { completedBitmapRequest == bitmapRequest }
-    LaunchedEffect(bitmapRequest) {
+        codeNumberTextScale, storeLogoScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
+        extraFieldTitle, extraFieldValue, extraFieldTextScale, selectedDpi, selectedDesign
+    ) {
+        val old = bitmap
         val newBmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             generateProductCodeLabelBitmap(
                 productName = currentProduct.name,
@@ -3539,37 +3227,89 @@ fun ProductCodeImageDialog(
                 extraFieldValue = extraFieldValue,
                 extraFieldTextScale = extraFieldTextScale,
                 showLogo = showLogo,
-                labelDesign = labelDesign,
-                storeLogo = storeLogo,
-                storeLogoScale = storeLogoScale,
                 dpi = selectedDpi,
-                showBanglaDigits = showBanglaDigits
+                showBanglaDigits = showBanglaDigits,
+                labelDesign = selectedDesign
             )
         }
-        renderedBitmap = newBmp
-        completedBitmapRequest = bitmapRequest
-        // Let GC release old previews after Compose and any active export finish using them.
+        bitmap = newBmp
+        if (newBmp != null) {
+            designBitmaps[selectedDesign] = newBmp
+        }
+        if (old != null && !old.isRecycled && old != newBmp && !designBitmaps.containsValue(old)) {
+            old.recycle()
+        }
+
+        // Pre-generate remaining designs in background for buttery smooth 60fps swiping
+        if (codeType == ProductCodeType.BARCODE) {
+            for (design in availableDesigns) {
+                if (design != selectedDesign) {
+                    val preBmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                        generateProductCodeLabelBitmap(
+                            productName = currentProduct.name,
+                            barcode = currentProduct.barcode,
+                            formattedPrice = formattedPriceString,
+                            codeType = codeType,
+                            labelSize = labelSize,
+                            showPrice = showPrice,
+                            showCodeNumber = showCodeNumber,
+                            customWidthMm = customWidthMm,
+                            customHeightMm = customHeightMm,
+                            productNameTextScale = productNameTextScale,
+                            priceTextScale = priceTextScale,
+                            codeNumberTextScale = codeNumberTextScale,
+                            showStoreName = showStoreName,
+                            storeName = effectiveStoreName,
+                            storeNameTextScale = storeNameTextScale,
+                            showDateTracking = showDateTracking,
+                            mfgOrPkgType = mfgOrPkgType,
+                            mfgOrPkgDate = mfgOrPkgDate,
+                            expDate = expDate,
+                            dateTrackingTextScale = dateTrackingTextScale,
+                            barcodeGraphicScale = barcodeGraphicScale,
+                            showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+                            extraFieldLabel = extraFieldTitle,
+                            extraFieldValue = extraFieldValue,
+                            extraFieldTextScale = extraFieldTextScale,
+                            showLogo = showLogo,
+                            dpi = selectedDpi,
+                            showBanglaDigits = showBanglaDigits,
+                            labelDesign = design
+                        )
+                    }
+                    if (preBmp != null) {
+                        designBitmaps[design] = preBmp
+                    }
+                }
+            }
+        }
     }
 
     DisposableEffect(Unit) {
         onDispose {
+            designBitmaps.values.forEach { bmp ->
+                if (!bmp.isRecycled) bmp.recycle()
+            }
+            designBitmaps.clear()
+            if (bitmap != null && !bitmap!!.isRecycled) {
+                bitmap?.recycle()
+            }
             singlePrintJob?.cancel()
             sharePdfJob?.cancel()
         }
     }
 
     LaunchedEffect(
-        labelDesignId, showLogo, storeLogo, storeLogoScale,
-        codeTypeName, labelSizeName, showPrice, priceTierName, isDualPrice, showUnit, showBanglaDigits,
-        showCodeNumber, showStoreName, storeNameInput,
+        codeTypeName, selectedDesignName, labelSizeName, showPrice, priceTierName, isDualPrice, showUnit, showBanglaDigits,
+        showCodeNumber, showStoreName, showLogo, storeNameInput,
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthInput, customHeightInput, productNameTextScale, priceTextScale,
-        codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
+        codeNumberTextScale, storeLogoScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
         extraFieldTitle, extraFieldValue, extraFieldTextScale, copiesMode, manualCopies
     ) {
         val editor = preferences.edit()
-            .putString("label_design", labelDesignId)
             .putString("code_type", codeTypeName)
+            .putString("barcode_label_design", selectedDesignName)
             .putString("label_size", labelSizeName)
             .putBoolean("show_price", showPrice)
             .putString("price_tier", if (isDualPrice) ProductCodePriceTier.DUAL.name else priceTierName)
@@ -3624,22 +3364,11 @@ fun ProductCodeImageDialog(
             dismissOnBackPress = !isPrinting && !isSharingPdf
         )
     ) {
-        val configuration = LocalConfiguration.current
-        val isTablet = configuration.screenWidthDp >= 600
-        val dialogModifier = if (isTablet) {
-            Modifier
-                .widthIn(max = 720.dp)
-                .fillMaxWidth(0.76f)
-                .fillMaxHeight(0.90f)
-                .trackUserActivity()
-        } else {
-            Modifier
+        Surface(
+            modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .fillMaxHeight(0.94f)
-                .trackUserActivity()
-        }
-        Surface(
-            modifier = dialogModifier,
+                .trackUserActivity(),
             shape = RoundedCornerShape(24.dp),
             color = studioDialogBg,
             tonalElevation = 0.dp,
@@ -3700,26 +3429,480 @@ fun ProductCodeImageDialog(
                             color = studioPrimary
                         )
                     }
-                    Surface(
+                    IconButton(
                         onClick = onDismiss,
                         enabled = !isPrinting && !isSharingPdf,
-                        shape = CircleShape,
-                        color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9),
-                        border = BorderStroke(1.dp, studioCardBorder),
                         modifier = Modifier.size(48.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.dismiss),
-                                tint = studioTextMuted,
-                                modifier = Modifier.size(16.dp)
-                            )
+                        Surface(
+                            shape = CircleShape,
+                            color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9),
+                            border = BorderStroke(1.dp, studioCardBorder),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.dismiss),
+                                    tint = studioTextMuted,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
 
-                // 2. UNIFIED SCROLLABLE DIALOG BODY (Matching preview: Hero, Preview with Presets, Tabs, and Tab Controls)
+                // 2. COMPACT PRODUCT HERO & CAROUSEL STRIP (Pinned at top)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = studioCardBg,
+                    border = BorderStroke(1.dp, studioCardBorder)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Category Badge
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isDark) Color(0xFF0369A1).copy(alpha = 0.25f) else Color(0xFFE0F2FE)
+                            ) {
+                                Text(
+                                    text = currentProduct.category.ifBlank { "General" }.uppercase(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontSize = 9.sp
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = currentProduct.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = studioTextMain,
+                                    fontSize = 13.5.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = currentProduct.barcode,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 10.sp,
+                                        color = studioTextMuted
+                                    )
+                                    Text("•", fontSize = 10.sp, color = studioTextMuted)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(5.dp)
+                                            .clip(CircleShape)
+                                            .background(if (currentProduct.stockQty > 0) Color(0xFF10B981) else Color(0xFFEF4444))
+                                    )
+                                    Text(
+                                        text = if (currentProduct.stockQty > 0) "Stock: ${currentProduct.stockQty.toInt()} pcs" else "Out of Stock",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        color = if (currentProduct.stockQty > 0) Color(0xFF10B981) else Color(0xFFEF4444)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Carousel Controls (If products available)
+                        if (allProducts.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        if (hasPrev) {
+                                            val prev = allProducts[productIndex - 1]
+                                            currentProduct = prev
+                                            onProductSelected?.invoke(prev)
+                                        }
+                                    },
+                                    enabled = hasPrev,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ChevronLeft,
+                                        contentDescription = stringResource(R.string.product_prev),
+                                        modifier = Modifier.size(18.dp),
+                                        tint = if (hasPrev) studioTextMain else studioTextMuted.copy(alpha = 0.35f)
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(R.string.product_carousel_counter, productIndex + 1, allProducts.size),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = studioTextMuted,
+                                    fontSize = 10.5.sp
+                                )
+                                IconButton(
+                                    onClick = {
+                                        if (hasNext) {
+                                            val next = allProducts[productIndex + 1]
+                                            currentProduct = next
+                                            onProductSelected?.invoke(next)
+                                        }
+                                    },
+                                    enabled = hasNext,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ChevronRight,
+                                        contentDescription = stringResource(R.string.product_next),
+                                        modifier = Modifier.size(18.dp),
+                                        tint = if (hasNext) studioTextMain else studioTextMuted.copy(alpha = 0.35f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. PINNED LIVE STICKER PREVIEW (Always pinned & visible at top in real-time)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = studioCardBg,
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(1.5.dp, Color(0xFF14B8A6).copy(alpha = if (isDark) 0.40f else 0.45f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    if (isDark) listOf(Color(0xFF0F766E).copy(alpha = 0.16f), Color(0xFF1E293B))
+                                    else listOf(Color(0xFF0F766E).copy(alpha = 0.06f), Color(0xFFFFFFFF))
+                                )
+                            )
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // Preview Top Bar: Dimensions Badge + Active Design Name + Zoom Inspect Button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = studioPrimaryContainer,
+                                border = BorderStroke(1.dp, Color(0xFF14B8A6).copy(alpha = 0.6f))
+                            ) {
+                                Text(
+                                    text = "📐 ${selectedLabelWidthMm.toInt()} × ${selectedLabelHeightMm.toInt()} mm • $selectedDpi DPI",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 10.sp,
+                                    color = studioPrimary,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
+                                )
+                            }
+
+                            if (codeType == ProductCodeType.BARCODE) {
+                                val canPrev = designPagerState.currentPage > 0
+                                val canNext = designPagerState.currentPage < availableDesigns.size - 1
+                                val designTitle = when (selectedDesign) {
+                                    BarcodeLabelDesign.STANDARD_RETAIL -> stringResource(R.string.barcode_design_standard)
+                                    BarcodeLabelDesign.BOUTIQUE_CREST -> stringResource(R.string.barcode_design_boutique_crest)
+                                    BarcodeLabelDesign.BRAND_HERO_SPLIT -> stringResource(R.string.barcode_design_brand_split)
+                                    BarcodeLabelDesign.COMPACT_MINIMALIST -> stringResource(R.string.barcode_design_compact_minimalist)
+                                    BarcodeLabelDesign.SHELF_EDGE_TAG -> stringResource(R.string.barcode_design_shelf_edge)
+                                }
+                                val designEmoji = when (selectedDesign) {
+                                    BarcodeLabelDesign.STANDARD_RETAIL -> "🏷️"
+                                    BarcodeLabelDesign.BOUTIQUE_CREST -> "👑"
+                                    BarcodeLabelDesign.BRAND_HERO_SPLIT -> "🛡️"
+                                    BarcodeLabelDesign.COMPACT_MINIMALIST -> "✦"
+                                    BarcodeLabelDesign.SHELF_EDGE_TAG -> "🏬"
+                                }
+                                Row(
+                                    modifier = Modifier
+                                        .weight(1f, fill = false)
+                                        .padding(horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            val prevPage = (designPagerState.currentPage - 1).coerceAtLeast(0)
+                                            scope.launch { designPagerState.animateScrollToPage(prevPage) }
+                                        },
+                                        enabled = canPrev,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ChevronLeft,
+                                            contentDescription = "Previous Design",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = if (canPrev) studioPrimary else studioTextMuted.copy(alpha = 0.35f)
+                                        )
+                                    }
+                                    Text(
+                                        text = "$designEmoji $designTitle",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = studioTextMain,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            val nextPage = (designPagerState.currentPage + 1).coerceAtMost(availableDesigns.size - 1)
+                                            scope.launch { designPagerState.animateScrollToPage(nextPage) }
+                                        },
+                                        enabled = canNext,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ChevronRight,
+                                            contentDescription = "Next Design",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = if (canNext) studioPrimary else studioTextMuted.copy(alpha = 0.35f)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Zoom Inspect Button
+                            Surface(
+                                onClick = { showZoomModal = true },
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9),
+                                border = BorderStroke(1.dp, studioCardBorder)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ZoomIn,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(12.dp),
+                                        tint = studioTextMain
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.zoom_inspect_label),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.5.sp,
+                                        color = studioTextMain
+                                    )
+                                }
+                            }
+                        }
+
+                        // Live Physical Sticker Canvas (Swipable Pager for Barcode, Image for QR)
+                        if (codeType == ProductCodeType.BARCODE) {
+                            HorizontalPager(
+                                state = designPagerState,
+                                pageSpacing = 10.dp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 2.dp)
+                            ) { page ->
+                                val pageDesign = availableDesigns[page]
+                                val displayBmp = designBitmaps[pageDesign] ?: if (pageDesign == selectedDesign) bitmap else null
+
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 2.dp),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color.White,
+                                    shadowElevation = 6.dp,
+                                    border = BorderStroke(1.5.dp, Color.Black.copy(alpha = 0.12f))
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 85.dp, max = 118.dp)
+                                            .clickable { showZoomModal = true }
+                                            .padding(6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (displayBmp != null) {
+                                            Image(
+                                                bitmap = displayBmp.asImageBitmap(),
+                                                contentDescription = stringResource(R.string.product_code_image_preview),
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        } else {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(22.dp),
+                                                strokeWidth = 2.dp,
+                                                color = studioPrimary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Dot Indicators & Compact Design Chips Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                availableDesigns.forEachIndexed { index, design ->
+                                    val isSelected = designPagerState.currentPage == index
+                                    val chipTitle = when (design) {
+                                        BarcodeLabelDesign.STANDARD_RETAIL -> stringResource(R.string.barcode_design_standard)
+                                        BarcodeLabelDesign.BOUTIQUE_CREST -> stringResource(R.string.barcode_design_boutique_crest)
+                                        BarcodeLabelDesign.BRAND_HERO_SPLIT -> stringResource(R.string.barcode_design_brand_split)
+                                        BarcodeLabelDesign.COMPACT_MINIMALIST -> stringResource(R.string.barcode_design_compact_minimalist)
+                                        BarcodeLabelDesign.SHELF_EDGE_TAG -> stringResource(R.string.barcode_design_shelf_edge)
+                                    }
+                                    val chipIcon = when (design) {
+                                        BarcodeLabelDesign.STANDARD_RETAIL -> "🏷️"
+                                        BarcodeLabelDesign.BOUTIQUE_CREST -> "👑"
+                                        BarcodeLabelDesign.BRAND_HERO_SPLIT -> "🛡️"
+                                        BarcodeLabelDesign.COMPACT_MINIMALIST -> "✦"
+                                        BarcodeLabelDesign.SHELF_EDGE_TAG -> "🏬"
+                                    }
+
+                                    Surface(
+                                        onClick = {
+                                            scope.launch { designPagerState.animateScrollToPage(index) }
+                                        },
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = if (isSelected) studioPrimaryContainer else (if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)),
+                                        border = BorderStroke(
+                                            width = if (isSelected) 1.5.dp else 1.dp,
+                                            color = if (isSelected) studioPrimary else studioCardBorder
+                                        )
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                        ) {
+                                            Text(text = chipIcon, fontSize = 10.sp)
+                                            Text(
+                                                text = chipTitle,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                                fontSize = 10.sp,
+                                                color = if (isSelected) studioPrimary else studioTextMain
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // QR Code Physical Sticker Surface
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 2.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color.White,
+                                shadowElevation = 6.dp,
+                                border = BorderStroke(1.5.dp, Color.Black.copy(alpha = 0.12f))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 85.dp, max = 118.dp)
+                                        .clickable { showZoomModal = true }
+                                        .padding(6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val currentBmp = bitmap
+                                    if (currentBmp != null) {
+                                        Image(
+                                            bitmap = currentBmp.asImageBitmap(),
+                                            contentDescription = stringResource(R.string.product_code_image_preview),
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    } else {
+                                        Text(
+                                            stringResource(R.string.code_generation_failed),
+                                            color = MaterialTheme.colorScheme.error,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. PINNED SEGMENTED 3-TAB SELECTOR (Always accessible right below preview)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isDark) Color(0xFF111A2C) else Color(0xFFE2E8F0).copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, studioCardBorder)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(2.5.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        val tabs = listOf(
+                            "🏷️" to stringResource(R.string.tab_label_setup),
+                            "🏢" to stringResource(R.string.tab_store_info),
+                            "📅" to stringResource(R.string.tab_dates_scale)
+                        )
+                        tabs.forEachIndexed { index, (icon, title) ->
+                            val isSelected = selectedTab == index
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) studioPrimaryGradient else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
+                                    .clickable { selectedTab = index }
+                                    .padding(vertical = 7.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(text = icon, fontSize = 11.sp)
+                                    Spacer(Modifier.width(3.dp))
+                                    Text(
+                                        text = title,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                        color = if (isSelected) Color.White else studioTextMuted,
+                                        fontSize = 10.5.sp,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 5. SCROLLABLE TAB CONTENT BODY (Users scroll down to adjust setups while live preview remains pinned above!)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -3727,372 +3910,130 @@ fun ProductCodeImageDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // A. PRODUCT HERO CARD & CAROUSEL
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = studioCardBg,
-                        shadowElevation = 2.dp,
-                        border = BorderStroke(1.dp, studioCardBorder)
+                    // Quick Template Presets Carousel (LBL-18: Standard, Grocery, Jewelry, Apparel, Warehouse)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(11.dp),
-                            verticalArrangement = Arrangement.spacedBy(7.dp)
-                        ) {
-                            // Top Carousel Navigation Row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                // Category Badge
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = if (isDark) Color(0xFF0369A1).copy(alpha = 0.25f) else Color(0xFFE0F2FE)
-                                ) {
-                                    Text(
-                                        text = currentProduct.category.ifBlank { "General" }.uppercase(),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
-                                        fontSize = 9.5.sp
-                                    )
-                                }
-
-                                // Carousel Controls & Search Button (If products available)
-                                if (allProducts.isNotEmpty()) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                    ) {
-                                        Surface(
-                                            onClick = { showProductSearchModal = true },
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = studioPrimaryContainer,
-                                            border = BorderStroke(1.dp, studioPrimaryBorder.copy(alpha = 0.5f)),
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    Icons.Default.Search,
-                                                    contentDescription = stringResource(R.string.search_product),
-                                                    modifier = Modifier.size(17.dp),
-                                                    tint = studioPrimary
-                                                )
-                                            }
+                        val presetPills = listOf(
+                            Triple("standard", "🏷️", "Standard Retail"),
+                            Triple("grocery", "🥫", "Grocery & Expiry"),
+                            Triple("jewelry", "💍", "Jewelry Mini"),
+                            Triple("apparel", "👗", "Apparel Dual-Price"),
+                            Triple("warehouse", "📦", "Warehouse Code 128")
+                        )
+                        presetPills.forEach { (key, icon, name) ->
+                            val isActive = activePresetKey == key
+                            Surface(
+                                onClick = {
+                                    activePresetKey = key
+                                    when (key) {
+                                        "standard" -> {
+                                            labelSizeName = ProductCodeLabelSize.SIZE_50_X_30.name
+                                            priceTierName = ProductCodePriceTier.SELLING.name
+                                            showPrice = true
+                                            showCodeNumber = true
+                                            showStoreName = true
+                                            showDateTracking = false
+                                            isDualPrice = false
+                                            productNameTextScale = 1.0f
+                                            priceTextScale = 1.0f
+                                            codeNumberTextScale = 1.0f
+                                            storeNameTextScale = 1.0f
+                                            dateTrackingTextScale = 1.0f
+                                            barcodeGraphicScale = 1.0f
+                                            extraFieldTextScale = 1.0f
                                         }
-                                        Surface(
-                                            onClick = {
-                                                if (hasPrev) {
-                                                    val prev = allProducts[productIndex - 1]
-                                                    currentProduct = prev
-                                                    onProductSelected?.invoke(prev)
-                                                }
-                                            },
-                                            enabled = hasPrev,
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9),
-                                            border = BorderStroke(1.dp, studioCardBorder),
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    Icons.Default.ChevronLeft,
-                                                    contentDescription = stringResource(R.string.product_prev),
-                                                    modifier = Modifier.size(18.dp),
-                                                    tint = if (hasPrev) studioTextMain else studioTextMuted.copy(alpha = 0.4f)
-                                                )
-                                            }
+                                        "grocery" -> {
+                                            labelSizeName = ProductCodeLabelSize.SIZE_40_X_25.name
+                                            priceTierName = ProductCodePriceTier.SELLING.name
+                                            showPrice = true
+                                            showCodeNumber = true
+                                            showDateTracking = true
+                                            isDualPrice = false
+                                            productNameTextScale = 1.0f
+                                            priceTextScale = 1.0f
+                                            codeNumberTextScale = 1.0f
+                                            storeNameTextScale = 1.0f
+                                            dateTrackingTextScale = 1.0f
+                                            barcodeGraphicScale = 1.0f
+                                            extraFieldTextScale = 1.0f
                                         }
-                                        Text(
-                                            text = stringResource(R.string.product_carousel_counter, productIndex + 1, allProducts.size),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = studioTextMuted,
-                                            modifier = Modifier.padding(horizontal = 4.dp)
-                                        )
-                                        Surface(
-                                            onClick = {
-                                                if (hasNext) {
-                                                    val next = allProducts[productIndex + 1]
-                                                    currentProduct = next
-                                                    onProductSelected?.invoke(next)
-                                                }
-                                            },
-                                            enabled = hasNext,
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9),
-                                            border = BorderStroke(1.dp, studioCardBorder),
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    Icons.Default.ChevronRight,
-                                                    contentDescription = stringResource(R.string.product_next),
-                                                    modifier = Modifier.size(18.dp),
-                                                    tint = if (hasNext) studioTextMain else studioTextMuted.copy(alpha = 0.4f)
-                                                )
-                                            }
+                                        "jewelry" -> {
+                                            labelSizeName = ProductCodeLabelSize.SIZE_25_X_15.name
+                                            priceTierName = ProductCodePriceTier.SELLING.name
+                                            showPrice = true
+                                            showCodeNumber = false
+                                            showDateTracking = false
+                                            isDualPrice = false
+                                            productNameTextScale = 1.0f
+                                            priceTextScale = 1.0f
+                                            codeNumberTextScale = 1.0f
+                                            storeNameTextScale = 1.0f
+                                            dateTrackingTextScale = 1.0f
+                                            barcodeGraphicScale = 0.8f
+                                            extraFieldTextScale = 1.0f
+                                        }
+                                        "apparel" -> {
+                                            labelSizeName = ProductCodeLabelSize.SIZE_60_X_40.name
+                                            isDualPrice = true
+                                            showPrice = true
+                                            showUnit = true
+                                            showStoreName = true
+                                            showCodeNumber = true
+                                            showDateTracking = false
+                                            productNameTextScale = 1.0f
+                                            priceTextScale = 1.0f
+                                            codeNumberTextScale = 1.0f
+                                            storeNameTextScale = 1.0f
+                                            dateTrackingTextScale = 1.0f
+                                            barcodeGraphicScale = 1.0f
+                                            extraFieldTextScale = 1.0f
+                                        }
+                                        "warehouse" -> {
+                                            labelSizeName = ProductCodeLabelSize.SIZE_100_X_150.name
+                                            codeTypeName = ProductCodeType.BARCODE.name
+                                            showPrice = false
+                                            showStoreName = true
+                                            showCodeNumber = true
+                                            showDateTracking = true
+                                            isDualPrice = false
+                                            productNameTextScale = 1.0f
+                                            priceTextScale = 1.0f
+                                            codeNumberTextScale = 1.0f
+                                            storeNameTextScale = 1.0f
+                                            dateTrackingTextScale = 1.0f
+                                            barcodeGraphicScale = 1.0f
+                                            extraFieldTextScale = 1.0f
                                         }
                                     }
-                                }
-                            }
-
-                            // Product Details Row (Tappable to quick search/switch product)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .clickable(enabled = allProducts.isNotEmpty()) {
-                                        showProductSearchModal = true
-                                    },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // 3D Product Avatar Box
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(Color(0xFF4338CA), Color(0xFF6366F1))
-                                            )
-                                        )
-                                        .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .fillMaxHeight(0.5f)
-                                            .align(Alignment.TopCenter)
-                                            .background(
-                                                Brush.verticalGradient(
-                                                    listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)
-                                                )
-                                            )
-                                    )
-                                    Text(
-                                        text = "📦",
-                                        fontSize = 22.sp
-                                    )
-                                }
-                                Spacer(Modifier.width(10.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = currentProduct.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = studioTextMain,
-                                        fontSize = 14.5.sp,
-                                        lineHeight = 18.sp,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Row(
-                                        modifier = Modifier.padding(top = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Surface(
-                                            shape = RoundedCornerShape(4.dp),
-                                            color = if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9)
-                                        ) {
-                                            Text(
-                                                text = currentProduct.barcode,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 10.5.sp,
-                                                color = studioTextMuted,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
-                                            )
-                                        }
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(6.dp)
-                                                    .clip(CircleShape)
-                                                    .background(if (currentProduct.stockQty > 0) Color(0xFF10B981) else Color(0xFFEF4444))
-                                            )
-                                            Text(
-                                                text = if (currentProduct.stockQty > 0) {
-                                                    "${stringResource(R.string.in_stock)}: ${stringResource(R.string.products_units_pcs, currentProduct.stockQty.toInt().toString())}"
-                                                } else {
-                                                    stringResource(R.string.out_of_stock)
-                                                },
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (currentProduct.stockQty > 0) Color(0xFF10B981) else Color(0xFFEF4444)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // 4. PINNED STICKER PREVIEW WITH ZOOM INSPECT
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = studioCardBg,
-                        shadowElevation = 2.dp,
-                        border = BorderStroke(1.5.dp, Color(0xFF14B8A6).copy(alpha = if (isDark) 0.40f else 0.45f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    Brush.verticalGradient(
-                                        if (isDark) listOf(Color(0xFF0F766E).copy(alpha = 0.16f), Color(0xFF1E293B))
-                                        else listOf(Color(0xFF0F766E).copy(alpha = 0.06f), Color(0xFFFFFFFF))
-                                    )
+                                    Toast.makeText(context, context.getString(R.string.label_preset_saved_toast), Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (isActive) studioPrimaryContainer else (if (isDark) Color(0xFF1E293B) else Color(0xFFFFFFFF)),
+                                border = BorderStroke(
+                                    if (isActive) 1.5.dp else 1.dp,
+                                    if (isActive) studioPrimaryBorder else studioCardBorder
                                 )
-                                .padding(10.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                // Preview Header (Dimensions + Zoom Inspect Button)
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    val widthDisp = if (selectedLabelWidthMm % 1f == 0f) selectedLabelWidthMm.toInt().toString() else String.format(Locale.US, "%.1f", selectedLabelWidthMm)
-                                    val heightDisp = if (selectedLabelHeightMm % 1f == 0f) selectedLabelHeightMm.toInt().toString() else String.format(Locale.US, "%.1f", selectedLabelHeightMm)
-                                    Surface(
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = studioPrimaryContainer,
-                                        border = BorderStroke(1.dp, Color(0xFF14B8A6).copy(alpha = 0.6f))
-                                    ) {
-                                        Text(
-                                            text = "📐 $widthDisp × $heightDisp mm • $selectedDpi DPI",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 10.5.sp,
-                                            color = studioPrimary,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                        )
-                                    }
-
-                                    // Zoom Inspect Button
-                                    Surface(
-                                        onClick = { showZoomModal = true },
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9),
-                                        border = BorderStroke(1.dp, studioCardBorder)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.5.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.ZoomIn,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(13.dp),
-                                                tint = studioTextMain
-                                            )
-                                            Text(
-                                                text = stringResource(R.string.zoom_inspect_label),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 10.5.sp,
-                                                color = studioTextMain
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // REALISTIC PHYSICAL STICKER CANVAS WITH PAPER DROP SHADOW
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Color.White,
-                                    shadowElevation = 8.dp,
-                                    border = BorderStroke(1.5.dp, Color.Black.copy(alpha = 0.14f))
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .heightIn(min = 96.dp, max = 155.dp)
-                                            .clickable { showZoomModal = true }
-                                            .padding(8.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        val currentBmp = bitmap
-                                        if (currentBmp != null) {
-                                            Image(
-                                                bitmap = currentBmp.asImageBitmap(),
-                                                contentDescription = stringResource(R.string.product_code_image_preview),
-                                                modifier = Modifier.fillMaxSize(),
-                                                contentScale = ContentScale.Fit
-                                            )
-                                        } else {
-                                            Text(
-                                                stringResource(R.string.code_generation_failed),
-                                                color = MaterialTheme.colorScheme.error,
-                                                fontSize = 12.sp
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // Shared template catalog; choosing a design preserves product fields and paper size.
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    LabelDesign.entries.forEach { design ->
-                                        val isActive = labelDesign == design
-                                        val name = stringResource(design.titleRes)
-                                        Surface(
-                                            modifier = Modifier.heightIn(min = 48.dp),
-                                            onClick = {
-                                                labelDesignId = design.id
-                                                showLogo = design.hasLogo
-                                            },
-                                            shape = RoundedCornerShape(20.dp),
-                                            color = if (isActive) studioPrimaryContainer else (if (isDark) Color(0xFF1E293B) else Color(0xFFFFFFFF)),
-                                            border = BorderStroke(
-                                                if (isActive) 1.5.dp else 1.dp,
-                                                if (isActive) studioPrimaryBorder else studioCardBorder
-                                            )
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Text(
-                                                    text = name,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                                    color = if (isActive) studioPrimary else studioTextMuted
-                                                )
-                                            }
-                                        }
-                                    }
+                                    Text(icon, fontSize = 11.sp)
+                                    Text(
+                                        text = name,
+                                        fontSize = 10.5.sp,
+                                        fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                        color = if (isActive) studioPrimary else studioTextMuted
+                                    )
                                 }
                             }
                         }
-                    }
-
-                    if (labelDesign.hasLogo && showLogo && storeLogo == null) {
-                        Text(stringResource(R.string.label_design_missing_logo), style = MaterialTheme.typography.bodySmall)
                     }
 
                     // High Density Barcode Warning (LBL-21)
@@ -4125,56 +4066,6 @@ fun ProductCodeImageDialog(
                         }
                     }
 
-                    // 5. SEGMENTED 3-TAB SELECTOR (Vibrant Pill Tabs)
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isDark) Color(0xFF111A2C) else Color(0xFFE2E8F0).copy(alpha = 0.85f),
-                        border = BorderStroke(1.dp, studioCardBorder)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(3.dp),
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            val tabs = listOf(
-                                "🏷️" to stringResource(R.string.tab_label_setup),
-                                "🏢" to stringResource(R.string.tab_store_info),
-                                "📅" to stringResource(R.string.tab_dates_scale)
-                            )
-                            tabs.forEachIndexed { index, (icon, title) ->
-                                val isSelected = selectedTab == index
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .heightIn(min = 42.dp)
-                                        .clip(RoundedCornerShape(9.dp))
-                                        .background(if (isSelected) studioPrimaryGradient else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
-                                        .clickable { selectedTab = index }
-                                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(text = icon, fontSize = 12.sp)
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(
-                                            text = title,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                            color = if (isSelected) Color.White else studioTextMuted,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     // D. ACTIVE TAB PANE CONTENT
                     when (selectedTab) {
                         0 -> {
@@ -4193,7 +4084,7 @@ fun ProductCodeImageDialog(
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
-                                        text = stringResource(R.string.select_code_format).uppercase(),
+                                        text = "SELECT CODE FORMAT",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = studioPrimary
@@ -4365,7 +4256,7 @@ fun ProductCodeImageDialog(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.print_resolution_label),
+                                            text = "Print Resolution:",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.SemiBold,
                                             color = studioTextMuted,
@@ -4477,7 +4368,7 @@ fun ProductCodeImageDialog(
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.print_copies_title).uppercase(),
+                                            text = "PRINT COPIES",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = studioPrimary
@@ -4561,7 +4452,7 @@ fun ProductCodeImageDialog(
                                                         }
                                                     },
                                                     enabled = printCopies > 1,
-                                                    modifier = Modifier.size(36.dp)
+                                                    modifier = Modifier.size(32.dp)
                                                 ) {
                                                     Icon(
                                                         Icons.Default.Remove,
@@ -4588,7 +4479,7 @@ fun ProductCodeImageDialog(
                                                         fontSize = 13.5.sp,
                                                         color = studioTextMain
                                                     ),
-                                                    modifier = Modifier.width(44.dp)
+                                                    modifier = Modifier.width(36.dp)
                                                 )
                                                 IconButton(
                                                     onClick = {
@@ -4600,7 +4491,7 @@ fun ProductCodeImageDialog(
                                                         }
                                                     },
                                                     enabled = printCopies < 500,
-                                                    modifier = Modifier.size(36.dp)
+                                                    modifier = Modifier.size(32.dp)
                                                 ) {
                                                     Icon(
                                                         Icons.Default.Add,
@@ -4694,13 +4585,13 @@ fun ProductCodeImageDialog(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.store_branding_title).uppercase(),
+                                            text = "STORE BRANDING",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = studioPrimary
                                         )
                                         Text(
-                                            text = stringResource(R.string.top_label_header),
+                                            text = "Top Label Header",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = studioPrimary,
                                             fontSize = 10.sp
@@ -4757,7 +4648,7 @@ fun ProductCodeImageDialog(
                                                 .weight(1f)
                                                 .height(38.dp)
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .clickable(enabled = labelDesign.hasLogo) { showLogo = !showLogo },
+                                                .clickable { showLogo = !showLogo },
                                             shape = RoundedCornerShape(10.dp),
                                             color = if (showLogo) studioPrimaryContainer else studioFieldBg,
                                             border = BorderStroke(
@@ -4825,13 +4716,13 @@ fun ProductCodeImageDialog(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.label_dimensions_title).uppercase(),
+                                            text = "LABEL DIMENSIONS",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = studioPrimary
                                         )
                                         Text(
-                                            text = stringResource(R.string.standard_thermal_sizes),
+                                            text = "Standard Thermal Sizes",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = Color(0xFF38BDF8),
                                             fontSize = 10.sp
@@ -5012,13 +4903,13 @@ fun ProductCodeImageDialog(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.additional_custom_field).uppercase(),
+                                            text = "ADDITIONAL CUSTOM FIELD",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = studioPrimary
                                         )
                                         Text(
-                                            text = stringResource(R.string.optional_badge),
+                                            text = "Optional",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = studioTextMuted,
                                             fontSize = 10.sp
@@ -5033,7 +4924,7 @@ fun ProductCodeImageDialog(
                                         OutlinedTextField(
                                             value = extraFieldTitle,
                                             onValueChange = { extraFieldTitle = it.take(30) },
-                                            label = { Text(stringResource(R.string.custom_field_label), fontSize = 11.sp) },
+                                            label = { Text("Field Label", fontSize = 11.sp) },
                                             placeholder = { Text("e.g. Batch", fontSize = 11.sp) },
                                             singleLine = true,
                                             modifier = Modifier.weight(1f)
@@ -5041,7 +4932,7 @@ fun ProductCodeImageDialog(
                                         OutlinedTextField(
                                             value = extraFieldValue,
                                             onValueChange = { extraFieldValue = it.take(40) },
-                                            label = { Text(stringResource(R.string.custom_field_value), fontSize = 11.sp) },
+                                            label = { Text("Field Value", fontSize = 11.sp) },
                                             placeholder = { Text("e.g. #B2026", fontSize = 11.sp) },
                                             singleLine = true,
                                             modifier = Modifier.weight(1f)
@@ -5057,7 +4948,7 @@ fun ProductCodeImageDialog(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.presets_label),
+                                            text = "Presets:",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = studioTextMuted,
                                             fontSize = 10.sp
@@ -5131,7 +5022,7 @@ fun ProductCodeImageDialog(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.dates_and_tracking).uppercase(),
+                                            text = "DATES & TRACKING",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = studioPrimary
@@ -5139,7 +5030,7 @@ fun ProductCodeImageDialog(
                                         FilterChip(
                                             selected = showDateTracking,
                                             onClick = { showDateTracking = !showDateTracking },
-                                            label = { Text(stringResource(R.string.enable_dates), fontSize = 11.sp) },
+                                            label = { Text("Enable Dates", fontSize = 11.sp) },
                                             leadingIcon = if (showDateTracking) {
                                                 { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) }
                                             } else null,
@@ -5268,7 +5159,7 @@ fun ProductCodeImageDialog(
                                     LabelTextSizeControl(
                                         label = stringResource(R.string.store_logo_scale),
                                         scale = storeLogoScale,
-                                        enabled = labelDesign.hasLogo && showLogo,
+                                        enabled = showLogo,
                                         onScaleChange = { storeLogoScale = it },
                                         onReset = { storeLogoScale = 1.0f }
                                     )
@@ -5375,7 +5266,7 @@ fun ProductCodeImageDialog(
                                                             heightMm = selectedLabelHeightMm,
                                                             copies = printCopies,
                                                             jobName = context.getString(R.string.print_job_product_label_fmt, currentProduct.name),
-                                                            settings = invoiceSettings.copy(labelDpi = selectedDpi)
+                                                            settings = invoiceSettings
                                                         )
                                                         when (outcome) {
                                                             com.example.techyfipos.utils.LabelPrintOutcome.SENT_DIRECT -> {
@@ -5412,9 +5303,7 @@ fun ProductCodeImageDialog(
                                             stringResource(R.string.print_copies_button_fmt, printCopies),
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color.White,
-                                            fontSize = 13.5.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            fontSize = 14.sp
                                         )
                                     }
                                 }
@@ -5569,10 +5458,8 @@ fun ProductCodeImageDialog(
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
-                            val zoomWidthDisp = if (selectedLabelWidthMm % 1f == 0f) selectedLabelWidthMm.toInt().toString() else String.format(Locale.US, "%.1f", selectedLabelWidthMm)
-                            val zoomHeightDisp = if (selectedLabelHeightMm % 1f == 0f) selectedLabelHeightMm.toInt().toString() else String.format(Locale.US, "%.1f", selectedLabelHeightMm)
                             Text(
-                                text = "$zoomWidthDisp × $zoomHeightDisp mm • $selectedDpi DPI Dot Simulation",
+                                text = "${selectedLabelWidthMm.toInt()} × ${selectedLabelHeightMm.toInt()} mm • ${invoiceSettings.labelDpi} DPI Dot Simulation",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -5609,19 +5496,6 @@ fun ProductCodeImageDialog(
                 }
             }
         }
-    }
-
-    if (showProductSearchModal) {
-        SingleProductPickerModal(
-            allProducts = allProducts,
-            currentProduct = currentProduct,
-            onProductSelected = { selected ->
-                currentProduct = selected
-                onProductSelected?.invoke(selected)
-                showProductSearchModal = false
-            },
-            onDismiss = { showProductSearchModal = false }
-        )
     }
 }
 

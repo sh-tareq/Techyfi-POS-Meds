@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-23 (app version 2.7.03-Final-V23-10-2026, build `Techyfi-POS-Final-V23-10-2026.apk`; versionCode 220984; DB schema version 38)
+Last updated: 2026-10-23 (app version 2.7.02-Final-V23-10-2026, build `Techyfi-POS-Final-V23-10-2026.apk`; versionCode 220983; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3342,33 +3342,8 @@ mindmap
   - Responsive design switcher row with `weight(1f, fill = false)` and `TextOverflow.Ellipsis` preventing any overflow on narrow 360dp phone viewports.
 - **R8 Minification & Resource Shrinking**:
   - Built with full R8 code optimization (`isMinifyEnabled = true`), resource shrinking (`isShrinkResources = true`), and update-compatible signing certificate (`signingConfigs.debug`).
-### Release Final-V23-10-2026-R8: Single & Batch Code Image UI/UX Polish, Responsive Layouts, and Search Modernization (Version 2.7.03-Final-V23-10-2026, Build Final-V23-10-2026)
-- **Compact & Consistent Search Box (`PosSearchBox.kt`)**:
-  - Typography synchronization: matched input and placeholder font size (`13.sp`) and explicit line height (`18.sp`), preventing vertical clipping and baseline jumping.
-  - Proportional touch target: replaced overflowing 48dp clear button with compact 36dp container (17dp icon), perfectly fitting the 46dp container without constraint violations.
-- **Instant Product Search in Single Label Studio (`SingleProductPickerModal`)**:
-  - Added dedicated searchable modal dialog powered by `PosSearchBox` allowing direct product lookup (by name or barcode) instead of relying solely on linear `<` / `>` carousel cycling.
-  - Added 32dp quick search icon button in Hero Card and made the product details row tappable to trigger search modal.
-- **Layout Responsiveness (Phone vs Tablet)**:
-  - Responsive dialog surfaces across `ProductCodeImageDialog`, `BatchProductCodePrintDialog`, `BatchProductPickerSheet`, and `SingleProductPickerModal`.
-  - Tablet (`>= 600dp`): Centered modal dialog constrained to `widthIn(max = 720.dp).fillMaxWidth(0.76f).fillMaxHeight(0.90f)`.
-  - Phone (`< 600dp`): `fillMaxWidth(0.95f).fillMaxHeight(0.94f)` to maximize visible touchscreen surface area.
-- **Defect Remediation & Ergonomics**:
-  - Title clipping: Set product name to `maxLines = 2`, `lineHeight = 18.sp`, and `TextOverflow.Ellipsis` in hero card, batch picker, and single product modal.
-  - Price truncation: Lowered price tier font to `12.5.sp` with `maxLines = 1` and ellipsis so values like `৳12,500.00` never clip.
-  - Option rows: Added `heightIn(min = 44.dp)` and label weighting so switch badges never get displaced.
-  - Copies steppers: Enlarged `-` / `+` stepper buttons to 32-36dp with 16dp icons; broadened copy count text field to 44dp so 3-digit counts (e.g. 500) fit cleanly.
-  - Fractional dimensions: Dynamically format millimeters (`%.1f` when fractional, integer when whole) to prevent truncation of sizes like `38.1mm`.
-  - 3-Tab selector: Added `heightIn(min = 42.dp)` and `TextOverflow.Ellipsis`.
-  - Direct print action buttons: Styled with `fontSize = 13.5.sp`, `maxLines = 1`, and `TextOverflow.Ellipsis` for both English and Bengali phrasing.
-- **Bilingual Localization (Bangla & English)**:
-  - Added 14 bilingual string resource pairs in `strings.xml` and `values-bn/strings.xml`.
-  - Localized stock indicator ("In Stock: %1$s Pcs" / "স্টকে আছে: %1$s টি" or "Out of Stock" / "স্টক শেষ").
-  - Localized all tab labels, resolution headers, and custom field badges.
-- **R8 Minification & Resource Shrinking**:
-  - Built with full R8 code optimization (`isMinifyEnabled = true`), resource shrinking (`isShrinkResources = true`), and update-compatible signing certificate (`signingConfigs.debug`).
 - **Release Deliverables**:
-  - `Techyfi-POS-Final-V23-10-2026.apk` (versionCode 220984, versionName "2.7.03-Final-V23-10-2026").
+  - `Techyfi-POS-Final-V23-10-2026.apk` (versionCode 220983, versionName "2.7.02-Final-V23-10-2026"), installed as seamless update on connected Xiaomi hardware (`cb5fdfb5`).
 
 ## Maintenance note
 
