@@ -5388,64 +5388,76 @@ fun MedicineItemRow(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Dosage Form Pill
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = formBg,
-                    border = BorderStroke(0.6.dp, formText.copy(alpha = 0.4f))
+                // Left Badges
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
-                    Text(
-                        text = medicine.dosageForm,
-                        fontSize = 10.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = formText,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-
-                // Antibiotic Warning Badge
-                if (medicine.isAntibiotic) {
+                    // Dosage Form Pill
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.7f) else Color(0xFFFEE2E2),
-                        border = BorderStroke(0.6.dp, Color(0xFFEF4444).copy(alpha = 0.6f))
+                        color = formBg,
+                        border = BorderStroke(0.6.dp, formText.copy(alpha = 0.4f))
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        Text(
+                            text = medicine.dosageForm,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = formText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+
+                    // Antibiotic Warning Badge
+                    if (medicine.isAntibiotic) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.7f) else Color(0xFFFEE2E2),
+                            border = BorderStroke(0.6.dp, Color(0xFFEF4444).copy(alpha = 0.6f))
                         ) {
-                            Text("🚨", fontSize = 10.sp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            ) {
+                                Text("🚨", fontSize = 10.sp)
+                                Text(
+                                    text = "অ্যান্টিবায়োটিক (Rx)",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    color = if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626)
+                                )
+                            }
+                        }
+                    }
+
+                    // Shelf Location
+                    if (!medicine.shelfLocation.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        ) {
                             Text(
-                                text = "অ্যান্টিবায়োটিক (Rx)",
+                                text = "📍 ${medicine.shelfLocation}",
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626)
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                             )
                         }
                     }
                 }
 
-                // Shelf Location
-                if (!medicine.shelfLocation.isNullOrBlank()) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                    ) {
-                        Text(
-                            text = "📍 ${medicine.shelfLocation}",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(6.dp))
 
                 // Stock Badge
                 val stockText = when {
@@ -5468,6 +5480,8 @@ fun MedicineItemRow(
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = stockColor,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }

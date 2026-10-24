@@ -71,34 +71,43 @@ class MedicineRepository private constructor(private val context: Context) {
         }
     }
 
-    suspend fun initializeDatabase() = withContext(Dispatchers.IO) {
-        val dbFile = context.getDatabasePath(DB_NAME)
-        if (!dbFile.exists() || dbFile.length() < 1000L) {
-            dbFile.parentFile?.mkdirs()
-            try {
-                context.assets.open(DB_NAME).use { input ->
-                    FileOutputStream(dbFile).use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                Log.i(TAG, "Successfully copied $DB_NAME (${dbFile.length()} bytes) from assets.")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed copying asset database: ${e.message}", e)
-            }
-        }
-
+    @Synchronized
+    private fun getReadableDb(): SQLiteDatabase {
         if (db == null || !db!!.isOpen) {
+            val dbFile = context.getDatabasePath(DB_NAME)
+            if (!dbFile.exists() || dbFile.length() < 1000L) {
+                dbFile.parentFile?.mkdirs()
+                try {
+                    context.assets.open(DB_NAME).use { input ->
+                        FileOutputStream(dbFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    Log.i(TAG, "Successfully copied $DB_NAME (${dbFile.length()} bytes) from assets.")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed copying asset database: ${e.message}", e)
+                }
+            }
             try {
                 db = SQLiteDatabase.openDatabase(
                     dbFile.absolutePath,
                     null,
                     SQLiteDatabase.OPEN_READWRITE
                 )
-                // Ensure custom pharmacy columns exist in user database
                 ensurePharmacyColumns(db!!)
             } catch (e: Exception) {
                 Log.e(TAG, "Error opening SQLite database: ${e.message}", e)
+                throw e
             }
+        }
+        return db!!
+    }
+
+    suspend fun initializeDatabase() = withContext(Dispatchers.IO) {
+        try {
+            getReadableDb()
+        } catch (e: Exception) {
+            Log.e(TAG, "Database initialization error: ${e.message}", e)
         }
     }
 
@@ -131,14 +140,6 @@ class MedicineRepository private constructor(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Failed adding columns to pos_medicines: ${e.message}", e)
         }
-    }
-
-    private fun getReadableDb(): SQLiteDatabase {
-        if (db == null || !db!!.isOpen) {
-            val dbFile = context.getDatabasePath(DB_NAME)
-            db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-        }
-        return db!!
     }
 
     suspend fun searchMedicines(
