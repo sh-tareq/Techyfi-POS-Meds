@@ -1,6 +1,6 @@
 # Techyfi POS Medicine Database
 
-Production-grade pharmaceutical product database extracted from DIMS and formatted specifically for **Pharmacy Point of Sale (POS)** and billing applications in Bangladesh.
+Production-grade pharmaceutical product database formatted specifically for **Pharmacy Point of Sale (POS)** and billing applications in Bangladesh.
 
 ---
 
@@ -15,7 +15,7 @@ Production-grade pharmaceutical product database extracted from DIMS and formatt
 | **`pos_generics_master.json`** | JSON | Clinical reference in JSON format | 1,421 generics |
 | **`pos_companies_master.csv`** | CSV (UTF-8 BOM) | Pharmaceutical manufacturers and distributors directory | 692 companies |
 | **`schema.sql`** | SQL | Database initialization script for SQLite, PostgreSQL, and MySQL | DDL script |
-| **`original_dims_tables/`** | Directory | All 18 original raw DIMS relational tables exported as individual CSVs | Full raw schema |
+| **`raw_pharma_tables/`** | Directory | All 18 raw pharmaceutical relational tables exported as individual CSVs | Full raw schema |
 
 ---
 

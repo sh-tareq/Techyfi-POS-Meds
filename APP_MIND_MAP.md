@@ -3377,9 +3377,9 @@ mindmap
   - Built with full R8 code optimization (`isMinifyEnabled = true`), resource shrinking (`isShrinkResources = true`), incremented `versionCode = 220984` for in-place update compatibility, and signed with update-compatible keystore.
   - Saved deliverable in project root: `Techyfi-POS-Final-V23-10-2026.apk`.
 
-### Release Final-V25-10-2026-R8: Specialized Medicine Shop POS (ফার্মেসি পিওএস), DIMS 29,834 Medicine Master Database, 3-Tier Multi-Unit Pricing, Clinical Generic Substitutes, Antibiotic Rx Enforcement, Package Rename to com.techyfiposmeds, and R8 Minification (Version 2.8.00-Final-V25-10-2026, Build Final-V25-10-2026)
-- **Specialized Pharmacy Architecture & DIMS Master Database (`techyfi_pos_meds.db`)**:
-  - Transitioned the entire retail POS catalog into a dedicated medicine shop POS powered by Bangladesh DIMS (29,834 medicines across 692 pharmaceutical companies and 1,425 clinical generics).
+### Release Final-V25-10-2026-R8: Specialized Medicine Shop POS (ফার্মেসি পিওএস), 29,834 Medicine Master Database, 3-Tier Multi-Unit Pricing, Clinical Generic Substitutes, Antibiotic Rx Enforcement, Package Rename to com.techyfiposmeds, and R8 Minification (Version 2.8.00-Final-V25-10-2026, Build Final-V25-10-2026)
+- **Specialized Pharmacy Architecture & Master Medicine Database (`techyfi_pos_meds.db`)**:
+  - Transitioned the entire retail POS catalog into a dedicated medicine shop POS with comprehensive pharmaceutical coverage (29,834 medicines across 692 pharmaceutical companies and 1,425 clinical generics).
   - Integrated pre-populated high-speed SQLite database into `app/src/main/assets/techyfi_pos_meds.db` and implemented Room schema migration version 39 in `AppDatabase.kt`.
   - Built `MedicineRepository.kt` with FTS5 full-text indexing, multi-column search, generic matching, and clinical reference queries.
   - Replaced the Products section with the Medicine Database catalog in `ProductsScreen.kt`, providing responsive Grid and List views with instant search.
@@ -3392,7 +3392,7 @@ mindmap
 - **Instant Generic Substitute Finder (`MedicineSubstituteDialog.kt`)**:
   - Enabled 1-tap matching of therapeutically identical brands sharing the same generic molecule, dosage form, and strength (e.g. Napa Extra ↔ Fast Flur ↔ Ace Plus).
   - Displays unit prices, company names, and stock status for every alternative brand with 1-tap cart replacement.
-- **DIMS Clinical Reference Sheet (`MedicineClinicalDialog.kt`)**:
+- **Clinical Drug Reference Sheet (`MedicineClinicalDialog.kt`)**:
   - Provided pharmacists with instant point-of-sale clinical guidelines: Indications (নির্দেশনা), Adult & Child Dose (সেবনমাত্রা), Contraindications (প্রতিনির্দেশনা), Side Effects (পার্শ্বপ্রতিক্রিয়া), and Precautions (সতর্কতা).
 - **DGDA Antibiotic Prescription Enforcement**:
   - Flagged 4,443 antibiotic products with `is_antibiotic = true` and visual hazard indicators.

@@ -1447,7 +1447,7 @@
         <img src="assets/3d_medicine_catalog.jpg" alt="Medicine POS" onerror="this.src=''; this.innerHTML='💊';">
       </div>
       <div class="brand-meta">
-        <h1>Techyfi Pharma POS <span class="badge-pill">DIMS v2026.10</span></h1>
+        <h1>Techyfi Pharma POS <span class="badge-pill">v2026.10</span></h1>
         <p class="lang-text" data-en="Specialized Pharmacy & Medicine Database Architecture" data-bn="বিশেষায়িত ফার্মেসি ও ওষুধ ডেটাবেজ আর্কিটেকচার">Specialized Pharmacy & Medicine Database Architecture</p>
       </div>
     </div>
@@ -1504,7 +1504,7 @@
         <div class="stat-icon-box green">💊</div>
         <div class="stat-info">
           <div class="stat-value">29,834</div>
-          <div class="stat-label lang-text" data-en="Total DIMS Medicines" data-bn="মোট নিবন্ধিত ওষুধ">Total DIMS Medicines</div>
+          <div class="stat-label lang-text" data-en="Total Medicines" data-bn="মোট নিবন্ধিত ওষুধ">Total Medicines</div>
         </div>
       </div>
       <div class="stat-card">
@@ -1553,7 +1553,7 @@
               <div class="inapp-icon-squircle">💊</div>
               <div>
                 <h2 class="lang-text" data-en="Medicines" data-bn="ওষুধ তালিকা">Medicines</h2>
-                <p class="lang-text" data-en="DIMS Specialized Pharmacy DB" data-bn="বিশেষায়িত ফার্মেসি ডেটাবেজ">DIMS Specialized Pharmacy DB</p>
+                <p class="lang-text" data-en="Specialized Pharmacy DB" data-bn="বিশেষায়িত ফার্মেসি ডেটাবেজ">Specialized Pharmacy DB</p>
               </div>
             </div>
             <div class="inapp-actions">
@@ -1973,7 +1973,7 @@
               <tr>
                 <td><strong>Product Catalog</strong></td>
                 <td><span class="pill-diff-old">Simple Products</span><br>User manually enters item name, barcode, single price, generic category.</td>
-                <td><span class="pill-diff-new">29,834 DIMS Medicines</span><br>Pre-indexed DIMS SQLite database with Brand, Generic, Strength, Form, Manufacturer.</td>
+                <td><span class="pill-diff-new">29,834 Medicines</span><br>Pre-indexed pharmaceutical SQLite database with Brand, Generic, Strength, Form, Manufacturer.</td>
                 <td>Zero manual data entry. Every medicine in Bangladesh is instantly searchable upon installation.</td>
               </tr>
               <tr>
@@ -2033,7 +2033,7 @@
             <p style="font-size: 12px; color: var(--text-muted);">Visual amber/red alert trigger when scanning any antibiotic with <code>is_antibiotic = 1</code>. Captures Doctor's Name and BMDC license number in the invoice record.</p>
           </div>
           <div class="control-card">
-            <h4>4. 📋 DIMS Clinical Reference Sheet</h4>
+            <h4>4. 📋 Clinical Drug Reference Sheet</h4>
             <p style="font-size: 12px; color: var(--text-muted);">Offline clinical pop-up displaying Indication, Adult Dose, Child Dose, Contraindications, Side Effects, and Pregnancy Warnings for all 1,425 generics.</p>
           </div>
           <div class="control-card">
@@ -2517,7 +2517,7 @@
       const sub = document.getElementById('modal-med-sub');
       const body = document.getElementById('modal-content-area');
 
-      title.textContent = 'DIMS Clinical Reference: ' + med.generic_name;
+      title.textContent = 'Clinical Reference: ' + med.generic_name;
       sub.textContent = 'Brand: ' + med.brand_name + ' • ' + med.company_name;
 
       body.innerHTML = `
@@ -2581,7 +2581,7 @@
           <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Current Price: ৳${Number(target.unit_price).toFixed(2)} / pc • ৳${Number(target.strip_price).toFixed(2)} / strip</div>
         </div>
 
-        <h4 style="margin-top: 8px;">Equipotent Alternative Brands Available from DIMS Database:</h4>
+        <h4 style="margin-top: 8px;">Equipotent Alternative Brands Available from Medicine Database:</h4>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px;">
           ${(target.substitutes || []).map(s => `
             <div class="stat-card" style="flex-direction: column; align-items: flex-start; gap: 8px;">
@@ -2603,7 +2603,7 @@
     }
 
     function openAddMedicineModal() {
-      alert('Add/Edit Medicine Dialog: Pre-fills DIMS clinical fields, strip multipliers, rack location (Rack A-1), batch number, and expiry date picker.');
+      alert('Add/Edit Medicine Dialog: Pre-fills clinical fields, strip multipliers, rack location (Rack A-1), batch number, and expiry date picker.');
     }
 
     function setReceiptWidth(w) {

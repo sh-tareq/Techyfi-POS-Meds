@@ -76,7 +76,7 @@ fun MedicineClinicalDialog(
                         }
                         Column {
                             Text(
-                                text = "DIMS Clinical Reference",
+                                text = "Clinical Drug Reference",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold
                             )

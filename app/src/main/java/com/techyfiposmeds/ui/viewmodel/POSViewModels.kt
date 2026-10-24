@@ -2065,7 +2065,7 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun searchDIMSMedicines(
+    fun searchMedicines(
         query: String = _searchQuery.value,
         dosageForm: String? = _selectedDosageForm.value,
         isAntibiotic: Boolean? = _filterAntibioticOnly.value,
@@ -2092,13 +2092,13 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun setDosageFormFilter(form: String) {
         _selectedDosageForm.value = form
-        searchDIMSMedicines(dosageForm = form)
+        searchMedicines(dosageForm = form)
     }
 
     fun toggleAntibioticFilter() {
         val next = !_filterAntibioticOnly.value
         _filterAntibioticOnly.value = next
-        searchDIMSMedicines(isAntibiotic = if (next) true else null)
+        searchMedicines(isAntibiotic = if (next) true else null)
     }
 
     suspend fun getSubstitutes(med: com.techyfiposmeds.data.MedicineItem): List<com.techyfiposmeds.data.MedicineItem> {
@@ -2150,7 +2150,7 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
-        searchDIMSMedicines(query = query)
+        searchMedicines(query = query)
     }
 
     suspend fun getProductByBarcode(barcode: String): Product? {

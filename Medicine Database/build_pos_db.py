@@ -10,8 +10,8 @@ import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET_DIR = os.path.dirname(os.path.abspath(__file__))
-RAW_DIMS_DIR = os.path.join(TARGET_DIR, "original_dims_tables")
-DIMS_DB_PATH = os.path.join(BASE_DIR, "DIMS Source & Raw Database", "dims_medicine.db")
+RAW_PHARMA_DIR = os.path.join(TARGET_DIR, "raw_pharma_tables")
+SRC_DB_PATH = os.path.join(TARGET_DIR, "techyfi_pos_meds.db")
 POS_DB_PATH = os.path.join(TARGET_DIR, "techyfi_pos_meds.db")
 
 ANTIBIOTIC_KEYWORDS = {
@@ -35,17 +35,14 @@ def is_antibiotic_generic(gname):
 
 
 def main():
-    if not os.path.exists(DIMS_DB_PATH):
-        print(f"Error: {DIMS_DB_PATH} not found.", file=sys.stderr)
+    if not os.path.exists(SRC_DB_PATH):
+        print(f"Error: {SRC_DB_PATH} not found.", file=sys.stderr)
         sys.exit(1)
 
     os.makedirs(TARGET_DIR, exist_ok=True)
-    os.makedirs(RAW_DIMS_DIR, exist_ok=True)
+    os.makedirs(RAW_PHARMA_DIR, exist_ok=True)
 
-    if os.path.exists(POS_DB_PATH):
-        os.remove(POS_DB_PATH)
-
-    src_conn = sqlite3.connect(DIMS_DB_PATH)
+    src_conn = sqlite3.connect(SRC_DB_PATH)
     src_cur = src_conn.cursor()
 
     dst_conn = sqlite3.connect(POS_DB_PATH)
@@ -413,7 +410,7 @@ def main():
         for row in comp_rows:
             w.writerow(list(row))
 
-    print("5. Exporting original DIMS tables...")
+    print("5. Exporting raw pharmaceutical tables...")
     src_tables = [t[0] for t in src_cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name != 'android_metadata'").fetchall()]
     for t in src_tables:
         src_cur.execute(f"SELECT * FROM {t}")
@@ -421,7 +418,7 @@ def main():
         if not t_rows:
             continue
         t_cols = [desc[0] for desc in src_cur.description]
-        with open(os.path.join(RAW_DIMS_DIR, f"{t}.csv"), "w", newline="", encoding="utf-8-sig") as f:
+        with open(os.path.join(RAW_PHARMA_DIR, f"{t}.csv"), "w", newline="", encoding="utf-8-sig") as f:
             w = csv.writer(f)
             w.writerow(t_cols)
             for r in t_rows:

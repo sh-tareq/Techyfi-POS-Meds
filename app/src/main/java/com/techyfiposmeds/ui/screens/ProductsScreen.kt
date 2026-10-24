@@ -2012,7 +2012,7 @@ fun ProductsScreen(
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = if (isSearchingMedicines) "DIMS মেডিসিন ডেটাবেজে অনুসন্ধান করা হচ্ছে..." else stringResource(R.string.loading),
+                            text = if (isSearchingMedicines) "মেডিসিন ডেটাবেজে অনুসন্ধান করা হচ্ছে..." else stringResource(R.string.loading),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -5623,7 +5623,7 @@ fun MedicineItemRow(
                         }
                     }
 
-                    // Clinical DIMS Button
+                    // Clinical Reference Info Button
                     Surface(
                         onClick = onViewClinical,
                         shape = RoundedCornerShape(8.dp),
