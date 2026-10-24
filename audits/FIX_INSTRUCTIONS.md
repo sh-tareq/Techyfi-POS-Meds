@@ -229,7 +229,7 @@ Text(
     style = MaterialTheme.typography.bodyMedium
 )
 ```
-Keep any "Pro" badge if it is a separate UI element — just add the version number alongside it. The import `import com.example.techyfipos.BuildConfig` may be needed.
+Keep any "Pro" badge if it is a separate UI element — just add the version number alongside it. The import `import com.techyfiposmeds.BuildConfig` may be needed.
 
 ---
 

@@ -8,10 +8,10 @@ plugins {
 // Allow stax-api for Apache POI on Android
 
 android {
-    namespace = "com.example.techyfipos"
+    namespace = "com.techyfiposmeds"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.techyfi.pos"
+        applicationId = "com.techyfiposmeds"
         minSdk = 24
         targetSdk = 36
         versionCode = 220984

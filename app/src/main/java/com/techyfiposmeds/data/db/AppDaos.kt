@@ -1,0 +1,858 @@
+package com.techyfiposmeds.data.db
+
+import androidx.room.*
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface ProductDao {
+    @Query("SELECT * FROM products ORDER BY name ASC")
+    fun getAllProducts(): Flow<List<Product>>
+
+    @Query("SELECT * FROM products ORDER BY name ASC")
+    suspend fun getAllProductsList(): List<Product>
+
+    @Query("SELECT * FROM products WHERE barcode = :barcode OR barcode = LOWER(:barcode) LIMIT 1")
+    suspend fun getProductByBarcode(barcode: String): Product?
+
+    @Query("SELECT * FROM products WHERE LOWER(barcode) = LOWER(:barcode) LIMIT 1")
+    suspend fun getProductByBarcodeCaseInsensitive(barcode: String): Product?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertProduct(product: Product)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertProductIgnore(product: Product): Long
+
+    @Update
+    suspend fun updateProduct(product: Product)
+
+    @Query("""
+        UPDATE products 
+        SET stockQty = CASE 
+            WHEN :allowNegative = 1 THEN (stockQty + :delta) 
+            ELSE MAX(0.0, stockQty + :delta) 
+        END 
+        WHERE LOWER(barcode) = LOWER(:barcode)
+    """)
+    suspend fun adjustStockQty(barcode: String, delta: Double, allowNegative: Boolean = false)
+
+    @Query("UPDATE products SET stockQty = stockQty - :quantity WHERE LOWER(barcode) = LOWER(:barcode) AND stockQty >= :quantity")
+    suspend fun decrementStockIfAvailable(barcode: String, quantity: Double): Int
+
+    @Delete
+    suspend fun deleteProduct(product: Product)
+
+    @Query("SELECT * FROM products WHERE name LIKE :query OR barcode LIKE :query OR category LIKE :query ORDER BY name ASC")
+    fun searchProducts(query: String): Flow<List<Product>>
+
+    @Query("SELECT * FROM products WHERE name LIKE :query OR barcode LIKE :query OR barcode LIKE :altQuery OR category LIKE :query ORDER BY name ASC")
+    fun searchProductsWithAlt(query: String, altQuery: String): Flow<List<Product>>
+
+    @Query("UPDATE products SET category = :newCategory WHERE category = :oldCategory")
+    suspend fun renameCategory(oldCategory: String, newCategory: String)
+}
+
+data class ReturnLine(
+    val barcode: String,
+    val name: String,
+    val price: Double,
+    val quantity: Double
+)
+
+data class SaleWithItems(
+    @Embedded val sale: Sale,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "saleId"
+    )
+    val items: List<SaleItem>
+)
+
+@Dao
+interface SaleDao {
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertSale(sale: Sale): Long
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertSaleItems(items: List<SaleItem>)
+
+    @Transaction
+    @Query("SELECT * FROM sales ORDER BY timestamp DESC")
+    fun getAllSalesWithItems(): Flow<List<SaleWithItems>>
+
+    @Transaction
+    @Query("SELECT * FROM sales WHERE timestamp >= :startTime AND timestamp < :endTime ORDER BY timestamp DESC")
+    fun getSalesWithItemsBetween(startTime: Long, endTime: Long): Flow<List<SaleWithItems>>
+
+    @Transaction
+    @Query("SELECT * FROM sales WHERE id = :saleId")
+    suspend fun getSaleWithItemsById(saleId: Long): SaleWithItems?
+
+    @Query("SELECT * FROM sales ORDER BY timestamp DESC")
+    fun getAllSales(): Flow<List<Sale>>
+
+    @Query("SELECT * FROM sales ORDER BY timestamp DESC")
+    suspend fun getAllSalesOnce(): List<Sale>
+
+    @Query("SELECT * FROM sales ORDER BY timestamp DESC LIMIT :limit OFFSET :offset")
+    suspend fun getSalesPaged(limit: Int, offset: Int): List<Sale>
+
+    @Query("SELECT * FROM sale_items WHERE saleId = :saleId")
+    suspend fun getItemsForSale(saleId: Long): List<SaleItem>
+
+    @Query("DELETE FROM sales WHERE id = :saleId")
+    suspend fun deleteSaleById(saleId: Long)
+
+    @Query("DELETE FROM sale_items WHERE saleId = :saleId")
+    suspend fun deleteSaleItemsBySaleId(saleId: Long)
+
+    @Transaction
+    suspend fun deleteSale(saleId: Long) {
+        deleteSaleItemsBySaleId(saleId)
+        deleteSaleById(saleId)
+    }
+
+    @Query("SELECT customerName FROM sales WHERE customerPhone = :phone AND customerName IS NOT NULL AND TRIM(customerName) != '' ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLatestCustomerNameByPhone(phone: String): String?
+
+    @Query("SELECT DISTINCT customerPhone, customerName FROM sales WHERE (customerName LIKE :q OR customerPhone LIKE :q) AND customerPhone IS NOT NULL AND TRIM(customerPhone) != '' LIMIT 5")
+    suspend fun searchPastCustomerContacts(q: String): List<CustomerContactInfo>
+
+    @Query("SELECT * FROM sales WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    fun getSalesForCustomer(phone: String): Flow<List<Sale>>
+
+    @Transaction
+    @Query("SELECT * FROM sales WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    fun getSalesWithItemsForCustomer(phone: String): Flow<List<SaleWithItems>>
+
+    @Transaction
+    @Query("SELECT * FROM sales WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    suspend fun getSalesWithItemsForCustomerOnce(phone: String): List<SaleWithItems>
+
+    @Query("UPDATE sales SET customerPhone = :newPhone, customerName = :newName WHERE customerPhone = :oldPhone")
+    suspend fun reassignCustomerForSales(oldPhone: String, newPhone: String, newName: String): Int
+
+    @Query("""
+        SELECT si.productBarcode AS barcode, MAX(si.productName) AS name, 
+               SUM(si.quantity) AS totalQty, 
+               SUM(si.price * si.quantity) AS totalSpent, 
+               COUNT(si.id) AS purchaseCount 
+        FROM sale_items si 
+        INNER JOIN sales s ON si.saleId = s.id 
+        WHERE s.customerPhone = :phone 
+        GROUP BY si.productBarcode 
+        ORDER BY totalQty DESC, totalSpent DESC 
+        LIMIT :limit
+    """)
+    suspend fun getTopProductsForCustomer(phone: String, limit: Int = 25): List<CustomerProductPurchaseSummary>
+
+    @Query("UPDATE sales SET isTaxInclusive = 1 WHERE isTaxInclusive = 0 AND (taxAmount > 0.0 OR taxRate > 0.0)")
+    suspend fun backfillTaxInclusiveForLegacySales(): Int
+}
+
+@Dao
+interface CustomerDueDao {
+    @Query("SELECT * FROM customer_dues WHERE outstandingAmount > 0 AND isArchived = 0 ORDER BY updatedAt DESC")
+    fun getAllOutstandingDues(): Flow<List<CustomerDue>>
+
+    @Query("SELECT * FROM customer_dues WHERE isArchived = 0 ORDER BY updatedAt DESC")
+    fun getAllDues(): Flow<List<CustomerDue>>
+
+    @Query("SELECT * FROM customer_dues ORDER BY updatedAt DESC")
+    suspend fun getAllDuesIncludingArchived(): List<CustomerDue>
+
+    @Query("SELECT * FROM customer_dues WHERE customerPhone = :phone LIMIT 1")
+    suspend fun getCustomerDueByPhone(phone: String): CustomerDue?
+
+    @Query("SELECT * FROM customer_dues WHERE customerPhone IN (:phones)")
+    suspend fun getCustomerDuesByPhones(phones: List<String>): List<CustomerDue>
+
+    @Query("SELECT * FROM customer_dues WHERE customerPhone = :phone AND isArchived = 0 LIMIT 1")
+    suspend fun getActiveCustomerDueByPhone(phone: String): CustomerDue?
+
+    // A REPLACE here deletes the existing parent row before inserting it again.
+    // Because due_payments references this table with ON DELETE CASCADE, that
+    // behavior erased the customer's previous payment history on every update.
+    @Upsert
+    suspend fun upsertCustomerDue(customerDue: CustomerDue)
+
+    @Query("SELECT * FROM due_payments WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    fun getPaymentsForCustomer(phone: String): Flow<List<DuePayment>>
+
+    @Query("SELECT * FROM due_payments WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    suspend fun getPaymentsForCustomerOnce(phone: String): List<DuePayment>
+
+    @Query("SELECT * FROM due_payments")
+    fun getAllDuePayments(): Flow<List<DuePayment>>
+
+    @Query("SELECT * FROM due_payments ORDER BY timestamp DESC")
+    suspend fun getAllDuePaymentsOnce(): List<DuePayment>
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertDuePayment(payment: DuePayment)
+
+    // Used only by the duplicate-ledger repair tool to move a stale (unnormalized-phone) row's
+    // payment history onto the canonical row before the stale row is deleted.
+    @Query("UPDATE due_payments SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
+    suspend fun reassignDuePaymentsPhone(oldPhone: String, newPhone: String)
+
+    @Query("SELECT * FROM due_payments WHERE id = :id LIMIT 1")
+    suspend fun getDuePaymentById(id: Long): DuePayment?
+
+    @Query("DELETE FROM due_payments WHERE id = :id")
+    suspend fun deleteDuePaymentById(id: Long)
+
+    // The debit side of the ledger (see DueCharge) - charges that increased a customer's balance,
+    // from a Due sale (reason "Sale") or a standalone entry via the Add Due dialog ("Manual").
+    @Query("SELECT * FROM due_charges WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    fun getChargesForCustomer(phone: String): Flow<List<DueCharge>>
+
+    @Query("SELECT * FROM due_charges WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    suspend fun getChargesForCustomerOnce(phone: String): List<DueCharge>
+
+    @Query("SELECT * FROM due_charges")
+    fun getAllDueCharges(): Flow<List<DueCharge>>
+
+    @Query("SELECT * FROM due_charges ORDER BY timestamp DESC")
+    suspend fun getAllDueChargesOnce(): List<DueCharge>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDueCharge(charge: DueCharge)
+
+    @Query("SELECT * FROM due_charges WHERE id = :id LIMIT 1")
+    suspend fun getDueChargeById(id: Long): DueCharge?
+
+    @Query("DELETE FROM due_charges WHERE id = :id")
+    suspend fun deleteDueChargeById(id: Long)
+
+    // Cleans up the ledger entry when the underlying sale is deleted; deleteSale() already
+    // reverses the due amount itself via reduceCustomerDue, so this must not touch the balance.
+    @Query("DELETE FROM due_charges WHERE saleId = :saleId")
+    suspend fun deleteDueChargesBySaleId(saleId: Long)
+
+    @Query("UPDATE due_charges SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
+    suspend fun reassignDueChargesPhone(oldPhone: String, newPhone: String)
+
+    @Query("SELECT COUNT(*) FROM customer_dues")
+    suspend fun getDueCount(): Int
+
+    @Query("DELETE FROM customer_dues WHERE customerPhone = :phone")
+    suspend fun deleteCustomerDueByPhone(phone: String)
+
+    @Query("DELETE FROM due_payments WHERE customerPhone = :phone")
+    suspend fun deleteDuePaymentsByPhone(phone: String)
+
+    @Query("DELETE FROM due_charges WHERE customerPhone = :phone")
+    suspend fun deleteDueChargesByPhone(phone: String)
+
+    @Transaction
+    suspend fun deleteCustomerDue(phone: String) {
+        deleteCustomerDueByPhone(phone)
+        deleteDuePaymentsByPhone(phone)
+        deleteDueChargesByPhone(phone)
+    }
+
+    @Query("UPDATE customer_dues SET isArchived = 1, updatedAt = :timestamp WHERE customerPhone = :phone")
+    suspend fun archiveCustomerDue(phone: String, timestamp: Long): Int
+
+    @Query("UPDATE customer_dues SET outstandingAmount = MAX(0.0, outstandingAmount + :delta), updatedAt = :timestamp WHERE customerPhone = :phone")
+    suspend fun adjustOutstandingDue(phone: String, delta: Double, timestamp: Long): Int
+
+    @Transaction
+    suspend fun recordDuePayment(
+        phone: String,
+        amountPaid: Double,
+        timestamp: Long,
+        paymentMethod: String = "Cash",
+        referenceNote: String? = null
+    ) {
+        val currentDue = getActiveCustomerDueByPhone(phone)
+            ?: throw IllegalArgumentException("No active due account found for customer $phone")
+        require(amountPaid.isFinite() && amountPaid > 0.0) { "Payment amount must be positive and finite" }
+        val appliedAmount = amountPaid.coerceAtMost(currentDue.outstandingAmount)
+        val newAmount = (currentDue.outstandingAmount - appliedAmount).coerceAtLeast(0.0)
+        upsertCustomerDue(currentDue.copy(outstandingAmount = newAmount, updatedAt = timestamp))
+        insertDuePayment(
+            DuePayment(
+                customerPhone = phone,
+                amountPaid = appliedAmount,
+                timestamp = timestamp,
+                paymentMethod = paymentMethod,
+                referenceNote = referenceNote
+            )
+        )
+    }
+}
+
+@Dao
+interface UserDao {
+    @Query("SELECT * FROM users ORDER BY createdAt ASC")
+    fun getAllUsers(): Flow<List<User>>
+
+    @Query("SELECT * FROM users ORDER BY createdAt ASC")
+    suspend fun getAllUsersOnce(): List<User>
+
+    @Query("SELECT * FROM users WHERE isActive = 1 ORDER BY createdAt ASC")
+    fun getActiveUsers(): Flow<List<User>>
+
+    @Query("SELECT * FROM users WHERE isActive = 1 ORDER BY createdAt ASC")
+    suspend fun getActiveUsersOnce(): List<User>
+
+    @Query("SELECT * FROM users WHERE id = :userId LIMIT 1")
+    suspend fun getUserById(userId: Long): User?
+
+    @Query("SELECT COUNT(*) FROM users")
+    suspend fun getUserCount(): Int
+
+    @Query("SELECT COUNT(*) FROM users WHERE role = 'OWNER'")
+    suspend fun getOwnerCount(): Int
+
+    @Query("SELECT COUNT(*) FROM users WHERE role = 'OWNER' AND isActive = 1")
+    suspend fun getActiveOwnerCount(): Int
+
+    @Query("SELECT * FROM users WHERE (role = 'OWNER' OR role = 'MANAGER') AND isActive = 1")
+    suspend fun getActiveSupervisors(): List<User>
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertUser(user: User): Long
+
+    @Query("UPDATE users SET pinHash = :pinHash WHERE id = :userId")
+    suspend fun updatePinHash(userId: Long, pinHash: String)
+
+    @Query("UPDATE users SET customPermissions = :customPermissions WHERE id = :userId")
+    suspend fun updatePermissions(userId: Long, customPermissions: String?)
+
+    @Query("UPDATE users SET isActive = :isActive WHERE id = :userId")
+    suspend fun updateActiveStatus(userId: Long, isActive: Boolean)
+
+    @Query("UPDATE users SET role = :role WHERE id = :userId")
+    suspend fun updateRole(userId: Long, role: String)
+
+    @Update
+    suspend fun updateUser(user: User)
+
+    @Delete
+    suspend fun deleteUser(user: User)
+
+    @Query("UPDATE users SET maxDiscountPercent = :newPercent WHERE role = 'MANAGER' AND customPermissions IS NULL AND maxDiscountPercent = :oldPercent")
+    suspend fun updateManagerDefaultDiscount(oldPercent: Double = 10.0, newPercent: Double = 20.0): Int
+}
+
+@Dao
+interface ReturnDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertReturn(returnRecord: Return): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertReturnItems(items: List<ReturnItem>)
+
+    @Query("SELECT * FROM return_items WHERE returnId IN (SELECT id FROM returns WHERE saleId = :saleId)")
+    suspend fun getReturnItemsForSale(saleId: Long): List<ReturnItem>
+
+    @Query("SELECT * FROM returns WHERE saleId = :saleId ORDER BY timestamp DESC")
+    fun getReturnsForSale(saleId: Long): Flow<List<Return>>
+
+    @Query("SELECT * FROM returns WHERE saleId = :saleId ORDER BY timestamp DESC")
+    suspend fun getReturnsForSaleOnce(saleId: Long): List<Return>
+
+    @Query("SELECT COALESCE(SUM(refundAmount), 0.0) FROM returns WHERE saleId = :saleId")
+    suspend fun getRefundTotalForSale(saleId: Long): Double
+
+    @Query("SELECT * FROM returns")
+    fun getAllReturns(): Flow<List<Return>>
+
+    @Query("SELECT * FROM returns ORDER BY timestamp DESC")
+    suspend fun getAllReturnsOnce(): List<Return>
+
+    @Query("SELECT * FROM return_items")
+    fun getAllReturnItems(): Flow<List<ReturnItem>>
+
+    @Query("SELECT * FROM return_items")
+    suspend fun getAllReturnItemsOnce(): List<ReturnItem>
+}
+
+@Dao
+interface HeldCartDao {
+    @Query("SELECT * FROM held_carts ORDER BY timestamp DESC")
+    fun getAllHeldCarts(): Flow<List<HeldCart>>
+
+    @Query("SELECT * FROM held_carts ORDER BY timestamp DESC")
+    suspend fun getAllHeldCartsOnce(): List<HeldCart>
+
+    @Query("SELECT * FROM held_carts WHERE id = :id LIMIT 1")
+    suspend fun getHeldCartById(id: Long): HeldCart?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHeldCart(heldCart: HeldCart): Long
+
+    @Query("DELETE FROM held_carts WHERE id = :id")
+    suspend fun deleteHeldCartById(id: Long)
+
+    @Query("DELETE FROM held_carts")
+    suspend fun clearAllHeldCarts()
+
+    @Query("DELETE FROM held_carts WHERE timestamp < :cutoffTimestamp")
+    suspend fun deleteHeldCartsOlderThan(cutoffTimestamp: Long): Int
+
+    @Query("SELECT COUNT(*) FROM held_carts")
+    fun getHeldCartCount(): Flow<Int>
+
+    @Query("UPDATE held_carts SET customerPhone = :newPhone, customerName = CASE WHEN :newName IS NOT NULL AND :newName != '' THEN :newName ELSE customerName END WHERE customerPhone = :oldPhone")
+    suspend fun reassignHeldCartsCustomer(oldPhone: String, newPhone: String, newName: String? = null): Int
+
+    @Query("UPDATE held_carts SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
+    suspend fun reassignHeldCartsPhone(oldPhone: String, newPhone: String): Int
+}
+
+@Dao
+interface ExpenseDao {
+    @Query("SELECT * FROM expenses ORDER BY timestamp DESC")
+    fun getAllExpenses(): Flow<List<Expense>>
+
+    @Query("SELECT * FROM expenses ORDER BY timestamp DESC")
+    suspend fun getAllExpensesOnce(): List<Expense>
+ 
+     @Query("SELECT * FROM expenses WHERE timestamp >= :startTime AND timestamp <= :endTime ORDER BY timestamp DESC")
+     fun getExpensesBetween(startTime: Long, endTime: Long): Flow<List<Expense>>
+ 
+     @Insert(onConflict = OnConflictStrategy.REPLACE)
+     suspend fun insertExpense(expense: Expense): Long
+ 
+     @Update
+     suspend fun updateExpense(expense: Expense)
+ 
+     @Delete
+     suspend fun deleteExpense(expense: Expense)
+ 
+     @Query("SELECT * FROM expenses WHERE id = :id LIMIT 1")
+     suspend fun getExpenseById(id: Long): Expense?
+ 
+     @Query("DELETE FROM expenses WHERE id = :id")
+     suspend fun deleteExpenseById(id: Long)
+
+     @Query("SELECT * FROM expenses WHERE category = 'Supplier Payment' AND timestamp = :timestamp LIMIT 1")
+     suspend fun getSupplierExpenseByTimestamp(timestamp: Long): Expense?
+ 
+     @Query("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE type = 'EXPENSE' AND paymentSource = 'Cash' AND timestamp >= :startTime")
+     suspend fun getCashExpensesSince(startTime: Long): Double
+ 
+     @Query("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE type = 'CASH_IN' AND paymentSource = 'Cash' AND timestamp >= :startTime")
+     suspend fun getCashInSince(startTime: Long): Double
+ }
+ 
+ @Dao
+ interface SupplierDao {
+     @Query("SELECT * FROM suppliers ORDER BY name ASC")
+     fun getAllSuppliers(): Flow<List<Supplier>>
+ 
+     @Query("SELECT * FROM suppliers ORDER BY name ASC")
+     suspend fun getAllSuppliersOnce(): List<Supplier>
+ 
+     @Query("SELECT * FROM suppliers WHERE id = :id LIMIT 1")
+     suspend fun getSupplierById(id: Long): Supplier?
+ 
+     @Upsert
+     suspend fun upsertSupplier(supplier: Supplier): Long
+ 
+     @Delete
+     suspend fun deleteSupplier(supplier: Supplier)
+ 
+     @Query("UPDATE suppliers SET totalPurchased = totalPurchased + :purchaseAmount, totalDue = totalDue + :dueChange, updatedAt = :timestamp WHERE id = :supplierId")
+     suspend fun updateSupplierBalances(supplierId: Long, purchaseAmount: Double, dueChange: Double, timestamp: Long): Int
+
+     @Query("UPDATE suppliers SET totalPurchased = :totalPurchased, totalDue = :totalDue, updatedAt = :timestamp WHERE id = :supplierId")
+     suspend fun setSupplierBalances(supplierId: Long, totalPurchased: Double, totalDue: Double, timestamp: Long): Int
+ 
+     @Query("UPDATE suppliers SET totalDue = MAX(0.0, totalDue - :amountPaid), updatedAt = :timestamp WHERE id = :supplierId AND :amountPaid > 0.0")
+     suspend fun recordSupplierPayment(supplierId: Long, amountPaid: Double, timestamp: Long): Int
+ 
+     @Insert(onConflict = OnConflictStrategy.ABORT)
+     suspend fun insertSupplierPayment(payment: SupplierPayment): Long
+
+     @Delete
+     suspend fun deleteSupplierPayment(payment: SupplierPayment)
+
+     @Query("DELETE FROM supplier_payments WHERE id = :id")
+     suspend fun deleteSupplierPaymentById(id: Long)
+
+     @Query("SELECT * FROM supplier_payments WHERE id = :id LIMIT 1")
+     suspend fun getSupplierPaymentById(id: Long): SupplierPayment?
+ 
+     @Query("SELECT * FROM supplier_payments WHERE supplierId = :supplierId ORDER BY timestamp DESC")
+     fun getPaymentsForSupplier(supplierId: Long): Flow<List<SupplierPayment>>
+ 
+     @Query("SELECT * FROM supplier_payments WHERE supplierId = :supplierId ORDER BY timestamp DESC")
+     suspend fun getPaymentsForSupplierOnce(supplierId: Long): List<SupplierPayment>
+ 
+     @Query("SELECT * FROM supplier_payments ORDER BY timestamp DESC")
+     fun getAllSupplierPayments(): Flow<List<SupplierPayment>>
+
+     @Query("SELECT * FROM supplier_payments ORDER BY timestamp DESC")
+     suspend fun getAllSupplierPaymentsOnce(): List<SupplierPayment>
+ }
+ 
+ @Dao
+ interface PurchaseInvoiceDao {
+     @Query("SELECT * FROM purchase_invoices ORDER BY timestamp DESC")
+     fun getAllPurchaseInvoices(): Flow<List<PurchaseInvoice>>
+
+     @Query("SELECT * FROM purchase_invoices ORDER BY timestamp DESC")
+     suspend fun getAllInvoicesOnce(): List<PurchaseInvoice>
+
+     @Query("SELECT * FROM purchase_invoices WHERE id = :id LIMIT 1")
+     suspend fun getInvoiceById(id: Long): PurchaseInvoice?
+
+    @Query("SELECT * FROM purchase_invoices WHERE supplierId = :supplierId ORDER BY timestamp DESC")
+    fun getInvoicesForSupplier(supplierId: Long): Flow<List<PurchaseInvoice>>
+
+    @Query("SELECT * FROM purchase_invoices WHERE supplierId = :supplierId ORDER BY timestamp DESC")
+    suspend fun getInvoicesForSupplierOnce(supplierId: Long): List<PurchaseInvoice>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPurchaseInvoice(invoice: PurchaseInvoice): Long
+
+    @Delete
+    suspend fun deletePurchaseInvoice(invoice: PurchaseInvoice)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertPurchaseInvoiceItems(items: List<PurchaseInvoiceItem>)
+
+    @Query("DELETE FROM purchase_invoice_items WHERE invoiceId = :invoiceId")
+    suspend fun deleteItemsForInvoice(invoiceId: Long)
+
+    @Query("SELECT * FROM purchase_invoice_items WHERE invoiceId = :invoiceId ORDER BY id ASC")
+    fun getItemsForInvoice(invoiceId: Long): Flow<List<PurchaseInvoiceItem>>
+
+    @Query("SELECT * FROM purchase_invoice_items WHERE invoiceId = :invoiceId ORDER BY id ASC")
+    suspend fun getItemsForInvoiceOnce(invoiceId: Long): List<PurchaseInvoiceItem>
+
+    @Query("SELECT * FROM purchase_invoice_items ORDER BY invoiceId ASC, id ASC")
+    fun getAllPurchaseInvoiceItems(): Flow<List<PurchaseInvoiceItem>>
+
+    @Query("SELECT * FROM purchase_invoice_items ORDER BY invoiceId ASC, id ASC")
+    suspend fun getAllPurchaseInvoiceItemsOnce(): List<PurchaseInvoiceItem>
+}
+
+@Dao
+interface RegisterClosingDao {
+    @Query("SELECT * FROM register_closings ORDER BY timestamp DESC")
+    fun getAllClosings(): Flow<List<RegisterClosing>>
+
+    @Query("SELECT * FROM register_closings ORDER BY timestamp DESC")
+    suspend fun getAllClosingsOnce(): List<RegisterClosing>
+
+    @Query("SELECT * FROM register_closings WHERE date = :date LIMIT 1")
+    suspend fun getClosingByDate(date: String): RegisterClosing?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertClosing(closing: RegisterClosing): Long
+}
+
+@Dao
+interface RegisterShiftStateDao {
+    @Query("SELECT * FROM register_shift_state WHERE id = 1")
+    fun observe(): Flow<RegisterShiftState?>
+
+    @Query("SELECT * FROM register_shift_state WHERE id = 1")
+    suspend fun get(): RegisterShiftState?
+
+    @Upsert
+    suspend fun upsert(state: RegisterShiftState)
+}
+
+@Dao
+interface CustomerLoyaltyDao {
+    @Query("SELECT * FROM customer_loyalty WHERE isActive = 1 ORDER BY lifetimeSpent DESC")
+    fun getAllLoyaltyMembers(): Flow<List<CustomerLoyalty>>
+
+    @Query("SELECT * FROM customer_loyalty ORDER BY lifetimeSpent DESC")
+    suspend fun getAllIncludingInactive(): List<CustomerLoyalty>
+
+    @Query("SELECT * FROM customer_loyalty WHERE phone = :phone LIMIT 1")
+    suspend fun getLoyaltyByPhone(phone: String): CustomerLoyalty?
+
+    @Query("SELECT * FROM customer_loyalty WHERE phone IN (:phones)")
+    suspend fun getLoyaltyByPhones(phones: List<String>): List<CustomerLoyalty>
+
+    @Upsert
+    suspend fun upsertLoyalty(loyalty: CustomerLoyalty)
+
+    @Query("UPDATE customer_loyalty SET pointsBalance = pointsBalance + :pts, lifetimeSpent = lifetimeSpent + :spend, updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun addPoints(phone: String, pts: Int, spend: Double, timestamp: Long)
+
+    @Query("UPDATE customer_loyalty SET pointsBalance = MAX(0, pointsBalance - :pts), lifetimeSpent = MAX(0.0, lifetimeSpent - :spend), updatedAt = :timestamp WHERE phone = :phone AND :pts >= 0 AND :spend >= 0.0")
+    suspend fun reverseEarnedPoints(phone: String, pts: Int, spend: Double, timestamp: Long): Int
+
+    @Query("UPDATE customer_loyalty SET pointsBalance = pointsBalance - :pts, updatedAt = :timestamp WHERE phone = :phone AND :pts > 0 AND pointsBalance >= :pts")
+    suspend fun redeemPoints(phone: String, pts: Int, timestamp: Long): Int
+
+    @Query("UPDATE customer_loyalty SET pointsBalance = pointsBalance + :pts, updatedAt = :timestamp WHERE phone = :phone AND :pts > 0")
+    suspend fun restoreRedeemedPoints(phone: String, pts: Int, timestamp: Long): Int
+
+    @Query("UPDATE customer_loyalty SET isActive = :active, updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun setActive(phone: String, active: Boolean, timestamp: Long): Int
+
+    @Query("DELETE FROM customer_loyalty WHERE phone = :phone")
+    suspend fun delete(phone: String): Int
+
+    @Delete
+    suspend fun deleteLoyalty(loyalty: CustomerLoyalty)
+}
+
+@Dao
+interface LoyaltyTransactionDao {
+    @Query("SELECT * FROM loyalty_transactions ORDER BY timestamp DESC")
+    fun getAll(): Flow<List<LoyaltyTransaction>>
+
+    @Query("SELECT * FROM loyalty_transactions ORDER BY timestamp DESC")
+    suspend fun getAllOnce(): List<LoyaltyTransaction>
+
+    @Query("SELECT * FROM loyalty_transactions WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    fun getForCustomer(phone: String): Flow<List<LoyaltyTransaction>>
+
+    @Query("SELECT * FROM loyalty_transactions WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    suspend fun getForCustomerOnce(phone: String): List<LoyaltyTransaction>
+
+    @Query("UPDATE loyalty_transactions SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
+    suspend fun reassignCustomerPhone(oldPhone: String, newPhone: String): Int
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(transaction: LoyaltyTransaction): Long
+}
+
+@Dao
+interface InventoryAdjustmentDao {
+    @Query("SELECT * FROM inventory_adjustments ORDER BY timestamp DESC")
+    fun getAllAdjustments(): Flow<List<InventoryAdjustment>>
+
+    @Query("SELECT * FROM inventory_adjustments ORDER BY timestamp DESC")
+    suspend fun getAllAdjustmentsOnce(): List<InventoryAdjustment>
+
+    @Query("SELECT * FROM inventory_adjustments WHERE productBarcode = :barcode ORDER BY timestamp DESC")
+    fun getAdjustmentsForProduct(barcode: String): Flow<List<InventoryAdjustment>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAdjustment(adjustment: InventoryAdjustment): Long
+
+    @Query("UPDATE inventory_adjustments SET reason = :newReason WHERE reason = :oldReason")
+    suspend fun updateReason(oldReason: String, newReason: String): Int
+}
+
+@Dao
+interface ScheduledDueReminderDao {
+    @Query("SELECT * FROM scheduled_due_reminders ORDER BY fireAt ASC")
+    fun getAll(): Flow<List<ScheduledDueReminder>>
+
+    @Query("SELECT * FROM scheduled_due_reminders ORDER BY fireAt ASC")
+    suspend fun getAllOnce(): List<ScheduledDueReminder>
+
+    @Upsert
+    suspend fun upsert(reminder: ScheduledDueReminder)
+
+    @Query("DELETE FROM scheduled_due_reminders WHERE customerPhone = :phone")
+    suspend fun deleteByPhone(phone: String)
+
+    @Query("UPDATE scheduled_due_reminders SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
+    suspend fun reassignScheduledRemindersPhone(oldPhone: String, newPhone: String): Int
+}
+
+@Dao
+interface DueReminderLogDao {
+    @Query("SELECT * FROM due_reminder_logs ORDER BY timestamp DESC")
+    fun getAllLogs(): Flow<List<DueReminderLog>>
+
+    @Query("SELECT * FROM due_reminder_logs ORDER BY timestamp DESC")
+    suspend fun getAllLogsOnce(): List<DueReminderLog>
+
+    @Query("SELECT * FROM due_reminder_logs WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    fun getLogsForCustomer(phone: String): Flow<List<DueReminderLog>>
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertLog(log: DueReminderLog): Long
+
+    @Query("DELETE FROM due_reminder_logs WHERE id = :id")
+    suspend fun deleteLogById(id: Long)
+
+    @Query("DELETE FROM due_reminder_logs")
+    suspend fun clearAllLogs()
+
+    @Query("UPDATE due_reminder_logs SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
+    suspend fun reassignDueReminderLogsPhone(oldPhone: String, newPhone: String): Int
+}
+
+@Dao
+interface CustomerDao {
+    @Query("SELECT * FROM customers WHERE isArchived = 0 ORDER BY updatedAt DESC")
+    fun getAllCustomers(): Flow<List<Customer>>
+
+    @Query("SELECT * FROM customers WHERE isArchived = 0 ORDER BY updatedAt DESC")
+    suspend fun getAllCustomersOnce(): List<Customer>
+
+    @Query("SELECT * FROM customers WHERE phone = :phone LIMIT 1")
+    suspend fun getCustomerByPhone(phone: String): Customer?
+
+    @Query("SELECT * FROM customers WHERE phone = :phone LIMIT 1")
+    fun observeCustomerByPhone(phone: String): Flow<Customer?>
+
+    @Query("""
+        SELECT * FROM customers 
+        WHERE isArchived = 0 AND (
+            name LIKE '%' || :query || '%' OR 
+            phone LIKE '%' || :query || '%' OR 
+            address LIKE '%' || :query || '%' OR 
+            notes LIKE '%' || :query || '%' OR 
+            tag LIKE '%' || :query || '%'
+        ) 
+        ORDER BY updatedAt DESC
+    """)
+    fun searchCustomers(query: String): Flow<List<Customer>>
+
+    @Query("""
+        SELECT * FROM customers 
+        WHERE isArchived = 0 AND (
+            phone LIKE '%' || :query || '%' OR 
+            name LIKE '%' || :query || '%'
+        ) 
+        ORDER BY lifetimeSpent DESC 
+        LIMIT 10
+    """)
+    suspend fun searchCustomerSuggestions(query: String): List<Customer>
+
+    @Upsert
+    suspend fun upsertCustomer(customer: Customer)
+
+    @Query("UPDATE customers SET isArchived = 1, updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun archiveCustomer(phone: String, timestamp: Long): Int
+
+    @Query("UPDATE customers SET totalDue = :totalDue, updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun updateCustomerTotalDue(phone: String, totalDue: Double, timestamp: Long): Int
+
+    @Query("DELETE FROM customers WHERE phone = :phone")
+    suspend fun deleteCustomerPermanently(phone: String)
+
+    @Query("SELECT COUNT(*) FROM customers WHERE isArchived = 0")
+    suspend fun getCustomerCount(): Int
+
+    @Query("UPDATE customers SET totalDue = :dueAmount, updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun updateCustomerDue(phone: String, dueAmount: Double, timestamp: Long): Int
+
+    @Query("UPDATE customers SET loyaltyPoints = :points, loyaltyTier = :tier, updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun updateCustomerLoyalty(phone: String, points: Int, tier: String, timestamp: Long): Int
+
+    @Query("UPDATE customers SET storeCredit = :credit, updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun updateCustomerStoreCredit(phone: String, credit: Double, timestamp: Long): Int
+
+    @Query("UPDATE customers SET storeCredit = MAX(0.0, storeCredit + :delta), updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun adjustCustomerStoreCredit(phone: String, delta: Double, timestamp: Long): Int
+
+    @Query("UPDATE customers SET totalDue = MAX(0.0, totalDue + :delta), updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun adjustCustomerTotalDue(phone: String, delta: Double, timestamp: Long): Int
+
+    @Query("UPDATE customers SET loyaltyPoints = MAX(0, loyaltyPoints + :delta), updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun adjustCustomerLoyaltyPoints(phone: String, delta: Int, timestamp: Long): Int
+}
+
+@Dao
+interface SaleAuditLogDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAuditLog(log: SaleAuditLog): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAuditLogIgnore(log: SaleAuditLog): Long
+
+    @Query("SELECT * FROM sale_audit_logs ORDER BY timestamp DESC")
+    fun getAllAuditLogs(): Flow<List<SaleAuditLog>>
+
+    @Query("SELECT * FROM sale_audit_logs ORDER BY timestamp DESC")
+    suspend fun getAllAuditLogsOnce(): List<SaleAuditLog>
+
+    @Query("SELECT * FROM sale_audit_logs ORDER BY timestamp DESC")
+    suspend fun getAll(): List<SaleAuditLog>
+
+    @Query("SELECT * FROM sale_audit_logs WHERE saleId = :saleId ORDER BY timestamp DESC")
+    suspend fun getAuditLogsForSale(saleId: Long): List<SaleAuditLog>
+}
+
+@Dao
+interface ExpenseAuditLogDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAuditLog(log: ExpenseAuditLog): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAuditLogIgnore(log: ExpenseAuditLog): Long
+
+    @Query("SELECT * FROM expense_audit_logs ORDER BY timestamp DESC")
+    fun getAllAuditLogs(): Flow<List<ExpenseAuditLog>>
+
+    @Query("SELECT * FROM expense_audit_logs ORDER BY timestamp DESC")
+    suspend fun getAllAuditLogsOnce(): List<ExpenseAuditLog>
+
+    @Query("SELECT * FROM expense_audit_logs ORDER BY timestamp DESC")
+    suspend fun getAll(): List<ExpenseAuditLog>
+
+    @Query("SELECT * FROM expense_audit_logs WHERE expenseId = :expenseId ORDER BY timestamp DESC")
+    suspend fun getAuditLogsForExpense(expenseId: Long): List<ExpenseAuditLog>
+}
+
+@Dao
+interface StoreCreditVoucherDao {
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertVoucher(voucher: StoreCreditVoucher): Long
+
+    @Query("SELECT * FROM store_credit_vouchers WHERE code = :code LIMIT 1")
+    suspend fun getVoucherByCode(code: String): StoreCreditVoucher?
+
+    @Query("UPDATE store_credit_vouchers SET remainingBalance = :remainingBalance, status = :status WHERE code = :code")
+    suspend fun updateVoucherBalance(code: String, remainingBalance: Double, status: String): Int
+
+    @Query("UPDATE store_credit_vouchers SET status = 'CANCELLED' WHERE code = :code")
+    suspend fun cancelVoucher(code: String): Int
+
+    @Query("UPDATE store_credit_vouchers SET sourceReturnId = :returnId WHERE code = :code")
+    suspend fun updateVoucherSourceReturnId(code: String, returnId: Long): Int
+
+    @Query("SELECT * FROM store_credit_vouchers ORDER BY issuedAt DESC")
+    fun getAllVouchers(): Flow<List<StoreCreditVoucher>>
+
+    @Query("SELECT * FROM store_credit_vouchers ORDER BY issuedAt DESC")
+    suspend fun getAllVouchersOnce(): List<StoreCreditVoucher>
+
+    @Query("SELECT * FROM store_credit_vouchers WHERE customerPhone = :phone ORDER BY issuedAt DESC")
+    suspend fun getVouchersByPhone(phone: String): List<StoreCreditVoucher>
+
+    @Query("SELECT * FROM store_credit_vouchers WHERE sourceSaleId = :saleId ORDER BY issuedAt DESC LIMIT 1")
+    suspend fun getVoucherBySaleId(saleId: Long): StoreCreditVoucher?
+
+    @Query("SELECT * FROM store_credit_vouchers WHERE sourceReturnId = :returnId ORDER BY issuedAt DESC LIMIT 1")
+    suspend fun getVoucherByReturnId(returnId: Long): StoreCreditVoucher?
+
+    @Query("SELECT * FROM store_credit_vouchers WHERE customerPhone = :phone AND status = 'ACTIVE' LIMIT 1")
+    suspend fun getActiveVoucherForPhone(phone: String): StoreCreditVoucher?
+
+    @Query("DELETE FROM store_credit_vouchers WHERE customerPhone = :phone")
+    suspend fun deleteVouchersByPhone(phone: String)
+}
+
+@Dao
+interface StoreCreditLedgerDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEntry(entry: StoreCreditLedgerEntry): Long
+
+    @Query("SELECT * FROM store_credit_ledger WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    fun getLedgerForCustomer(phone: String): Flow<List<StoreCreditLedgerEntry>>
+
+    @Query("SELECT * FROM store_credit_ledger WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    suspend fun getLedgerForCustomerOnce(phone: String): List<StoreCreditLedgerEntry>
+
+    @Query("SELECT * FROM store_credit_ledger ORDER BY timestamp DESC LIMIT :limit")
+    fun getRecentLedgerEntries(limit: Int = 100): Flow<List<StoreCreditLedgerEntry>>
+
+    @Query("SELECT * FROM store_credit_ledger ORDER BY timestamp ASC")
+    suspend fun getAllEntries(): List<StoreCreditLedgerEntry>
+
+    @Query("SELECT * FROM store_credit_ledger WHERE referenceInvoiceId = :saleId")
+    suspend fun getEntriesForInvoiceOnce(saleId: Long): List<StoreCreditLedgerEntry>
+
+    @Query("DELETE FROM store_credit_ledger WHERE customerPhone = :phone")
+    suspend fun deleteLedgerByPhone(phone: String)
+}

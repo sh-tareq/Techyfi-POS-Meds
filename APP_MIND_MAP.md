@@ -2407,7 +2407,7 @@ mindmap
 
 - **Architectural Cleanup & Cross-Module Synchronization (`AppUtils.kt`, `RegisterCloseScreen.kt`, `SalesReportScreen.kt`, `AppUtilsDateTest.kt`)**:
   - **[V61-7] Centralized Timezone-Safe Date Utilities**:
-    - Centralized `startOfDay(millis: Long)` and `endOfDay(millis: Long)` into `com.example.techyfipos.util.AppUtils.kt`.
+    - Centralized `startOfDay(millis: Long)` and `endOfDay(millis: Long)` into `com.techyfiposmeds.util.AppUtils.kt`.
     - Removed duplicate, ad-hoc implementations across `SalesHistoryScreen.kt`, `SalesReportScreen.kt`, `DuesScreen.kt`, and `RegisterCloseScreen.kt`.
     - Validated millisecond boundary precision via `AppUtilsDateTest.kt`.
   - **[V61-8] Sales Report Business Health & Operational Cross-Reference**:
@@ -2432,7 +2432,7 @@ mindmap
   - **[V62-1] UI-Thread Locale Isolation (`Navigation.kt`)**:
     - Removed `java.util.Locale.setDefault(locale)` from `LocaleWrapper`, preventing global JVM mutation from the UI composition pipeline and avoiding race conditions with background coroutines doing date/number formatting.
   - **[V62-2] Clean Imports & Namespace Hygiene (`ProductsScreen.kt`, `DuesScreen.kt`, `LoyaltyScreen.kt`)**:
-    - Removed duplicate wildcard imports `import com.example.techyfipos.ui.components.*`.
+    - Removed duplicate wildcard imports `import com.techyfiposmeds.ui.components.*`.
   - **[V62-3] Return Audit Presets DataStore Migration (`SettingsDataStore.kt`, `ReturnDialog.kt`)**:
     - Migrated custom return audit presets from unencrypted `SharedPreferences` to `SettingsDataStore` (`return_audit_presets_json`).
     - Added one-time automatic legacy migration and dynamic Flow updates.
@@ -2511,7 +2511,7 @@ mindmap
     - Guarantees `SalesReportScreen` strictly respects user-selected "PHONE" layout mode on widescreen tablets and "TABLET" layout mode on compact phones.
 
 - **High-Maintainability Dialog Architecture Modularization**:
-  - **[V63-5] Component Extraction to `com.example.techyfipos.ui.dialogs` (`CartScreen.kt`, `ProductsScreen.kt`)**:
+  - **[V63-5] Component Extraction to `com.techyfiposmeds.ui.dialogs` (`CartScreen.kt`, `ProductsScreen.kt`)**:
     - Decomposed monolithic screens into 9 clean, focused, and testable dialog and sub-component files:
       1. `CartItemDialogs.kt`: `ManualQuantityDialog`, `CreditLimitWarningDialog`, `ConfirmDueSaleDialog`
       2. `ReceiptSummaryDialog.kt`: `InvoiceShareFormat`, `ReceiptSummaryDialog`
@@ -3111,7 +3111,7 @@ mindmap
 - **Release Deliverable**:
 ### Release Final-V6: App-Wide Search Box Overhaul & Unified PosSearchBox System (Version 2.6.89-Final-V6, Build Final-V6)
 - **Unified Standardized Search Component (`PosSearchBox.kt`)**:
-  - Implemented `PosSearchBox` in `com.example.techyfipos.ui.components` featuring:
+  - Implemented `PosSearchBox` in `com.techyfiposmeds.ui.components` featuring:
     - **Zero Vertical Baseline Clipping**: Vertically-centered `BasicTextField` wrapped inside a compact 46dp `Surface`, eliminating Material 3's minimum 56dp height constraints that previously clipped text baselines in constrained text fields.
     - **Safe Single-Line Placeholder Truncation**: Enforced `maxLines = 1` and `TextOverflow.Ellipsis` for both English and Bangla placeholder texts, preventing multi-line text wrapping behind input content.
     - **Section-Calibrated Accent Borders**: Subtle `BorderStroke` transitioning dynamically to section themes (`PosSectionColors.Products`, `PosSectionColors.SalesHistory`, `PosSectionColors.Dues`, `PosSectionColors.Customers`, `PosSectionColors.Suppliers`, `PosSectionColors.Expenses`, `PosSectionColors.Loyalty`, `PosSectionColors.Settings`) upon focus or text entry.
