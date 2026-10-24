@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.Dispatchers
 
-const val APP_DATABASE_VERSION = 39
+const val APP_DATABASE_VERSION = 40
 
 /**
  * Keeps every migration compatible with both Room database backends. Room calls
@@ -500,6 +500,40 @@ val MIGRATION_38_39 = sqlMigration(
     "ALTER TABLE sales ADD COLUMN doctorBmdcReg TEXT"
 )
 
+val MIGRATION_39_40 = sqlMigration(
+    39, 40,
+    """
+    CREATE TABLE IF NOT EXISTS `medicine_batches` (
+        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        `productBarcode` TEXT NOT NULL,
+        `batchNumber` TEXT NOT NULL,
+        `expiryDate` TEXT NOT NULL,
+        `mfgDate` TEXT,
+        `stockQty` REAL NOT NULL,
+        `purchasePrice` REAL NOT NULL,
+        `mrpPrice` REAL NOT NULL,
+        `isQuarantined` INTEGER NOT NULL,
+        `quarantineReason` TEXT,
+        `quarantineDate` INTEGER,
+        `createdAt` INTEGER NOT NULL,
+        FOREIGN KEY(`productBarcode`) REFERENCES `products`(`barcode`) ON UPDATE NO ACTION ON DELETE CASCADE
+    )
+    """.trimIndent(),
+    "CREATE INDEX IF NOT EXISTS `index_medicine_batches_productBarcode` ON `medicine_batches` (`productBarcode`)",
+    "CREATE INDEX IF NOT EXISTS `index_medicine_batches_expiryDate` ON `medicine_batches` (`expiryDate`)",
+    "CREATE INDEX IF NOT EXISTS `index_medicine_batches_isQuarantined` ON `medicine_batches` (`isQuarantined`)",
+    "ALTER TABLE purchase_invoice_items ADD COLUMN batchNumber TEXT",
+    "ALTER TABLE purchase_invoice_items ADD COLUMN expiryDate TEXT",
+    "ALTER TABLE purchase_invoice_items ADD COLUMN mfgDate TEXT",
+    "ALTER TABLE purchase_invoice_items ADD COLUMN tradeDiscountPercent REAL NOT NULL DEFAULT 0.0",
+    """
+    INSERT INTO `medicine_batches` (`productBarcode`, `batchNumber`, `expiryDate`, `mfgDate`, `stockQty`, `purchasePrice`, `mrpPrice`, `isQuarantined`, `quarantineReason`, `quarantineDate`, `createdAt`)
+    SELECT `barcode`, COALESCE(NULLIF(`batchNumber`, ''), 'BATCH-01'), COALESCE(NULLIF(`expiryDate`, ''), '2027-12-31'), `mfgOrPkgDate`, `stockQty`, `purchasePrice`, `mrpPrice`, 0, NULL, NULL, `created_at`
+    FROM `products` WHERE `stockQty` > 0
+    """.trimIndent()
+)
+
+
 @Database(
     entities = [
         Product::class,
@@ -528,7 +562,8 @@ val MIGRATION_38_39 = sqlMigration(
         SaleAuditLog::class,
         ExpenseAuditLog::class,
         StoreCreditVoucher::class,
-        StoreCreditLedgerEntry::class
+        StoreCreditLedgerEntry::class,
+        MedicineBatch::class
     ],
     version = APP_DATABASE_VERSION,
     exportSchema = true
@@ -555,6 +590,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun expenseAuditLogDao(): ExpenseAuditLogDao
     abstract fun storeCreditVoucherDao(): StoreCreditVoucherDao
     abstract fun storeCreditLedgerDao(): StoreCreditLedgerDao
+    abstract fun medicineBatchDao(): MedicineBatchDao
 
     companion object {
         @Volatile
@@ -570,7 +606,7 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
             MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33,
             MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37,
-            MIGRATION_37_38, MIGRATION_38_39
+            MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40
         )
 
         fun getDatabase(context: Context): AppDatabase {

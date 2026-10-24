@@ -322,6 +322,9 @@ fun ProductsScreen(
     var clinicalInfo by remember { mutableStateOf<ClinicalGeneric?>(null) }
     var isLoadingClinical by remember { mutableStateOf(false) }
 
+    var batchTargetProduct by remember { mutableStateOf<Product?>(null) }
+    var showQuarantineDialogFromProducts by remember { mutableStateOf(false) }
+
     fun addMedicineToCart(med: MedicineItem, unitType: String = "strip") {
         scope.launch {
             val prod = productsViewModel.convertAndSaveMedicineToProduct(med)
@@ -2046,6 +2049,12 @@ fun ProductsScreen(
                                         clinicalInfo = info
                                         clinicalTargetMedicine = med
                                     }
+                                },
+                                onManageBatches = {
+                                    scope.launch {
+                                        val prod = productsViewModel.convertAndSaveMedicineToProduct(med)
+                                        batchTargetProduct = prod
+                                    }
                                 }
                             )
                         }
@@ -2077,6 +2086,12 @@ fun ProductsScreen(
                                         val info = productsViewModel.getClinicalInfo(med.genericId)
                                         clinicalInfo = info
                                         clinicalTargetMedicine = med
+                                    }
+                                },
+                                onManageBatches = {
+                                    scope.launch {
+                                        val prod = productsViewModel.convertAndSaveMedicineToProduct(med)
+                                        batchTargetProduct = prod
                                     }
                                 }
                             )
@@ -2148,7 +2163,8 @@ fun ProductsScreen(
                                     },
                                     onImageClick = { productForEnlargedImage = Pair(product.imageUri, product.name) },
                                     onDelete = { requestDeleteProduct(product) },
-                                    onAddToCart = { addProductToCart(product) }
+                                    onAddToCart = { addProductToCart(product) },
+                                    onManageBatches = { batchTargetProduct = product }
                                 )
                             }
                         }
@@ -2216,7 +2232,8 @@ fun ProductsScreen(
                                     },
                                     onImageClick = { productForEnlargedImage = Pair(product.imageUri, product.name) },
                                     onDelete = { requestDeleteProduct(product) },
-                                    onAddToCart = { addProductToCart(product) }
+                                    onAddToCart = { addProductToCart(product) },
+                                    onManageBatches = { batchTargetProduct = product }
                                 )
                             }
                         }
@@ -2604,6 +2621,29 @@ fun ProductsScreen(
                                     color = if (isSelected) Color(0xFF312E81) else MaterialTheme.colorScheme.onSurface
                                 )
                             }
+                        }
+                    }
+
+                    // Quarantine & Disposal Hub Action Button
+                    val quarantinedBatches by productsViewModel.quarantinedMedicineBatches.collectAsStateWithLifecycle()
+                    Surface(
+                        onClick = { showQuarantineDialogFromProducts = true },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (quarantinedBatches.isNotEmpty()) Color(0xFFFEE2E2) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        border = BorderStroke(1.dp, if (quarantinedBatches.isNotEmpty()) Color(0xFFEF4444) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text("🔒", fontSize = 11.sp)
+                            Text(
+                                text = "কোয়ারেন্টাইন (${quarantinedBatches.size})",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (quarantinedBatches.isNotEmpty()) Color(0xFFB91C1C) else MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                 }
@@ -3279,6 +3319,45 @@ fun ProductsScreen(
             medicine = clinicalTargetMedicine!!,
             clinicalInfo = clinicalInfo,
             onDismiss = { clinicalTargetMedicine = null }
+        )
+    }
+
+    if (batchTargetProduct != null) {
+        val target = batchTargetProduct!!
+        val productBatches by productsViewModel.getBatchesForProduct(target.barcode).collectAsStateWithLifecycle(emptyList())
+        MedicineBatchesDialog(
+            medicineName = target.name,
+            genericName = target.genericName,
+            barcode = target.barcode,
+            stripSize = target.stripSize,
+            mrpPrice = target.mrpPrice,
+            batches = productBatches,
+            onDismiss = { batchTargetProduct = null },
+            onAddBatch = { batch -> productsViewModel.upsertBatch(batch) },
+            onQuarantineBatch = { id, reason -> productsViewModel.setBatchQuarantineStatus(id, true, reason) },
+            onReleaseBatch = { id -> productsViewModel.setBatchQuarantineStatus(id, false, null) },
+            onDeleteBatch = { id -> productsViewModel.deleteBatch(id) }
+        )
+    }
+
+    if (showQuarantineDialogFromProducts) {
+        val allBatches by productsViewModel.allMedicineBatches.collectAsStateWithLifecycle()
+        val allProds by productsViewModel.allProducts.collectAsStateWithLifecycle(emptyList())
+        val allSuppliers by productsViewModel.allSuppliers.collectAsStateWithLifecycle(emptyList())
+
+        QuarantineManagementDialog(
+            batches = allBatches,
+            products = allProds,
+            suppliers = allSuppliers,
+            onDismiss = { showQuarantineDialogFromProducts = false },
+            onQuarantineBatch = { id, reason -> productsViewModel.setBatchQuarantineStatus(id, true, reason) },
+            onReleaseBatch = { id -> productsViewModel.setBatchQuarantineStatus(id, false, null) },
+            onReturnToSupplier = { id, supId, qty, price, reason, note ->
+                productsViewModel.returnBatchToSupplier(id, supId, qty, price, reason, note)
+            },
+            onDisposeBatch = { id, qty, reason, notes ->
+                productsViewModel.disposeBatch(id, qty, reason, notes)
+            }
         )
     }
 }
@@ -4501,6 +4580,7 @@ private fun ProductOverflowMenu(
     onAdjustStock: () -> Unit = {},
     onGenerateCode: () -> Unit,
     onDelete: () -> Unit,
+    onManageBatches: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -4561,6 +4641,14 @@ private fun ProductOverflowMenu(
                 onClick = {
                     expanded = false
                     onGenerateCode()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("ব্যাচ ও FEFO ব্যবস্থাপনা") },
+                leadingIcon = { Text("🏷️", fontSize = 16.sp) },
+                onClick = {
+                    expanded = false
+                    onManageBatches()
                 }
             )
             DropdownMenuItem(
@@ -4711,6 +4799,7 @@ fun ProductItemRow(
     onImageClick: () -> Unit,
     onDelete: () -> Unit,
     onAddToCart: () -> Unit,
+    onManageBatches: () -> Unit = {},
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     onToggleSelect: () -> Unit = {},
@@ -4967,6 +5056,7 @@ fun ProductItemRow(
                         onAdjustStock = onAdjustStock,
                         onGenerateCode = onGenerateCode,
                         onDelete = onDelete,
+                        onManageBatches = onManageBatches,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -5022,6 +5112,7 @@ private fun ProductGridCard(
     onImageClick: () -> Unit,
     onDelete: () -> Unit,
     onAddToCart: () -> Unit,
+    onManageBatches: () -> Unit = {},
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     onToggleSelect: () -> Unit = {},
@@ -5276,6 +5367,7 @@ private fun ProductGridCard(
                             onAdjustStock = onAdjustStock,
                             onGenerateCode = onGenerateCode,
                             onDelete = onDelete,
+                            onManageBatches = onManageBatches,
                             modifier = Modifier.size(26.dp)
                         )
                     }
@@ -5355,7 +5447,8 @@ fun MedicineItemRow(
     isTablet: Boolean = false,
     onAddToCart: (unitType: String) -> Unit,
     onFindSubstitute: () -> Unit,
-    onViewClinical: () -> Unit
+    onViewClinical: () -> Unit,
+    onManageBatches: () -> Unit = {}
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val (formBg, formText) = getDosageFormStyle(medicine.dosageForm, isDark)
@@ -5641,6 +5734,24 @@ fun MedicineItemRow(
                         }
                     }
 
+                    // Batches & FEFO Button
+                    Surface(
+                        onClick = onManageBatches,
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFF59E0B).copy(alpha = 0.12f),
+                        border = BorderStroke(0.8.dp, Color(0xFFF59E0B).copy(alpha = 0.4f)),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            Text("🏷️", fontSize = 11.sp)
+                            Text("ব্যাচ", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                        }
+                    }
+
                     // Quick Add Buttons
                     if (hasStrip) {
                         Button(
@@ -5682,7 +5793,8 @@ fun MedicineGridCard(
     medicine: MedicineItem,
     onAddToCart: (unitType: String) -> Unit,
     onFindSubstitute: () -> Unit,
-    onViewClinical: () -> Unit
+    onViewClinical: () -> Unit,
+    onManageBatches: () -> Unit = {}
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val (formBg, formText) = getDosageFormStyle(medicine.dosageForm, isDark)
@@ -5884,6 +5996,18 @@ fun MedicineGridCard(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Info, contentDescription = "তথ্য", tint = Color(0xFF7C3AED), modifier = Modifier.size(14.dp))
+                    }
+                }
+
+                Surface(
+                    onClick = onManageBatches,
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFFF59E0B).copy(alpha = 0.12f),
+                    border = BorderStroke(0.6.dp, Color(0xFFF59E0B).copy(alpha = 0.4f)),
+                    modifier = Modifier.size(30.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("🏷️", fontSize = 12.sp)
                     }
                 }
 

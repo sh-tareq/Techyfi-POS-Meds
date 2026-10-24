@@ -1745,14 +1745,37 @@ fun InwardStockDialog(
     var paidAmountText by remember { mutableStateOf("") }
     var paymentMethod by remember { mutableStateOf("Cash") }
     var selectedBarcode by remember(products) { mutableStateOf(products.firstOrNull()?.barcode.orEmpty()) }
-    var quantityText by remember { mutableStateOf("") }
-    var unitCostText by remember { mutableStateOf("") }
+    var productSearchQuery by remember { mutableStateOf("") }
     var productMenuExpanded by remember { mutableStateOf(false) }
+
+    var quantityText by remember { mutableStateOf("") }
+    var selectedUnitType by remember { mutableStateOf("strip") } // "pc", "strip", "box"
+    var unitCostText by remember { mutableStateOf("") }
+    var tradeDiscountText by remember { mutableStateOf("0") }
+    var batchNumberText by remember { mutableStateOf("BX-${(System.currentTimeMillis() % 10000).toString().padStart(4, '0')}") }
+    var expiryDateText by remember { mutableStateOf("2027-12-31") }
+
     var stockLines by remember { mutableStateOf<List<PurchaseStockLine>>(emptyList()) }
 
+    val filteredProducts = remember(products, productSearchQuery) {
+        if (productSearchQuery.isBlank()) products.take(50)
+        else products.filter {
+            it.name.contains(productSearchQuery, ignoreCase = true) ||
+            it.barcode.contains(productSearchQuery, ignoreCase = true) ||
+            (it.genericName?.contains(productSearchQuery, ignoreCase = true) == true)
+        }.take(50)
+    }
+
+    val selectedProduct = remember(products, selectedBarcode) {
+        products.firstOrNull { it.barcode == selectedBarcode }
+    }
+
     fun recalculateTotal(lines: List<PurchaseStockLine>) {
-        val total = lines.sumOf { it.quantity * it.unitCost }
-        totalAmountText = if (total > 0.0) total.toString() else ""
+        val total = lines.sumOf { line ->
+            val discFactor = (1.0 - (line.tradeDiscountPercent / 100.0)).coerceIn(0.0, 1.0)
+            line.quantity * line.unitCost * discFactor
+        }
+        totalAmountText = if (total > 0.0) String.format(java.util.Locale.US, "%.2f", total) else ""
         if (paidAmountText.isBlank() || (paidAmountText.toDoubleOrNull() ?: 0.0) > total) {
             paidAmountText = totalAmountText
         }
@@ -1763,11 +1786,25 @@ fun InwardStockDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(dismissOnClickOutside = false),
         title = {
-            Text(stringResource(R.string.supplier_receive_stock_title, supplier.companyName), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Column {
+                Text(
+                    text = stringResource(R.string.supplier_receive_stock_title, supplier.companyName),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = "ফার্মাসিউটিক্যাল চালান ও স্টক ইনওয়ার্ড (ব্যাচ ও টিপি সহ)",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 580.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedTextField(
@@ -1778,6 +1815,7 @@ fun InwardStockDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                // Product Selection
                 Text(stringResource(R.string.supplier_purchase_stock_items), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
@@ -1785,16 +1823,37 @@ fun InwardStockDialog(
                         enabled = products.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        val product = products.firstOrNull { it.barcode == selectedBarcode }
-                        Text(product?.let { "${it.name} (${it.barcode})" } ?: stringResource(R.string.supplier_no_products_available), maxLines = 1)
+                        Text(
+                            text = selectedProduct?.let { "${it.name} (${it.barcode})" }
+                                ?: stringResource(R.string.supplier_no_products_available),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                     DropdownMenu(
                         expanded = productMenuExpanded,
-                        onDismissRequest = { productMenuExpanded = false }
+                        onDismissRequest = { productMenuExpanded = false },
+                        modifier = Modifier.heightIn(max = 350.dp).fillMaxWidth(0.9f)
                     ) {
-                        products.forEach { product ->
+                        OutlinedTextField(
+                            value = productSearchQuery,
+                            onValueChange = { productSearchQuery = it },
+                            placeholder = { Text("ওষুধ অনুসন্ধান করুন...", fontSize = 12.sp) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                        filteredProducts.forEach { product ->
                             DropdownMenuItem(
-                                text = { Text("${product.name} (${product.barcode})") },
+                                text = {
+                                    Column {
+                                        Text(product.name, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        Text(
+                                            "${product.dosageForm ?: ""} · ${product.strength ?: ""} · ৳${formatTaka(product.purchasePrice)}",
+                                            fontSize = 10.5.sp,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                    }
+                                },
                                 onClick = {
                                     selectedBarcode = product.barcode
                                     unitCostText = product.purchasePrice.takeIf { it > 0.0 }?.toString().orEmpty()
@@ -1804,11 +1863,28 @@ fun InwardStockDialog(
                         }
                     }
                 }
+
+                // Unit Selector & Quantity Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val units = listOf("pc" to "পিস", "strip" to "পাতা", "box" to "বক্স")
+                    units.forEach { (key, label) ->
+                        FilterChip(
+                            selected = selectedUnitType == key,
+                            onClick = { selectedUnitType = key },
+                            label = { Text(label, fontSize = 11.5.sp) }
+                        )
+                    }
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = quantityText,
                         onValueChange = { quantityText = it },
-                        label = { Text(stringResource(R.string.supplier_purchase_quantity)) },
+                        label = { Text("পরিমাণ (${if (selectedUnitType == "strip") "পাতা" else if (selectedUnitType == "box") "বক্স" else "পিস"})") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         modifier = Modifier.weight(1f)
@@ -1816,43 +1892,149 @@ fun InwardStockDialog(
                     OutlinedTextField(
                         value = unitCostText,
                         onValueChange = { unitCostText = it },
-                        label = { Text(stringResource(R.string.supplier_purchase_unit_cost)) },
+                        label = { Text("টিপি / ক্রয়মূল্য (৳/পিস)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                 }
+
+                // Batch Number & Expiry Date Row
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = batchNumberText,
+                        onValueChange = { batchNumberText = it },
+                        label = { Text("ব্যাচ নং (Batch)") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1.1f),
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                batchNumberText = "BX-${(System.currentTimeMillis() % 100000).toString().padStart(5, '0')}"
+                            }) {
+                                Text("🎲", fontSize = 14.sp)
+                            }
+                        }
+                    )
+                    OutlinedTextField(
+                        value = expiryDateText,
+                        onValueChange = { expiryDateText = it },
+                        label = { Text("মেয়াদ (YYYY-MM-DD)") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1.1f)
+                    )
+                }
+
+                // Trade Discount Row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = tradeDiscountText,
+                        onValueChange = { tradeDiscountText = it },
+                        label = { Text("টিপি ডিসকাউন্ট (%)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    val rawQty = quantityText.toDoubleOrNull() ?: 0.0
+                    val mult = when (selectedUnitType) {
+                        "strip" -> selectedProduct?.stripSize?.toDouble() ?: 10.0
+                        "box" -> {
+                            val bp = selectedProduct?.mrpPrice?.takeIf { it > 0.0 } ?: selectedProduct?.purchasePrice?.takeIf { it > 0.0 } ?: 0.0
+                            if ((selectedProduct?.packPrice ?: 0.0) > 0.0 && bp > 0.0) ((selectedProduct!!.packPrice / bp)).coerceAtLeast(10.0)
+                            else (selectedProduct?.stripSize ?: 10) * 10.0
+                        }
+                        else -> 1.0
+                    }
+                    val basePcs = rawQty * mult
+                    val cost = unitCostText.toDoubleOrNull() ?: 0.0
+                    val disc = (tradeDiscountText.toDoubleOrNull() ?: 0.0).coerceIn(0.0, 100.0)
+                    val estLineTotal = basePcs * cost * (1.0 - (disc / 100.0))
+
+                    Column(Modifier.weight(1f)) {
+                        Text("মোট পিস: ${if (basePcs % 1.0 == 0.0) basePcs.toLong().toString() else "%.1f".format(basePcs)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                        Text("লাইন মূল্য: ৳${formatTaka(estLineTotal)}", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
                 OutlinedButton(
                     onClick = {
-                        val quantity = quantityText.toDoubleOrNull() ?: 0.0
+                        val rawQty = quantityText.toDoubleOrNull() ?: 0.0
                         val unitCost = unitCostText.toDoubleOrNull() ?: 0.0
-                        if (selectedBarcode.isNotBlank() && quantity > 0.0 && unitCost >= 0.0) {
-                            val existing = stockLines.firstOrNull { it.productBarcode == selectedBarcode }
-                            val updated = if (existing == null) {
-                                stockLines + PurchaseStockLine(selectedBarcode, quantity, unitCost)
-                            } else {
-                                stockLines.map {
-                                    if (it.productBarcode == selectedBarcode) it.copy(quantity = it.quantity + quantity, unitCost = unitCost) else it
+                        val disc = (tradeDiscountText.toDoubleOrNull() ?: 0.0).coerceIn(0.0, 100.0)
+                        if (selectedBarcode.isNotBlank() && rawQty > 0.0 && unitCost >= 0.0) {
+                            val mult = when (selectedUnitType) {
+                                "strip" -> selectedProduct?.stripSize?.toDouble() ?: 10.0
+                                "box" -> {
+                                    val bp = selectedProduct?.mrpPrice?.takeIf { it > 0.0 } ?: selectedProduct?.purchasePrice?.takeIf { it > 0.0 } ?: 0.0
+                                    if ((selectedProduct?.packPrice ?: 0.0) > 0.0 && bp > 0.0) ((selectedProduct!!.packPrice / bp)).coerceAtLeast(10.0)
+                                    else (selectedProduct?.stripSize ?: 10) * 10.0
                                 }
+                                else -> 1.0
                             }
+                            val baseQuantity = rawQty * mult
+                            val newLine = PurchaseStockLine(
+                                productBarcode = selectedBarcode,
+                                quantity = baseQuantity,
+                                unitCost = unitCost,
+                                batchNumber = batchNumberText.trim().ifBlank { "BATCH-${System.currentTimeMillis() % 10000}" },
+                                expiryDate = expiryDateText.trim().ifBlank { "2027-12-31" },
+                                tradeDiscountPercent = disc
+                            )
+                            val updated = stockLines + newLine
                             stockLines = updated
                             recalculateTotal(updated)
                             quantityText = ""
+                            batchNumberText = "BX-${(System.currentTimeMillis() % 10000).toString().padStart(4, '0')}"
                         }
                     },
                     enabled = products.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth()
-                ) { Text(stringResource(R.string.supplier_purchase_add_stock_line)) }
+                ) {
+                    Text("+ তালিকায় ইনওয়ার্ড আইটেম যোগ করুন")
+                }
 
-                stockLines.forEach { line ->
+                // Inwarded Stock Lines List
+                if (stockLines.isNotEmpty()) {
+                    Text("সংযুক্ত আইটেমসমূহ (${stockLines.size}):", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                stockLines.forEachIndexed { index, line ->
                     val productName = products.firstOrNull { it.barcode == line.productBarcode }?.name ?: line.productBarcode
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("$productName · ${line.quantity} × ${formatTaka(line.unitCost)}", modifier = Modifier.weight(1f), fontSize = 12.sp)
-                        IconButton(onClick = {
-                            val updated = stockLines.filterNot { it.productBarcode == line.productBarcode }
-                            stockLines = updated
-                            recalculateTotal(updated)
-                        }) { Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_remove_stock_line)) }
+                    val discFactor = (1.0 - (line.tradeDiscountPercent / 100.0)).coerceIn(0.0, 1.0)
+                    val lineTotal = line.quantity * line.unitCost * discFactor
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(productName, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    "পরিমাণ: ${if (line.quantity % 1.0 == 0.0) line.quantity.toLong().toString() else "%.1f".format(line.quantity)} পিস · টিপি: ৳${formatTaka(line.unitCost)} ${if (line.tradeDiscountPercent > 0) "(-${line.tradeDiscountPercent}%)" else ""}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "🏷️ ব্যাচ: ${line.batchNumber ?: "N/A"} · ⏳ মেয়াদ: ${line.expiryDate ?: "N/A"} · মোট: ৳${formatTaka(lineTotal)}",
+                                    fontSize = 10.5.sp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            IconButton(onClick = {
+                                val updated = stockLines.toMutableList().also { it.removeAt(index) }
+                                stockLines = updated
+                                recalculateTotal(updated)
+                            }) {
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_remove_stock_line), tint = Color(0xFFEF4444))
+                            }
+                        }
                     }
                 }
 
@@ -1916,7 +2098,7 @@ fun InwardStockDialog(
                     if (tot > 0 && pd in 0.0..tot && stockLines.isNotEmpty()) {
                         val itemsSummary = stockLines.joinToString(", ") { line ->
                             val name = products.firstOrNull { it.barcode == line.productBarcode }?.name ?: line.productBarcode
-                            "$name × ${line.quantity}"
+                            "$name × ${line.quantity} (${line.batchNumber ?: "B"})"
                         }
                         onSave(invoiceNumber, tot, pd, itemsSummary, paymentMethod, stockLines)
                     }

@@ -98,6 +98,37 @@ data class PurchaseInvoice(
 )
 
 @Entity(
+    tableName = "medicine_batches",
+    foreignKeys = [
+        ForeignKey(
+            entity = Product::class,
+            parentColumns = ["barcode"],
+            childColumns = ["productBarcode"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [
+        Index(value = ["productBarcode"]),
+        Index(value = ["expiryDate"]),
+        Index(value = ["isQuarantined"])
+    ]
+)
+data class MedicineBatch(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val productBarcode: String,
+    val batchNumber: String,
+    val expiryDate: String, // YYYY-MM-DD or MM/YY
+    val mfgDate: String? = null,
+    val stockQty: Double, // in base units
+    val purchasePrice: Double = 0.0,
+    val mrpPrice: Double = 0.0,
+    val isQuarantined: Boolean = false,
+    val quarantineReason: String? = null,
+    val quarantineDate: Long? = null,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(
     tableName = "purchase_invoice_items",
     foreignKeys = [
         ForeignKey(
@@ -115,14 +146,22 @@ data class PurchaseInvoiceItem(
     val productBarcode: String,
     val productName: String,
     val quantity: Double,
-    val unitCost: Double
+    val unitCost: Double,
+    val batchNumber: String? = null,
+    val expiryDate: String? = null,
+    val mfgDate: String? = null,
+    val tradeDiscountPercent: Double = 0.0
 )
 
 /** Input line used when receiving supplier stock before the invoice id exists. */
 data class PurchaseStockLine(
     val productBarcode: String,
     val quantity: Double,
-    val unitCost: Double
+    val unitCost: Double,
+    val batchNumber: String? = null,
+    val expiryDate: String? = null,
+    val mfgDate: String? = null,
+    val tradeDiscountPercent: Double = 0.0
 )
 
 @Entity(

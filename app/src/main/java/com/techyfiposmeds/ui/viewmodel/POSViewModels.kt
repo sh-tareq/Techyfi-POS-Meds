@@ -2241,6 +2241,56 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
     val allInventoryAdjustments: StateFlow<List<InventoryAdjustment>> = repository.allInventoryAdjustments
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val allMedicineBatches: StateFlow<List<MedicineBatch>> = repository.allMedicineBatches
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val quarantinedMedicineBatches: StateFlow<List<MedicineBatch>> = repository.quarantinedMedicineBatches
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val activeMedicineBatches: StateFlow<List<MedicineBatch>> = repository.activeMedicineBatches
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allSuppliers: StateFlow<List<Supplier>> = repository.allSuppliers
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun getBatchesForProduct(barcode: String): Flow<List<MedicineBatch>> =
+        repository.getBatchesForProduct(barcode)
+
+    fun upsertBatch(batch: MedicineBatch, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val res = runCatchingNonCancellation { repository.upsertMedicineBatch(batch) }
+            onResult(res)
+        }
+    }
+
+    fun deleteBatch(batchId: Long, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val res = runCatchingNonCancellation { repository.deleteMedicineBatch(batchId) }
+            onResult(res)
+        }
+    }
+
+    fun setBatchQuarantineStatus(batchId: Long, isQuarantined: Boolean, reason: String?, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val res = runCatchingNonCancellation { repository.setBatchQuarantineStatus(batchId, isQuarantined, reason) }
+            onResult(res)
+        }
+    }
+
+    fun returnBatchToSupplier(batchId: Long, supplierId: Long, returnQty: Double, unitPrice: Double, reason: String, note: String? = null, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val res = runCatchingNonCancellation { repository.returnBatchToSupplier(batchId, supplierId, returnQty, unitPrice, reason, note) }
+            onResult(res)
+        }
+    }
+
+    fun disposeBatch(batchId: Long, disposeQty: Double, reason: String, notes: String? = null, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val res = runCatchingNonCancellation { repository.disposeBatch(batchId, disposeQty, reason, notes) }
+            onResult(res)
+        }
+    }
+
     /** Standalone audit entry with no paired stock mutation (e.g. logging the initial stock a brand-new product was created with). */
     fun recordInventoryAdjustment(
         productBarcode: String,

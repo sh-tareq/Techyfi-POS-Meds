@@ -856,3 +856,52 @@ interface StoreCreditLedgerDao {
     @Query("DELETE FROM store_credit_ledger WHERE customerPhone = :phone")
     suspend fun deleteLedgerByPhone(phone: String)
 }
+
+@Dao
+interface MedicineBatchDao {
+    @Query("SELECT * FROM medicine_batches WHERE productBarcode = :barcode ORDER BY expiryDate ASC")
+    fun getBatchesForProduct(barcode: String): Flow<List<MedicineBatch>>
+
+    @Query("SELECT * FROM medicine_batches WHERE productBarcode = :barcode ORDER BY expiryDate ASC")
+    suspend fun getBatchesForProductSync(barcode: String): List<MedicineBatch>
+
+    @Query("SELECT * FROM medicine_batches WHERE productBarcode = :barcode AND isQuarantined = 0 AND stockQty > 0 ORDER BY expiryDate ASC")
+    suspend fun getActiveBatchesForProduct(barcode: String): List<MedicineBatch>
+
+    @Query("SELECT * FROM medicine_batches ORDER BY expiryDate ASC")
+    fun getAllBatches(): Flow<List<MedicineBatch>>
+
+    @Query("SELECT * FROM medicine_batches WHERE isQuarantined = 1 ORDER BY quarantineDate DESC")
+    fun getQuarantinedBatches(): Flow<List<MedicineBatch>>
+
+    @Query("SELECT * FROM medicine_batches WHERE isQuarantined = 0 ORDER BY expiryDate ASC")
+    fun getAllActiveBatches(): Flow<List<MedicineBatch>>
+
+    @Query("SELECT * FROM medicine_batches WHERE productBarcode = :barcode AND batchNumber = :batchNumber LIMIT 1")
+    suspend fun getBatchByProductAndNumber(barcode: String, batchNumber: String): MedicineBatch?
+
+    @Query("SELECT * FROM medicine_batches WHERE id = :id LIMIT 1")
+    suspend fun getBatchById(id: Long): MedicineBatch?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBatch(batch: MedicineBatch): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBatches(batches: List<MedicineBatch>)
+
+    @Update
+    suspend fun updateBatch(batch: MedicineBatch): Int
+
+    @Delete
+    suspend fun deleteBatch(batch: MedicineBatch): Int
+
+    @Query("DELETE FROM medicine_batches WHERE id = :id")
+    suspend fun deleteBatchById(id: Long): Int
+
+    @Query("UPDATE medicine_batches SET isQuarantined = :isQuarantined, quarantineReason = :reason, quarantineDate = :date WHERE id = :id")
+    suspend fun setQuarantineStatus(id: Long, isQuarantined: Boolean, reason: String?, date: Long?): Int
+
+    @Query("UPDATE medicine_batches SET stockQty = MAX(0.0, stockQty + :delta) WHERE id = :id")
+    suspend fun adjustBatchStock(id: Long, delta: Double): Int
+}
+

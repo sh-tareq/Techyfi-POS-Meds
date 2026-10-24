@@ -109,6 +109,7 @@ class DataRepository(
     private val expenseAuditLogDao = database.expenseAuditLogDao()
     private val storeCreditVoucherDao = database.storeCreditVoucherDao()
     private val storeCreditLedgerDao = database.storeCreditLedgerDao()
+    private val medicineBatchDao = database.medicineBatchDao()
     val medicineRepository = MedicineRepository.getInstance(context)
 
     init {
@@ -1414,6 +1415,23 @@ class DataRepository(
                         productDao.adjustStockQty(barcode, -requested, allowNegative)
                     }
                     medicineRepository.adjustStockByBarcodeOrSku(barcode, -requested)
+
+                    // FEFO automated batch deduction
+                    try {
+                        val activeBatches = medicineBatchDao.getActiveBatchesForProduct(barcode)
+                        if (activeBatches.isNotEmpty()) {
+                            var toDeduct = requested
+                            for (batch in activeBatches) {
+                                if (toDeduct <= 0.0) break
+                                val take = minOf(batch.stockQty, toDeduct)
+                                medicineBatchDao.adjustBatchStock(batch.id, -take)
+                                toDeduct -= take
+                            }
+                            updateProductFefoBatch(barcode)
+                        }
+                    } catch (e: Exception) {
+                        Log.w("DataRepository", "FEFO batch deduction notice: ${e.message}")
+                    }
                 }
 
             val maxAllowedPercent = AppPermissions.getEffectiveMaxDiscount(sessionUser)
@@ -5874,6 +5892,37 @@ class DataRepository(
                             purchasePrice = newPurchasePrice
                         )
                     )
+                    // Synchronize master catalog
+                    medicineRepository.adjustStockByBarcodeOrSku(line.productBarcode, line.quantity)
+
+                    // Multi-Batch handling:
+                    val batchNo = line.batchNumber?.takeIf { it.isNotBlank() } ?: "BATCH-${System.currentTimeMillis() % 10000}"
+                    val expDate = line.expiryDate?.takeIf { it.isNotBlank() } ?: product.expiryDate?.takeIf { it.isNotBlank() } ?: "2027-12-31"
+                    val existingBatch = medicineBatchDao.getBatchByProductAndNumber(line.productBarcode, batchNo)
+                    if (existingBatch != null) {
+                        medicineBatchDao.updateBatch(
+                            existingBatch.copy(
+                                stockQty = existingBatch.stockQty + line.quantity,
+                                purchasePrice = line.unitCost,
+                                expiryDate = expDate,
+                                mfgDate = line.mfgDate ?: existingBatch.mfgDate
+                            )
+                        )
+                    } else {
+                        medicineBatchDao.insertBatch(
+                            MedicineBatch(
+                                productBarcode = line.productBarcode,
+                                batchNumber = batchNo,
+                                expiryDate = expDate,
+                                mfgDate = line.mfgDate,
+                                stockQty = line.quantity,
+                                purchasePrice = line.unitCost,
+                                mrpPrice = product.mrpPrice
+                            )
+                        )
+                    }
+                    updateProductFefoBatch(line.productBarcode)
+
                     inventoryAdjustmentDao.insertAdjustment(
                         InventoryAdjustment(
                             productBarcode = line.productBarcode,
@@ -5882,7 +5931,7 @@ class DataRepository(
                             newStock = newStock,
                             difference = line.quantity,
                             reason = "Purchase Invoice",
-                            note = "Purchase Invoice #$invoiceNumber",
+                            note = "Purchase Invoice #$invoiceNumber (Batch: $batchNo, Exp: $expDate)",
                             cashierName = sessionUser?.name.orEmpty().also {
                                 if (sessionUser == null) Log.w("DataRepository", "sessionUser null at write time")
                             }
@@ -5893,7 +5942,11 @@ class DataRepository(
                         productBarcode = line.productBarcode,
                         productName = product.name,
                         quantity = line.quantity,
-                        unitCost = line.unitCost
+                        unitCost = line.unitCost,
+                        batchNumber = batchNo,
+                        expiryDate = expDate,
+                        mfgDate = line.mfgDate,
+                        tradeDiscountPercent = line.tradeDiscountPercent
                     )
                 }
                 purchaseInvoiceDao.insertPurchaseInvoiceItems(invoiceItems)
@@ -6344,6 +6397,189 @@ class DataRepository(
         val snapshots = dir.listFiles { file -> file.name.startsWith("pre_restore_portable_") }
             ?.sortedByDescending { it.lastModified() }.orEmpty()
         snapshots.drop(3).forEach { it.delete() }
+    }
+
+    // Medicine Batches & FEFO Management
+    val allMedicineBatches: Flow<List<MedicineBatch>> = medicineBatchDao.getAllBatches()
+    val quarantinedMedicineBatches: Flow<List<MedicineBatch>> = medicineBatchDao.getQuarantinedBatches()
+    val activeMedicineBatches: Flow<List<MedicineBatch>> = medicineBatchDao.getAllActiveBatches()
+
+    fun getBatchesForProduct(barcode: String): Flow<List<MedicineBatch>> =
+        medicineBatchDao.getBatchesForProduct(barcode)
+
+    suspend fun getBatchesForProductSync(barcode: String): List<MedicineBatch> =
+        medicineBatchDao.getBatchesForProductSync(barcode)
+
+    suspend fun upsertMedicineBatch(batch: MedicineBatch) = withContext(Dispatchers.IO) {
+        database.withDriverTransaction {
+            if (batch.id > 0) {
+                medicineBatchDao.updateBatch(batch)
+            } else {
+                medicineBatchDao.insertBatch(batch)
+            }
+            updateProductFefoBatch(batch.productBarcode)
+        }
+    }
+
+    suspend fun deleteMedicineBatch(batchId: Long) = withContext(Dispatchers.IO) {
+        database.withDriverTransaction {
+            val batch = medicineBatchDao.getBatchById(batchId)
+            if (batch != null) {
+                medicineBatchDao.deleteBatchById(batchId)
+                updateProductFefoBatch(batch.productBarcode)
+            }
+        }
+    }
+
+    suspend fun setBatchQuarantineStatus(
+        batchId: Long,
+        isQuarantined: Boolean,
+        reason: String?
+    ) = withContext(Dispatchers.IO) {
+        database.withDriverTransaction {
+            val batch = medicineBatchDao.getBatchById(batchId)
+                ?: throw IllegalArgumentException("Batch not found")
+            val product = productDao.getProductByBarcode(batch.productBarcode)
+                ?: throw IllegalArgumentException("Product not found")
+
+            val now = System.currentTimeMillis()
+            medicineBatchDao.setQuarantineStatus(
+                id = batchId,
+                isQuarantined = isQuarantined,
+                reason = reason,
+                date = if (isQuarantined) now else null
+            )
+
+            // When quarantined, remove batch.stockQty from sellable product stock
+            // When un-quarantined, return batch.stockQty to sellable product stock
+            val delta = if (isQuarantined) -batch.stockQty else batch.stockQty
+            val newStock = (product.stockQty + delta).coerceAtLeast(0.0)
+            productDao.updateProduct(product.copy(stockQty = newStock))
+            medicineRepository.adjustStockByBarcodeOrSku(product.barcode, delta)
+
+            inventoryAdjustmentDao.insertAdjustment(
+                InventoryAdjustment(
+                    productBarcode = product.barcode,
+                    productName = product.name,
+                    previousStock = product.stockQty,
+                    newStock = newStock,
+                    difference = delta,
+                    reason = if (isQuarantined) "Quarantine" else "Quarantine Release",
+                    note = "Batch ${batch.batchNumber}: ${reason.orEmpty()}",
+                    cashierName = sessionUserName.ifBlank { "Admin" }
+                )
+            )
+
+            updateProductFefoBatch(product.barcode)
+        }
+    }
+
+    suspend fun returnBatchToSupplier(
+        batchId: Long,
+        supplierId: Long,
+        returnQty: Double,
+        unitRefundPrice: Double,
+        reason: String,
+        note: String? = null
+    ) = withContext(Dispatchers.IO) {
+        database.withDriverTransaction {
+            val batch = medicineBatchDao.getBatchById(batchId)
+                ?: throw IllegalArgumentException("Batch not found")
+            val product = productDao.getProductByBarcode(batch.productBarcode)
+                ?: throw IllegalArgumentException("Product not found")
+            val supplier = supplierDao.getSupplierById(supplierId)
+                ?: throw IllegalArgumentException("Supplier not found")
+
+            require(returnQty > 0 && returnQty <= batch.stockQty) {
+                "Return quantity must be between 1 and ${batch.stockQty}"
+            }
+
+            val newBatchStock = batch.stockQty - returnQty
+            medicineBatchDao.updateBatch(batch.copy(stockQty = newBatchStock))
+
+            if (!batch.isQuarantined) {
+                val newProdStock = (product.stockQty - returnQty).coerceAtLeast(0.0)
+                productDao.updateProduct(product.copy(stockQty = newProdStock))
+                medicineRepository.adjustStockByBarcodeOrSku(product.barcode, -returnQty)
+            }
+
+            val refundValue = returnQty * unitRefundPrice
+            val newDue = (supplier.totalDue - refundValue).coerceAtLeast(0.0)
+            supplierDao.upsertSupplier(supplier.copy(
+                totalDue = newDue,
+                updatedAt = System.currentTimeMillis()
+            ))
+
+            inventoryAdjustmentDao.insertAdjustment(
+                InventoryAdjustment(
+                    productBarcode = product.barcode,
+                    productName = product.name,
+                    previousStock = product.stockQty,
+                    newStock = product.stockQty - (if (!batch.isQuarantined) returnQty else 0.0),
+                    difference = -returnQty,
+                    reason = "Supplier Return",
+                    note = "Batch ${batch.batchNumber} returned to ${supplier.companyName} ($reason). Credit: ৳$refundValue${if (!note.isNullOrBlank()) " - $note" else ""}",
+                    cashierName = sessionUserName.ifBlank { "Admin" }
+                )
+            )
+
+            updateProductFefoBatch(product.barcode)
+        }
+    }
+
+    suspend fun disposeBatch(
+        batchId: Long,
+        disposeQty: Double,
+        reason: String,
+        notes: String? = null
+    ) = withContext(Dispatchers.IO) {
+        database.withDriverTransaction {
+            val batch = medicineBatchDao.getBatchById(batchId)
+                ?: throw IllegalArgumentException("Batch not found")
+            val product = productDao.getProductByBarcode(batch.productBarcode)
+                ?: throw IllegalArgumentException("Product not found")
+
+            require(disposeQty > 0 && disposeQty <= batch.stockQty) {
+                "Disposal quantity must be between 1 and ${batch.stockQty}"
+            }
+
+            val newBatchStock = batch.stockQty - disposeQty
+            medicineBatchDao.updateBatch(batch.copy(stockQty = newBatchStock))
+
+            if (!batch.isQuarantined) {
+                val newProdStock = (product.stockQty - disposeQty).coerceAtLeast(0.0)
+                productDao.updateProduct(product.copy(stockQty = newProdStock))
+                medicineRepository.adjustStockByBarcodeOrSku(product.barcode, -disposeQty)
+            }
+
+            inventoryAdjustmentDao.insertAdjustment(
+                InventoryAdjustment(
+                    productBarcode = product.barcode,
+                    productName = product.name,
+                    previousStock = product.stockQty,
+                    newStock = product.stockQty - (if (!batch.isQuarantined) disposeQty else 0.0),
+                    difference = -disposeQty,
+                    reason = "DGDA Disposal",
+                    note = "Batch ${batch.batchNumber} destroyed ($reason): ${notes.orEmpty()}",
+                    cashierName = sessionUserName.ifBlank { "Admin" }
+                )
+            )
+
+            updateProductFefoBatch(product.barcode)
+        }
+    }
+
+    private suspend fun updateProductFefoBatch(barcode: String) {
+        val nextFefo = medicineBatchDao.getActiveBatchesForProduct(barcode).firstOrNull { it.stockQty > 0 }
+        if (nextFefo != null) {
+            val prod = productDao.getProductByBarcode(barcode)
+            if (prod != null && (prod.batchNumber != nextFefo.batchNumber || prod.expiryDate != nextFefo.expiryDate)) {
+                productDao.updateProduct(prod.copy(
+                    batchNumber = nextFefo.batchNumber,
+                    expiryDate = nextFefo.expiryDate
+                ))
+            }
+        }
     }
 
     private fun getTierRank(tier: String?): Int = when (tier?.lowercase(java.util.Locale.ROOT)) {

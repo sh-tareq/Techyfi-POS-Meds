@@ -57,6 +57,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation3.ui.NavDisplay
 import com.techyfiposmeds.ui.components.*
+import com.techyfiposmeds.ui.dialogs.*
 import com.techyfiposmeds.ui.screens.*
 import com.techyfiposmeds.ui.viewmodel.*
 import com.techyfiposmeds.theme.extendedColors
@@ -485,6 +486,7 @@ fun MainNavigation() {
         }
 
         var showMoreHubSheet by remember { mutableStateOf(false) }
+        var showQuarantineManager by remember { mutableStateOf(false) }
         var showUserDropdown by remember { mutableStateOf(false) }
         var showLogoutConfirmDialog by remember { mutableStateOf(false) }
         var unacknowledgedOwnerAlert by remember { mutableStateOf<com.techyfiposmeds.data.OwnerAuditEvent?>(null) }
@@ -658,7 +660,32 @@ fun MainNavigation() {
                     activePermissions = activePermissions,
                     currentKey = currentKey,
                     isTablet = isTablet,
-                    language = currentLang
+                    language = currentLang,
+                    onNavigateToQuarantine = {
+                        showMoreHubSheet = false
+                        showQuarantineManager = true
+                    }
+                )
+            }
+
+            if (showQuarantineManager) {
+                val allBatches by productsViewModel.allMedicineBatches.collectAsStateWithLifecycle()
+                val allProds by productsViewModel.allProducts.collectAsStateWithLifecycle(emptyList())
+                val allSuppliers by supplierViewModel.allSuppliers.collectAsStateWithLifecycle(emptyList())
+
+                QuarantineManagementDialog(
+                    batches = allBatches,
+                    products = allProds,
+                    suppliers = allSuppliers,
+                    onDismiss = { showQuarantineManager = false },
+                    onQuarantineBatch = { id, reason -> productsViewModel.setBatchQuarantineStatus(id, true, reason) },
+                    onReleaseBatch = { id -> productsViewModel.setBatchQuarantineStatus(id, false, null) },
+                    onReturnToSupplier = { id, supId, qty, price, reason, note ->
+                        productsViewModel.returnBatchToSupplier(id, supId, qty, price, reason, note)
+                    },
+                    onDisposeBatch = { id, qty, reason, notes ->
+                        productsViewModel.disposeBatch(id, qty, reason, notes)
+                    }
                 )
             }
 
@@ -1663,6 +1690,7 @@ fun MoreOperationsHubSheet(
     onNavigateToRegisterClose: () -> Unit,
     onNavigateToLoyalty: () -> Unit,
     onNavigateToCustomers: () -> Unit,
+    onNavigateToQuarantine: () -> Unit = {},
     onLockOrLogout: () -> Unit = {},
     isOwner: Boolean,
     isSupervisor: Boolean = false,
@@ -1714,6 +1742,7 @@ fun MoreOperationsHubSheet(
                             onNavigateToRegisterClose = onNavigateToRegisterClose,
                             onNavigateToLoyalty = onNavigateToLoyalty,
                             onNavigateToCustomers = onNavigateToCustomers,
+                            onNavigateToQuarantine = onNavigateToQuarantine,
                             onLockOrLogout = onLockOrLogout,
                             isOwner = isOwner,
                             isSupervisor = isSupervisor,
@@ -1754,6 +1783,7 @@ fun MoreOperationsHubSheet(
                     onNavigateToRegisterClose = onNavigateToRegisterClose,
                     onNavigateToLoyalty = onNavigateToLoyalty,
                     onNavigateToCustomers = onNavigateToCustomers,
+                    onNavigateToQuarantine = onNavigateToQuarantine,
                     onLockOrLogout = onLockOrLogout,
                     isOwner = isOwner,
                     isSupervisor = isSupervisor,
@@ -1781,6 +1811,7 @@ private fun MoreOperationsHubContent(
     onNavigateToRegisterClose: () -> Unit,
     onNavigateToLoyalty: () -> Unit,
     onNavigateToCustomers: () -> Unit,
+    onNavigateToQuarantine: () -> Unit = {},
     onLockOrLogout: () -> Unit = {},
     isOwner: Boolean,
     isSupervisor: Boolean = false,
@@ -1859,6 +1890,19 @@ private fun MoreOperationsHubContent(
                 isLocked = !canSuppliers,
                 lockedMessage = stringResource(R.string.owner_only_suppliers),
                 onClick = onNavigateToSuppliers
+            )
+        )
+        add(
+            OperationHubItem(
+                title = "কোয়ারেন্টাইন ও মেয়াদোত্তীর্ণ",
+                subtitle = "মেয়াদোত্তীর্ণ ও প্রত্যাহারকৃত ওষুধ ব্যবস্থাপনা ও কোম্পানি ফেরত",
+                navType = Nav3DType.PRODUCTS,
+                badge = "DGDA",
+                badgeColor = Color(0xFFDC2626),
+                isSelected = false,
+                category = OperationCategory.MANAGEMENT,
+                isLocked = false,
+                onClick = onNavigateToQuarantine
             )
         )
         add(
