@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-23 (app version 2.7.03-Final-V23-10-2026, build `Techyfi-POS-Final-V23-10-2026.apk`; versionCode 220984; DB schema version 38)
+Last updated: 2026-10-25 (app version 2.8.00-Final-V25-10-2026, build `Techyfi-POS-Meds-Final-V25-10-2026.apk`; versionCode 220985; DB schema version 39; package `com.techyfiposmeds`)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3376,6 +3376,41 @@ mindmap
 - **R8 Minification & Seamless Update Deliverable**:
   - Built with full R8 code optimization (`isMinifyEnabled = true`), resource shrinking (`isShrinkResources = true`), incremented `versionCode = 220984` for in-place update compatibility, and signed with update-compatible keystore.
   - Saved deliverable in project root: `Techyfi-POS-Final-V23-10-2026.apk`.
+
+### Release Final-V25-10-2026-R8: Specialized Medicine Shop POS (ফার্মেসি পিওএস), DIMS 29,834 Medicine Master Database, 3-Tier Multi-Unit Pricing, Clinical Generic Substitutes, Antibiotic Rx Enforcement, Package Rename to com.techyfiposmeds, and R8 Minification (Version 2.8.00-Final-V25-10-2026, Build Final-V25-10-2026)
+- **Specialized Pharmacy Architecture & DIMS Master Database (`techyfi_pos_meds.db`)**:
+  - Transitioned the entire retail POS catalog into a dedicated medicine shop POS powered by Bangladesh DIMS (29,834 medicines across 692 pharmaceutical companies and 1,425 clinical generics).
+  - Integrated pre-populated high-speed SQLite database into `app/src/main/assets/techyfi_pos_meds.db` and implemented Room schema migration version 39 in `AppDatabase.kt`.
+  - Built `MedicineRepository.kt` with FTS5 full-text indexing, multi-column search, generic matching, and clinical reference queries.
+  - Replaced the Products section with the Medicine Database catalog in `ProductsScreen.kt`, providing responsive Grid and List views with instant search.
+  - Added pharmacy dosage form filter chips: `সব ওষুধ (29,834)`, `🚨 অ্যান্টিবায়োটিক (4,443)`, `⚪ ট্যাবলেট`, `💊 ক্যাপসুল`, `🧪 সিরাপ`, `💉 ইনজেকশন`, `💧 আই ড্রপ`, `⚠️ Low Stock`, `🚫 Out of Stock`.
+  - Added 3D realistic blister strip and floating dual-color capsule micro-animations in `Realistic3DIconSuite.kt`.
+- **3-Tier Multi-Unit Pricing Engine (`পিস / পাতা / বক্স`)**:
+  - Implemented 3-tier selling unit model supporting Loose Piece (`পিস`), Blister Strip (`পাতা`), and Pack/Box (`বক্স`) with automated unit conversions.
+  - Integrated 1-tap quick add buttons (`+ পাতা`, `+ পিস`, `+ কার্ট`) directly on medicine list rows and grid cards.
+  - Added interactive unit-type selector chips on cart items in `CartScreen.kt` with real-time recalculation of subtotals and discounts.
+- **Instant Generic Substitute Finder (`MedicineSubstituteDialog.kt`)**:
+  - Enabled 1-tap matching of therapeutically identical brands sharing the same generic molecule, dosage form, and strength (e.g. Napa Extra ↔ Fast Flur ↔ Ace Plus).
+  - Displays unit prices, company names, and stock status for every alternative brand with 1-tap cart replacement.
+- **DIMS Clinical Reference Sheet (`MedicineClinicalDialog.kt`)**:
+  - Provided pharmacists with instant point-of-sale clinical guidelines: Indications (নির্দেশনা), Adult & Child Dose (সেবনমাত্রা), Contraindications (প্রতিনির্দেশনা), Side Effects (পার্শ্বপ্রতিক্রিয়া), and Precautions (সতর্কতা).
+- **DGDA Antibiotic Prescription Enforcement**:
+  - Flagged 4,443 antibiotic products with `is_antibiotic = true` and visual hazard indicators.
+  - Added warning banner in `CartScreen.kt` enforcing capture of Prescribing Doctor's Name and BMDC Registration Number before checkout.
+  - Persisted doctor details into Room `Sale` and printed on thermal bills for DGDA regulatory compliance.
+- **1-Tap Bengali Dosage Schedule Chips**:
+  - Added fast dosage instruction selector chips in `CartScreen.kt`: `১+০+১ (খাওয়ার পর)`, `১+১+১`, `০+১+০`, `১+০+০`, `০+০+১`, and `প্রয়োজনে (SOS)`.
+  - Attached dosage notes to line items for printing on customer receipts.
+- **FEFO Batch Tracking & Physical Shelf Locator**:
+  - Rendered physical rack coordinates (`📍 Rack A-1`), batch number (`🏷️ BX-2024-08`), and expiry countdown tags (`⏳ 2026-11-30`) across catalog and cart items.
+- **Specialized Pharmacy Thermal Receipt Formatting**:
+  - Updated `BillPdfGenerator.kt` for 58mm/80mm thermal printers with DGDA Drug License number header, doctor details, dosage schedules, and batch/expiry data.
+- **Package & Namespace Rename (`com.techyfiposmeds`)**:
+  - Renamed namespace and applicationId in `app/build.gradle.kts` from `com.example.techyfipos` to `com.techyfiposmeds`.
+  - Moved all 129 source, test, and androidTest files to `com/techyfiposmeds/` and updated manifest, receivers, and Room schemas.
+- **R8 Minification & Update Deliverable**:
+  - Built with full R8 code optimization (`isMinifyEnabled = true`), resource shrinking (`isShrinkResources = true`), incremented `versionCode = 220985` for in-place update compatibility, and signed with update-compatible keystore.
+  - Deliverable saved in project root: `Techyfi-POS-Meds-Final-V25-10-2026.apk`.
 
 ## Maintenance note
 

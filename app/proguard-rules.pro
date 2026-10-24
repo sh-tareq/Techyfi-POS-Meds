@@ -59,3 +59,8 @@
 -dontwarn org.openxmlformats.schemas.wordprocessingml.**
 -dontwarn org.osgi.framework.**
 -dontwarn org.w3c.dom.events.**
+
+# Room and Data Models
+-keep class com.techyfiposmeds.data.** { *; }
+-keep class com.techyfiposmeds.data.db.** { *; }
+
