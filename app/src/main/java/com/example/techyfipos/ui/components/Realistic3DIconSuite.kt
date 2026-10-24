@@ -193,76 +193,79 @@ fun Realistic3DProductsBoxIcon(
                 size = Size(w * 0.76f, h * 0.16f)
             )
 
-            // Top Face (Lighter Cardboard)
-            val topFace = Path().apply {
-                moveTo(w * 0.50f, h * 0.10f)
-                lineTo(w * 0.86f, h * 0.28f)
-                lineTo(w * 0.50f, h * 0.46f)
-                lineTo(w * 0.14f, h * 0.28f)
+            // 3D Metallic Silver Blister Pack Base
+            val foilBase = Path().apply {
+                moveTo(w * 0.50f, h * 0.12f)
+                lineTo(w * 0.88f, h * 0.32f)
+                lineTo(w * 0.50f, h * 0.52f)
+                lineTo(w * 0.12f, h * 0.32f)
                 close()
             }
             drawPath(
-                topFace,
+                foilBase,
                 brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFFFBBF24), Color(0xFFD97706)),
-                    start = Offset(w * 0.5f, h * 0.1f),
-                    end = Offset(w * 0.5f, h * 0.46f)
+                    colors = listOf(Color(0xFFE2E8F0), Color(0xFF94A3B8)),
+                    start = Offset(w * 0.5f, h * 0.12f),
+                    end = Offset(w * 0.5f, h * 0.52f)
                 )
             )
 
-            // Left Face (Medium Cardboard)
-            val leftFace = Path().apply {
-                moveTo(w * 0.14f, h * 0.28f)
-                lineTo(w * 0.50f, h * 0.46f)
-                lineTo(w * 0.50f, h * 0.84f)
-                lineTo(w * 0.14f, h * 0.66f)
+            // Blister thickness
+            val leftSide = Path().apply {
+                moveTo(w * 0.12f, h * 0.32f)
+                lineTo(w * 0.50f, h * 0.52f)
+                lineTo(w * 0.50f, h * 0.62f)
+                lineTo(w * 0.12f, h * 0.42f)
                 close()
             }
             drawPath(
-                leftFace,
+                leftSide,
                 brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFFD97706), Color(0xFFB45309)),
-                    start = Offset(w * 0.14f, h * 0.28f),
-                    end = Offset(w * 0.50f, h * 0.84f)
+                    colors = listOf(Color(0xFF64748B), Color(0xFF334155)),
+                    start = Offset(w * 0.12f, h * 0.32f),
+                    end = Offset(w * 0.50f, h * 0.62f)
                 )
             )
 
-            // Right Face (Shadow Cardboard)
-            val rightFace = Path().apply {
-                moveTo(w * 0.50f, h * 0.46f)
-                lineTo(w * 0.86f, h * 0.28f)
-                lineTo(w * 0.86f, h * 0.66f)
-                lineTo(w * 0.50f, h * 0.84f)
+            val rightSide = Path().apply {
+                moveTo(w * 0.50f, h * 0.52f)
+                lineTo(w * 0.88f, h * 0.32f)
+                lineTo(w * 0.88f, h * 0.42f)
+                lineTo(w * 0.50f, h * 0.62f)
                 close()
             }
             drawPath(
-                rightFace,
+                rightSide,
                 brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFFB45309), Color(0xFF78350F)),
-                    start = Offset(w * 0.50f, h * 0.46f),
-                    end = Offset(w * 0.86f, h * 0.84f)
+                    colors = listOf(Color(0xFF475569), Color(0xFF1E293B)),
+                    start = Offset(w * 0.50f, h * 0.52f),
+                    end = Offset(w * 0.88f, h * 0.62f)
                 )
             )
 
-            // Center Packaging Tape (Glossy Golden Brown)
-            val tapeTop = Path().apply {
-                moveTo(w * 0.44f, h * 0.13f)
-                lineTo(w * 0.56f, h * 0.19f)
-                lineTo(w * 0.56f, h * 0.43f)
-                lineTo(w * 0.44f, h * 0.37f)
-                close()
-            }
-            drawPath(tapeTop, Color(0xFFFDE68A).copy(alpha = 0.75f))
+            // 3D Capsule Pill Floating on top
+            drawOval(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFFEF4444), Color(0xFFDC2626)),
+                    start = Offset(w * 0.32f, h * 0.50f),
+                    end = Offset(w * 0.48f, h * 0.80f)
+                ),
+                topLeft = Offset(w * 0.28f, h * 0.52f),
+                size = Size(w * 0.22f, h * 0.38f)
+            )
+            drawOval(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFF10B981), Color(0xFF059669)),
+                    start = Offset(w * 0.48f, h * 0.40f),
+                    end = Offset(w * 0.68f, h * 0.70f)
+                ),
+                topLeft = Offset(w * 0.44f, h * 0.42f),
+                size = Size(w * 0.22f, h * 0.38f)
+            )
 
-            // White Shipping Barcode Label on Left Face
-            val labelPath = Path().apply {
-                moveTo(w * 0.24f, h * 0.42f)
-                lineTo(w * 0.40f, h * 0.50f)
-                lineTo(w * 0.40f, h * 0.65f)
-                lineTo(w * 0.24f, h * 0.57f)
-                close()
-            }
-            drawPath(labelPath, Color(0xFFFFFFFF).copy(alpha = 0.9f))
+            // Specular glint
+            drawCircle(Color.White.copy(alpha = 0.85f), radius = w * 0.04f, center = Offset(w * 0.34f, h * 0.58f))
+            drawCircle(Color.White.copy(alpha = 0.85f), radius = w * 0.04f, center = Offset(w * 0.50f, h * 0.48f))
         }
     }
 }

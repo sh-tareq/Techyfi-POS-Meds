@@ -24,7 +24,7 @@
     <string name="customer_name">Customer Name</string>
     <string name="customer_phone">Customer Phone</string>
     <string name="due_receivable">Due Amount</string>
-    <string name="products">Products</string>
+    <string name="products">Medicines</string>
     <string name="products_header_subtitle">%1$d inventory SKUs registered</string>
     <string name="cart_header_subtitle">%1$d items in cart</string>
     <string name="sales_history_header_subtitle">%1$d completed orders logged</string>
@@ -3439,6 +3439,56 @@
     <string name="users_no_staff_found">No staff found matching query</string>
     <string name="users_joined_date">Joined: %1$s</string>
     <string name="sales_report_total_transactions">%1$d transactions</string>
+    <!-- Specialized Pharmacy & Medicine Shop Strings -->
+    <string name="nav_medicines">Medicines</string>
+    <string name="med_generic">Generic</string>
+    <string name="med_dosage_form">Form</string>
+    <string name="med_strength">Strength</string>
+    <string name="med_strip">Strip</string>
+    <string name="med_piece">Piece</string>
+    <string name="med_box">Box</string>
+    <string name="med_shelf">Shelf / Rack</string>
+    <string name="med_batch">Batch No</string>
+    <string name="med_expiry">Expiry</string>
+    <string name="med_substitutes">Substitutes</string>
+    <string name="med_substitutes_title">Generic Substitute Finder</string>
+    <string name="med_substitutes_sub">Equivalent active molecule brands</string>
+    <string name="med_available_alternatives">Available Alternative Brands (%1$d)</string>
+    <string name="med_no_substitutes_found">No equivalent brands found</string>
+    <string name="med_choose_brand">Choose Brand</string>
+    <string name="med_clinical_info">Clinical Info</string>
+    <string name="med_rx_alert">⚠️ Prescription Required (Antibiotic / Controlled)</string>
+    <string name="med_doctor_name">Doctor\'s Name</string>
+    <string name="med_doctor_bmdc">BMDC Reg #</string>
+    <string name="med_dosage_instruction">Dosage Schedule</string>
+    <string name="med_dgda_license">DGDA Drug License #</string>
+    <string name="med_search_hint">Search Brand, Generic, Company, Form…</string>
+    <string name="med_filter_all_forms">All Forms</string>
+    <string name="med_filter_antibiotics">🚨 Antibiotic (Rx)</string>
+    <string name="med_filter_near_expiry">⏳ Near Expiry</string>
+    <string name="med_stock_status_safe">Safe</string>
+    <string name="med_stock_status_near_expiry">Near Expiry</string>
+    <string name="med_stock_status_expired">Expired</string>
+    <string name="med_add_medicine_title">Add New Medicine</string>
+    <string name="med_edit_medicine_title">Edit Medicine Details</string>
+    <!-- Specialized Pharmacy Strings -->
+    <string name="loading">Loading...</string>
+    <string name="antibiotic_warning_title">DGDA Antibiotic Alert (Rx Required)</string>
+    <string name="antibiotic_warning_desc">Prescription from a registered doctor is mandatory before dispensing antibiotic medicines.</string>
+    <string name="doctor_name_label">Prescribing Doctor\'s Name</string>
+    <string name="doctor_bmdc_label">Doctor BMDC Registration No.</string>
+    <string name="unit_type_label">Unit:</string>
+    <string name="unit_loose_piece">Piece</string>
+    <string name="unit_blister_strip">Strip</string>
+    <string name="unit_box">Box</string>
+    <string name="dosage_label">Dosage Schedule</string>
+    <string name="med_filter_all">All Medicines</string>
+    <string name="med_filter_antibiotic">Antibiotic (Rx)</string>
+    <string name="med_filter_tablet">Tablet</string>
+    <string name="med_filter_capsule">Capsule</string>
+    <string name="med_filter_syrup">Syrup</string>
+    <string name="med_filter_injection">Injection</string>
+    <string name="med_filter_eye_drops">Eye Drops</string>
 </resources>
 
 

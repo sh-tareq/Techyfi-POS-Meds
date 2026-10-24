@@ -3,6 +3,8 @@
 package com.example.techyfipos.ui.screens
 
 import com.example.techyfipos.ui.dialogs.*
+import com.example.techyfipos.data.MedicineItem
+import com.example.techyfipos.data.ClinicalGeneric
 import android.content.Context
 import android.graphics.Bitmap
 import android.widget.Toast
@@ -306,6 +308,29 @@ fun ProductsScreen(
     var showBulkPriceDialog by rememberSaveable { mutableStateOf(false) }
     var showBulkCategoryDialog by rememberSaveable { mutableStateOf(false) }
     var showBulkDeleteDialog by rememberSaveable { mutableStateOf(false) }
+
+    val medicineSearchResults by productsViewModel.medicineSearchResults.collectAsStateWithLifecycle()
+    val isSearchingMedicines by productsViewModel.isSearchingMedicines.collectAsStateWithLifecycle()
+    val selectedDosageForm by productsViewModel.selectedDosageForm.collectAsStateWithLifecycle()
+    val filterAntibioticOnly by productsViewModel.filterAntibioticOnly.collectAsStateWithLifecycle()
+
+    var substituteTargetMedicine by remember { mutableStateOf<MedicineItem?>(null) }
+    var substituteList by remember { mutableStateOf<List<MedicineItem>>(emptyList()) }
+    var isLoadingSubstitutes by remember { mutableStateOf(false) }
+
+    var clinicalTargetMedicine by remember { mutableStateOf<MedicineItem?>(null) }
+    var clinicalInfo by remember { mutableStateOf<ClinicalGeneric?>(null) }
+    var isLoadingClinical by remember { mutableStateOf(false) }
+
+    fun addMedicineToCart(med: MedicineItem, unitType: String = "strip") {
+        scope.launch {
+            val prod = productsViewModel.convertAndSaveMedicineToProduct(med)
+            cartViewModel.addToCart(prod, 1.0)
+            cartViewModel.setItemUnitType(prod, unitType)
+            addedConfirmation = ProductAddedConfirmation(med.brandName, cartUnitCount + 1.0)
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
 
     val listState = rememberLazyListState()
     val gridState = rememberLazyGridState()
@@ -1584,17 +1609,18 @@ fun ProductsScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 1. All SKUs
-                val isAllSkus = stockFilter == ProductStockFilter.ALL && !highMarginOnly
+                // 1. All Medicines (সব ওষুধ)
+                val isAllMeds = selectedDosageForm == "all" && !filterAntibioticOnly && stockFilter == ProductStockFilter.ALL
                 Surface(
                     onClick = {
+                        productsViewModel.setDosageFormFilter("all")
+                        if (filterAntibioticOnly) productsViewModel.toggleAntibioticFilter()
                         stockFilterName = ProductStockFilter.ALL.name
-                        highMarginOnly = false
                     },
                     shape = RoundedCornerShape(999.dp),
-                    color = if (isAllSkus) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (isAllSkus) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)),
-                    shadowElevation = if (isAllSkus) 1.dp else 0.dp
+                    color = if (isAllMeds) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (isAllMeds) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)),
+                    shadowElevation = if (isAllMeds) 1.dp else 0.dp
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1602,32 +1628,149 @@ fun ProductsScreen(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.products_filter_all_skus),
+                            text = "💊 " + stringResource(R.string.med_filter_all),
                             fontSize = 12.sp,
-                            fontWeight = if (isAllSkus) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isAllSkus) Color.White else MaterialTheme.colorScheme.onSurface
+                            fontWeight = if (isAllMeds) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isAllMeds) Color.White else MaterialTheme.colorScheme.onSurface
                         )
                         Surface(
                             shape = RoundedCornerShape(999.dp),
-                            color = if (isAllSkus) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceVariant
+                            color = if (isAllMeds) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceVariant
                         ) {
                             Text(
-                                text = "${allProductsList.size}",
+                                text = "29,834",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = if (isAllSkus) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (isAllMeds) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
                             )
                         }
                     }
                 }
 
-                // 2. ⚠️ Low Stock
+                // 2. 🚨 Antibiotic Rx Filter Chip
+                Surface(
+                    onClick = { productsViewModel.toggleAntibioticFilter() },
+                    shape = RoundedCornerShape(999.dp),
+                    color = if (filterAntibioticOnly) Color(0xFFFEE2E2) else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (filterAntibioticOnly) Color(0xFFEF4444) else Color(0xFFEF4444).copy(alpha = 0.45f))
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "🚨 " + stringResource(R.string.med_filter_antibiotic),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (filterAntibioticOnly) Color(0xFFDC2626) else Color(0xFFB91C1C)
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(999.dp),
+                            color = Color(0xFFEF4444).copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = "4,443",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFFDC2626),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                }
+
+                // 3. Tablet
+                val isTabletActive = selectedDosageForm.equals("Tablet", ignoreCase = true)
+                Surface(
+                    onClick = { productsViewModel.setDosageFormFilter(if (isTabletActive) "all" else "Tablet") },
+                    shape = RoundedCornerShape(999.dp),
+                    color = if (isTabletActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (isTabletActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+                ) {
+                    Text(
+                        text = "⚪ " + stringResource(R.string.med_filter_tablet),
+                        fontSize = 12.sp,
+                        fontWeight = if (isTabletActive) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isTabletActive) Color.White else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+
+                // 4. Capsule
+                val isCapsuleActive = selectedDosageForm.equals("Capsule", ignoreCase = true)
+                Surface(
+                    onClick = { productsViewModel.setDosageFormFilter(if (isCapsuleActive) "all" else "Capsule") },
+                    shape = RoundedCornerShape(999.dp),
+                    color = if (isCapsuleActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (isCapsuleActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+                ) {
+                    Text(
+                        text = "💊 " + stringResource(R.string.med_filter_capsule),
+                        fontSize = 12.sp,
+                        fontWeight = if (isCapsuleActive) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isCapsuleActive) Color.White else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+
+                // 5. Syrup
+                val isSyrupActive = selectedDosageForm.equals("Syrup", ignoreCase = true)
+                Surface(
+                    onClick = { productsViewModel.setDosageFormFilter(if (isSyrupActive) "all" else "Syrup") },
+                    shape = RoundedCornerShape(999.dp),
+                    color = if (isSyrupActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (isSyrupActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+                ) {
+                    Text(
+                        text = "🧪 " + stringResource(R.string.med_filter_syrup),
+                        fontSize = 12.sp,
+                        fontWeight = if (isSyrupActive) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSyrupActive) Color.White else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+
+                // 6. Injection
+                val isInjectionActive = selectedDosageForm.equals("Injection", ignoreCase = true)
+                Surface(
+                    onClick = { productsViewModel.setDosageFormFilter(if (isInjectionActive) "all" else "Injection") },
+                    shape = RoundedCornerShape(999.dp),
+                    color = if (isInjectionActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (isInjectionActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+                ) {
+                    Text(
+                        text = "💉 " + stringResource(R.string.med_filter_injection),
+                        fontSize = 12.sp,
+                        fontWeight = if (isInjectionActive) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isInjectionActive) Color.White else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+
+                // 7. Eye Drops
+                val isDropsActive = selectedDosageForm.equals("Eye Drops", ignoreCase = true)
+                Surface(
+                    onClick = { productsViewModel.setDosageFormFilter(if (isDropsActive) "all" else "Eye Drops") },
+                    shape = RoundedCornerShape(999.dp),
+                    color = if (isDropsActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (isDropsActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+                ) {
+                    Text(
+                        text = "💧 " + stringResource(R.string.med_filter_eye_drops),
+                        fontSize = 12.sp,
+                        fontWeight = if (isDropsActive) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isDropsActive) Color.White else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+
+                // 8. ⚠️ Low Stock
                 val isLowActive = stockFilter == ProductStockFilter.LOW
                 Surface(
                     onClick = {
                         stockFilterName = if (isLowActive) ProductStockFilter.ALL.name else ProductStockFilter.LOW.name
-                        highMarginOnly = false
                     },
                     shape = RoundedCornerShape(999.dp),
                     color = if (isLowActive) Color(0xFFFEF3C7) else MaterialTheme.colorScheme.surface,
@@ -1644,27 +1787,14 @@ fun ProductsScreen(
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFD97706)
                         )
-                        Surface(
-                            shape = RoundedCornerShape(999.dp),
-                            color = Color(0xFFF59E0B).copy(alpha = 0.2f)
-                        ) {
-                            Text(
-                                text = "$lowStockCount",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFFD97706),
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
-                            )
-                        }
                     }
                 }
 
-                // 3. 🚫 Out of Stock
+                // 9. 🚫 Out of Stock
                 val isOutActive = stockFilter == ProductStockFilter.OUT
                 Surface(
                     onClick = {
                         stockFilterName = if (isOutActive) ProductStockFilter.ALL.name else ProductStockFilter.OUT.name
-                        highMarginOnly = false
                     },
                     shape = RoundedCornerShape(999.dp),
                     color = if (isOutActive) Color(0xFFFEE2E2) else MaterialTheme.colorScheme.surface,
@@ -1681,46 +1811,6 @@ fun ProductsScreen(
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFDC2626)
                         )
-                        Surface(
-                            shape = RoundedCornerShape(999.dp),
-                            color = Color(0xFFEF4444).copy(alpha = 0.2f)
-                        ) {
-                            Text(
-                                text = "$outOfStockCount",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFFDC2626),
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
-                            )
-                        }
-                    }
-                }
-
-                // 4. 💎 High Margin (>30%)
-                if (canViewCosts) {
-                    Surface(
-                        onClick = {
-                            highMarginOnly = !highMarginOnly
-                            if (highMarginOnly) {
-                                stockFilterName = ProductStockFilter.ALL.name
-                            }
-                        },
-                        shape = RoundedCornerShape(999.dp),
-                        color = if (highMarginOnly) Color(0xFFD1FAE5) else MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, if (highMarginOnly) Color(0xFF10B981) else Color(0xFF10B981).copy(alpha = 0.45f))
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.products_filter_high_margin_chip),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF047857)
-                            )
-                        }
                     }
                 }
 
@@ -1733,24 +1823,7 @@ fun ProductsScreen(
                     modifier = Modifier.padding(horizontal = 2.dp)
                 )
 
-                // 5. All Categories
-                val isAllCats = selectedCategory == null
-                Surface(
-                    onClick = { selectedCategory = null },
-                    shape = RoundedCornerShape(999.dp),
-                    color = if (isAllCats) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (isAllCats) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
-                ) {
-                    Text(
-                        text = stringResource(R.string.products_filter_all_categories),
-                        fontSize = 12.sp,
-                        fontWeight = if (isAllCats) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isAllCats) Color.White else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
-                    )
-                }
-
-                // 6. Dynamic Categories with Emojis & Counts
+                // 10. Dynamic Categories with Emojis & Counts
                 availableCategories.forEach { category ->
                     val isCatActive = selectedCategory == category
                     val emoji = getCategoryEmoji(category)
@@ -1924,20 +1997,7 @@ fun ProductsScreen(
             }
 
             // Products Content Area
-            if (!isProductsLoaded) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(36.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 3.dp
-                    )
-                }
-            } else if (allProductsList.isEmpty()) {
+            if (!isProductsLoaded || isSearchingMedicines) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1945,70 +2005,85 @@ fun ProductsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Realistic3DProductsBoxIcon(size = 72.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.products_empty_no_products),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(36.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 3.dp
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = stringResource(R.string.products_empty_add_first),
+                            text = if (isSearchingMedicines) "DIMS মেডিসিন ডেটাবেজে অনুসন্ধান করা হচ্ছে..." else stringResource(R.string.loading),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (isOwner) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(
-                                onClick = { showAddDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.products_add_product_button))
-                            }
+                    }
+                }
+            } else if (medicineSearchResults.isNotEmpty()) {
+                if (viewMode == ProductViewMode.LIST) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = if (isTablet) 16.dp else 72.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(medicineSearchResults, key = { it.id }) { med ->
+                            MedicineItemRow(
+                                medicine = med,
+                                isTablet = isTablet,
+                                onAddToCart = { unitType ->
+                                    addMedicineToCart(med, unitType)
+                                },
+                                onFindSubstitute = {
+                                    scope.launch {
+                                        val subs = productsViewModel.getSubstitutes(med)
+                                        substituteList = subs
+                                        substituteTargetMedicine = med
+                                    }
+                                },
+                                onViewClinical = {
+                                    scope.launch {
+                                        val info = productsViewModel.getClinicalInfo(med.genericId)
+                                        clinicalInfo = info
+                                        clinicalTargetMedicine = med
+                                    }
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        state = gridState,
+                        columns = if (isTablet) GridCells.Adaptive(minSize = 300.dp) else GridCells.Adaptive(minSize = 160.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = if (isTablet) 16.dp else 72.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        gridItems(medicineSearchResults, key = { it.id }) { med ->
+                            MedicineGridCard(
+                                medicine = med,
+                                onAddToCart = { unitType ->
+                                    addMedicineToCart(med, unitType)
+                                },
+                                onFindSubstitute = {
+                                    scope.launch {
+                                        val subs = productsViewModel.getSubstitutes(med)
+                                        substituteList = subs
+                                        substituteTargetMedicine = med
+                                    }
+                                },
+                                onViewClinical = {
+                                    scope.launch {
+                                        val info = productsViewModel.getClinicalInfo(med.genericId)
+                                        clinicalInfo = info
+                                        clinicalTargetMedicine = med
+                                    }
+                                }
+                            )
                         }
                     }
                 }
-            } else if (visibleProducts.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Realistic3DConsoleDialsIcon(size = 56.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.products_empty_no_match),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.products_empty_try_adjusting),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedButton(
-                            onClick = {
-                                selectedCategory = null
-                                stockFilterName = ProductStockFilter.ALL.name
-                                dateFilterName = ProductDateFilter.ALL.name
-                                sortOptionName = ProductSortOption.NAME_ASC.name
-                                highMarginOnly = false
-                                minimumPrice = ""
-                                maximumPrice = ""
-                            }
-                        ) {
-                            Text(stringResource(R.string.products_reset_filters))
-                        }
-                    }
-                }
-            } else {
+            } else if (visibleProducts.isNotEmpty()) {
                 key(selectedCategory) {
                     if (viewMode == ProductViewMode.LIST) {
                         LazyColumn(
@@ -2144,6 +2219,41 @@ fun ProductsScreen(
                                     onAddToCart = { addProductToCart(product) }
                                 )
                             }
+                        }
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Realistic3DConsoleDialsIcon(size = 56.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "কোন ওষুধ বা পণ্য পাওয়া যায়নি",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "অন্য নাম, জেনেরিক বা ফিল্টার দিয়ে পুনরায় চেষ্টা করুন",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(
+                            onClick = {
+                                productsViewModel.setSearchQuery("")
+                                productsViewModel.setDosageFormFilter("all")
+                                if (filterAntibioticOnly) productsViewModel.toggleAntibioticFilter()
+                                selectedCategory = null
+                                stockFilterName = ProductStockFilter.ALL.name
+                            }
+                        ) {
+                            Text("ফিল্টার রিসেট করুন")
                         }
                     }
                 }
@@ -3149,6 +3259,26 @@ fun ProductsScreen(
                     }
                 }
             }
+        )
+    }
+
+    if (substituteTargetMedicine != null) {
+        MedicineSubstituteDialog(
+            targetMedicine = substituteTargetMedicine!!,
+            substitutes = substituteList,
+            onDismiss = { substituteTargetMedicine = null },
+            onSelectSubstitute = { sub ->
+                substituteTargetMedicine = null
+                addMedicineToCart(sub)
+            }
+        )
+    }
+
+    if (clinicalTargetMedicine != null) {
+        MedicineClinicalDialog(
+            medicine = clinicalTargetMedicine!!,
+            clinicalInfo = clinicalInfo,
+            onDismiss = { clinicalTargetMedicine = null }
         )
     }
 }
@@ -5187,5 +5317,591 @@ private fun localizeImportError(context: Context, failure: String): String {
     }
     return failure
 }
+
+// =======================================================================
+// Specialized Pharmacy POS Components: MedicineItemRow & MedicineGridCard
+// =======================================================================
+
+private fun getDosageFormStyle(form: String, isDark: Boolean): Pair<Color, Color> {
+    val norm = form.lowercase().trim()
+    return when {
+        norm.contains("tab") || norm.contains("ট্যাব") -> {
+            if (isDark) Pair(Color(0xFF1E3A8A), Color(0xFF93C5FD)) else Pair(Color(0xFFEFF6FF), Color(0xFF1D4ED8))
+        }
+        norm.contains("cap") || norm.contains("ক্যাপ") -> {
+            if (isDark) Pair(Color(0xFF581C87), Color(0xFFD8B4FE)) else Pair(Color(0xFFFAF5FF), Color(0xFF7E22CE))
+        }
+        norm.contains("syr") || norm.contains("susp") || norm.contains("সিরাপ") -> {
+            if (isDark) Pair(Color(0xFF78350F), Color(0xFFFDE68A)) else Pair(Color(0xFFFFFBEB), Color(0xFFB45309))
+        }
+        norm.contains("inj") || norm.contains("ইনজে") -> {
+            if (isDark) Pair(Color(0xFF134E4A), Color(0xFF5EEAD4)) else Pair(Color(0xFFF0FDFA), Color(0xFF0F766E))
+        }
+        norm.contains("drop") || norm.contains("ড্রপ") -> {
+            if (isDark) Pair(Color(0xFF0C4A6E), Color(0xFF7DD3FC)) else Pair(Color(0xFFF0F9FF), Color(0xFF0284C7))
+        }
+        norm.contains("oint") || norm.contains("cream") || norm.contains("মলম") -> {
+            if (isDark) Pair(Color(0xFF701A75), Color(0xFFF0ABFC)) else Pair(Color(0xFFFDF4FF), Color(0xFFA21CAF))
+        }
+        else -> {
+            if (isDark) Pair(Color(0xFF1F2937), Color(0xFF9CA3AF)) else Pair(Color(0xFFF3F4F6), Color(0xFF4B5563))
+        }
+    }
+}
+
+@Composable
+fun MedicineItemRow(
+    medicine: MedicineItem,
+    isTablet: Boolean = false,
+    onAddToCart: (unitType: String) -> Unit,
+    onFindSubstitute: () -> Unit,
+    onViewClinical: () -> Unit
+) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val (formBg, formText) = getDosageFormStyle(medicine.dosageForm, isDark)
+    val hasStrip = medicine.stripPrice > 0 || medicine.stripSize > 1
+    val isOutOfStock = medicine.stockQty <= 0
+    val isLowStock = medicine.stockQty > 0 && medicine.stockQty <= medicine.reorderLevel
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (medicine.isAntibiotic) {
+                if (isDark) Color(0xFF2D1212) else Color(0xFFFFF7ED)
+            } else MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (medicine.isAntibiotic) {
+                if (isDark) Color(0xFF7F1D1D) else Color(0xFFFDBA74)
+            } else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Header Row: Form Tag + Antibiotic Badge + Shelf + Stock
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Dosage Form Pill
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = formBg,
+                    border = BorderStroke(0.6.dp, formText.copy(alpha = 0.4f))
+                ) {
+                    Text(
+                        text = medicine.dosageForm,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = formText,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+
+                // Antibiotic Warning Badge
+                if (medicine.isAntibiotic) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.7f) else Color(0xFFFEE2E2),
+                        border = BorderStroke(0.6.dp, Color(0xFFEF4444).copy(alpha = 0.6f))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        ) {
+                            Text("🚨", fontSize = 10.sp)
+                            Text(
+                                text = "অ্যান্টিবায়োটিক (Rx)",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626)
+                            )
+                        }
+                    }
+                }
+
+                // Shelf Location
+                if (!medicine.shelfLocation.isNullOrBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = "📍 ${medicine.shelfLocation}",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                // Stock Badge
+                val stockText = when {
+                    isOutOfStock -> "🚫 স্টক নেই"
+                    isLowStock -> "⚠️ কম স্টক (${toBanglaDigits(medicine.stockQty.toInt().toString())})"
+                    else -> "✅ স্টক: ${toBanglaDigits(medicine.stockQty.toInt().toString())}"
+                }
+                val stockColor = when {
+                    isOutOfStock -> Color(0xFFDC2626)
+                    isLowStock -> Color(0xFFD97706)
+                    else -> Color(0xFF059669)
+                }
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = stockColor.copy(alpha = 0.12f),
+                    border = BorderStroke(0.6.dp, stockColor.copy(alpha = 0.35f))
+                ) {
+                    Text(
+                        text = stockText,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = stockColor,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            // Middle: Brand Name + Strength + Generic Name + Company
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Leading 3D Pill Icon
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Realistic3DProductsBoxIcon(size = 28.dp, animate = false)
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = medicine.brandName,
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (!medicine.strength.isNullOrBlank()) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                            ) {
+                                Text(
+                                    text = medicine.strength,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (!medicine.genericName.isNullOrBlank()) {
+                        Text(
+                            text = "🧬 ${medicine.genericName}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF4F46E5),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    if (!medicine.companyName.isNullOrBlank()) {
+                        Text(
+                            text = "🏢 ${medicine.companyName}",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            // Bottom Multi-Unit Pricing Pill & Action Buttons Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Multi-unit pricing summary
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "৳${formatTaka(medicine.unitPrice)}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "/পিস",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (hasStrip) {
+                            val effStripPrice = if (medicine.stripPrice > 0) medicine.stripPrice else (medicine.unitPrice * medicine.stripSize)
+                            Text(
+                                text = "• ৳${formatTaka(effStripPrice)}/পাতা (${toBanglaDigits(medicine.stripSize.toString())})",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (medicine.packPrice > 0) {
+                        Text(
+                            text = "বক্স: ৳${formatTaka(medicine.packPrice)}",
+                            fontSize = 10.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                        )
+                    }
+                }
+
+                // Action Buttons: Substitutes + Clinical + Quick Add
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Substitute Finder Button
+                    Surface(
+                        onClick = onFindSubstitute,
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF3B82F6).copy(alpha = 0.12f),
+                        border = BorderStroke(0.8.dp, Color(0xFF3B82F6).copy(alpha = 0.4f)),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            Icon(Icons.Default.Repeat, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(13.dp))
+                            Text("বিকল্প", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                        }
+                    }
+
+                    // Clinical DIMS Button
+                    Surface(
+                        onClick = onViewClinical,
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF8B5CF6).copy(alpha = 0.12f),
+                        border = BorderStroke(0.8.dp, Color(0xFF8B5CF6).copy(alpha = 0.4f)),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFF7C3AED), modifier = Modifier.size(13.dp))
+                            Text("তথ্য", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7C3AED))
+                        }
+                    }
+
+                    // Quick Add Buttons
+                    if (hasStrip) {
+                        Button(
+                            onClick = { onAddToCart("strip") },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Text("+ পাতা", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                        FilledTonalButton(
+                            onClick = { onAddToCart("pc") },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 7.dp, vertical = 0.dp),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Text("+ পিস", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Button(
+                            onClick = { onAddToCart("pc") },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Text("+ কার্টে নিন", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MedicineGridCard(
+    medicine: MedicineItem,
+    onAddToCart: (unitType: String) -> Unit,
+    onFindSubstitute: () -> Unit,
+    onViewClinical: () -> Unit
+) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val (formBg, formText) = getDosageFormStyle(medicine.dosageForm, isDark)
+    val hasStrip = medicine.stripPrice > 0 || medicine.stripSize > 1
+    val isOutOfStock = medicine.stockQty <= 0
+    val isLowStock = medicine.stockQty > 0 && medicine.stockQty <= medicine.reorderLevel
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (medicine.isAntibiotic) {
+                if (isDark) Color(0xFF2D1212) else Color(0xFFFFF7ED)
+            } else MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (medicine.isAntibiotic) {
+                if (isDark) Color(0xFF7F1D1D) else Color(0xFFFDBA74)
+            } else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Header Row: Form Tag + Stock Pill
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(5.dp),
+                    color = formBg,
+                    border = BorderStroke(0.6.dp, formText.copy(alpha = 0.4f))
+                ) {
+                    Text(
+                        text = medicine.dosageForm,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = formText,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+
+                val stockColor = when {
+                    isOutOfStock -> Color(0xFFDC2626)
+                    isLowStock -> Color(0xFFD97706)
+                    else -> Color(0xFF059669)
+                }
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = stockColor.copy(alpha = 0.12f),
+                    border = BorderStroke(0.5.dp, stockColor.copy(alpha = 0.35f))
+                ) {
+                    Text(
+                        text = if (isOutOfStock) "স্টক নেই" else "${toBanglaDigits(medicine.stockQty.toInt().toString())} পিস",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = stockColor,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
+                    )
+                }
+            }
+
+            // Antibiotic Strip if applicable
+            if (medicine.isAntibiotic) {
+                Surface(
+                    shape = RoundedCornerShape(5.dp),
+                    color = if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.7f) else Color(0xFFFEE2E2),
+                    border = BorderStroke(0.5.dp, Color(0xFFEF4444).copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "🚨 অ্যান্টিবায়োটিক (Rx)",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // Title & Strength
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(
+                    text = medicine.brandName + if (!medicine.strength.isNullOrBlank()) " ${medicine.strength}" else "",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!medicine.genericName.isNullOrBlank()) {
+                    Text(
+                        text = "🧬 ${medicine.genericName}",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF4F46E5),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (!medicine.companyName.isNullOrBlank()) {
+                    Text(
+                        text = medicine.companyName,
+                        fontSize = 9.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Shelf & Batch Meta
+            if (!medicine.shelfLocation.isNullOrBlank() || !medicine.expiryDate.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (!medicine.shelfLocation.isNullOrBlank()) {
+                        Text(
+                            text = "📍 ${medicine.shelfLocation}",
+                            fontSize = 9.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+                    if (!medicine.expiryDate.isNullOrBlank()) {
+                        Text(
+                            text = "⏳ ${medicine.expiryDate}",
+                            fontSize = 9.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+
+            // Pricing Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    text = "৳${formatTaka(medicine.unitPrice)}",
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "/পিস",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (hasStrip) {
+                    val effStripPrice = if (medicine.stripPrice > 0) medicine.stripPrice else (medicine.unitPrice * medicine.stripSize)
+                    Text(
+                        text = "(${toBanglaDigits(medicine.stripSize.toString())}'s: ৳${formatTaka(effStripPrice)})",
+                        fontSize = 9.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        maxLines = 1
+                    )
+                }
+            }
+
+            // Action Buttons: Substitutes + Clinical + Add
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Surface(
+                    onClick = onFindSubstitute,
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFF3B82F6).copy(alpha = 0.12f),
+                    border = BorderStroke(0.6.dp, Color(0xFF3B82F6).copy(alpha = 0.4f)),
+                    modifier = Modifier.size(30.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Repeat, contentDescription = "বিকল্প", tint = Color(0xFF2563EB), modifier = Modifier.size(14.dp))
+                    }
+                }
+
+                Surface(
+                    onClick = onViewClinical,
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFF8B5CF6).copy(alpha = 0.12f),
+                    border = BorderStroke(0.6.dp, Color(0xFF8B5CF6).copy(alpha = 0.4f)),
+                    modifier = Modifier.size(30.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Info, contentDescription = "তথ্য", tint = Color(0xFF7C3AED), modifier = Modifier.size(14.dp))
+                    }
+                }
+
+                if (hasStrip) {
+                    Button(
+                        onClick = { onAddToCart("strip") },
+                        shape = RoundedCornerShape(7.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
+                        contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(30.dp)
+                    ) {
+                        Text("+ পাতা", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                } else {
+                    Button(
+                        onClick = { onAddToCart("pc") },
+                        shape = RoundedCornerShape(7.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(30.dp)
+                    ) {
+                        Text("+ কার্ট", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 

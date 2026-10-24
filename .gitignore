@@ -15,3 +15,4 @@ Backup Files/
 *.apk
 .vscode/
 screenshots/
+.venv/

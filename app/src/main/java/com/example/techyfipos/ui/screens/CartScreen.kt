@@ -350,6 +350,9 @@ fun CartScreen(
     val storeCreditApplied by cartViewModel.storeCreditApplied.collectAsStateWithLifecycle()
     val redeemedVoucher by cartViewModel.redeemedVoucher.collectAsStateWithLifecycle()
     var showVoucherRedeemDialog by remember { mutableStateOf(false) }
+    val hasAntibioticInCart by cartViewModel.hasAntibioticInCart.collectAsStateWithLifecycle()
+    val doctorName by cartViewModel.doctorName.collectAsStateWithLifecycle()
+    val doctorBmdc by cartViewModel.doctorBmdc.collectAsStateWithLifecycle()
     val defaultCashier = invoiceSettingsData.cashierName.ifBlank { cashierName.ifBlank { stringResource(R.string.default_cashier_admin) } }
     val currentDisplayCashier = checkoutCashierName.ifBlank { defaultCashier }
 
@@ -588,12 +591,15 @@ fun CartScreen(
                 quantity = item.quantity,
                 unitPrice = chargedUnitPrice,
                 lineTotal = chargedUnitPrice * item.quantity,
-                unit = item.product.unit,
+                unit = item.unitType,
                 note = item.note,
                 mrpPrice = if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice,
                 purchasePrice = item.product.purchasePrice,
                 taxable = item.taxable,
-                barcode = item.product.barcode
+                barcode = item.product.barcode,
+                dosageSchedule = item.dosageSchedule,
+                batchNumber = item.product.batchNumber,
+                expiryDate = item.product.expiryDate
             )
         }
         val snapshotSubtotal = subtotal
@@ -687,7 +693,10 @@ fun CartScreen(
                 voucherCode = snapshotVoucherCode,
                 voucherAmount = snapshotVoucherAmount,
                 customerRemainingStoreCredit = postSaleRemainingStoreCredit,
-                voucherRemainingBalance = postSaleRemainingVoucherBalance
+                voucherRemainingBalance = postSaleRemainingVoucherBalance,
+                doctorName = cartViewModel.doctorName.value.takeIf { it.isNotBlank() },
+                doctorBmdcReg = cartViewModel.doctorBmdc.value.takeIf { it.isNotBlank() },
+                drugLicenseNo = "DGDA-PH-2026-8849"
             ))
 
             if (invoiceSettingsData.cashDrawerKickEnabled && (snapshotPaymentMethod == "Cash" || snapshotPaymentMethod == "Split")) {
@@ -1060,6 +1069,88 @@ fun CartScreen(
                     }
                 }
 
+                // 🚨 DGDA Antibiotic Prescription Banner (Prompted when Rx antibiotic is in cart)
+                AnimatedVisibility(
+                    visible = hasAntibioticInCart,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFFFFF1F2),
+                        border = BorderStroke(1.2.dp, Color(0xFFF43F5E).copy(alpha = 0.6f)),
+                        shadowElevation = 1.dp
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFFF43F5E),
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text("🚨", fontSize = 14.sp)
+                                    }
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.antibiotic_warning_title),
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 12.5.sp,
+                                        color = Color(0xFF9F1239)
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.antibiotic_warning_desc),
+                                        fontSize = 10.5.sp,
+                                        color = Color(0xFFBE123C)
+                                    )
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = doctorName,
+                                    onValueChange = { cartViewModel.setDoctorDetails(it, doctorBmdc) },
+                                    label = { Text(stringResource(R.string.doctor_name_label), fontSize = 11.sp) },
+                                    placeholder = { Text("ডা. মোঃ রফিকুল ইসলাম", fontSize = 11.sp) },
+                                    modifier = Modifier.weight(1.3f),
+                                    singleLine = true,
+                                    textStyle = TextStyle(fontSize = 12.sp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFFE11D48),
+                                        unfocusedBorderColor = Color(0xFFFDA4AF)
+                                    )
+                                )
+                                OutlinedTextField(
+                                    value = doctorBmdc,
+                                    onValueChange = { cartViewModel.setDoctorDetails(doctorName, it) },
+                                    label = { Text(stringResource(R.string.doctor_bmdc_label), fontSize = 11.sp) },
+                                    placeholder = { Text("A-12345", fontSize = 11.sp) },
+                                    modifier = Modifier.weight(0.9f),
+                                    singleLine = true,
+                                    textStyle = TextStyle(fontSize = 12.sp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFFE11D48),
+                                        unfocusedBorderColor = Color(0xFFFDA4AF)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Cart Items list
                 LazyColumn(
                     modifier = Modifier
@@ -1112,7 +1203,9 @@ fun CartScreen(
                                     }
                                 )
                             },
-                            onEditNote = { editingNoteBarcode = item.product.barcode }
+                            onEditNote = { editingNoteBarcode = item.product.barcode },
+                            onUnitTypeChanged = { unit -> cartViewModel.setItemUnitType(item.product, unit) },
+                            onDosageScheduleChanged = { schedule -> cartViewModel.setItemDosageSchedule(item.product, schedule) }
                         )
                     }
                 }
@@ -3312,7 +3405,9 @@ fun CartItemRow(
     onRemove: () -> Unit,
     onEditNote: () -> Unit = {},
     unitPrice: Double = item.product.sellingPrice,
-    allowNegativeInventory: Boolean = false
+    allowNegativeInventory: Boolean = false,
+    onUnitTypeChanged: ((String) -> Unit)? = null,
+    onDosageScheduleChanged: ((String) -> Unit)? = null
 ) {
     var showQuantityDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -3344,7 +3439,7 @@ fun CartItemRow(
             availableStock = item.product.stockQty,
             allowNegativeInventory = allowNegativeInventory,
             isCustomItem = isCustomItem,
-            unit = item.product.unit,
+            unit = item.unitType,
             onConfirm = { qty ->
                 if (qty <= 0.0) {
                     onRemove()
@@ -3386,6 +3481,159 @@ fun CartItemRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // 🧬 Clinical Generic Name & Pharma Metadata
+            if (!item.product.genericName.isNullOrBlank()) {
+                Text(
+                    text = item.product.genericName ?: "",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF0284C7),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // Location, Expiry, and Antibiotic Badges Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (!item.product.shelfLocation.isNullOrBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = Color(0xFFEEF2FF),
+                        border = BorderStroke(0.6.dp, Color(0xFFC7D2FE))
+                    ) {
+                        Text(
+                            text = "📍 ${item.product.shelfLocation}",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4338CA),
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+                if (!item.product.batchNumber.isNullOrBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ) {
+                        Text(
+                            text = "📦 ${item.product.batchNumber}",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+                if (item.product.isAntibiotic) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = Color(0xFFFEE2E2),
+                        border = BorderStroke(0.6.dp, Color(0xFFFECACA))
+                    ) {
+                        Text(
+                            text = "🚨 Rx Antibiotic",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFDC2626),
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+            }
+
+            // 🏷️ Multi-Unit Selector (পিস / পাতা / বক্স)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.unit_type_label),
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val units = listOf(
+                    Triple("pc", stringResource(R.string.unit_loose_piece), item.product.sellingPrice),
+                    Triple("strip", stringResource(R.string.unit_blister_strip), if (item.product.stripPrice > 0.0) item.product.stripPrice else item.product.sellingPrice * 10),
+                    Triple("box", stringResource(R.string.unit_box), if (item.product.packPrice > 0.0) item.product.packPrice else item.product.sellingPrice * 100)
+                )
+                units.forEach { (uKey, uLabel, uPrice) ->
+                    val isSelected = item.unitType.equals(uKey, ignoreCase = true)
+                    Surface(
+                        onClick = { onUnitTypeChanged?.invoke(uKey) },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = uLabel,
+                                fontSize = 10.sp,
+                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = formatTaka(uPrice),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) Color.White.copy(alpha = 0.85f) else Color(0xFF059669)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 💊 1-Tap Dosage Schedule Chips
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(top = 5.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "💊 " + stringResource(R.string.dosage_label),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val schedules = listOf("১+০+১ (খাওয়ার পর)", "১+১+১", "০+১+০", "১+০+০", "০+০+১", "প্রয়োজনে (SOS)")
+                schedules.forEach { sch ->
+                    val isCurrent = item.dosageSchedule == sch
+                    Surface(
+                        onClick = {
+                            val next = if (isCurrent) "" else sch
+                            onDosageScheduleChanged?.invoke(next)
+                        },
+                        shape = RoundedCornerShape(999.dp),
+                        color = if (isCurrent) Color(0xFF0284C7) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        border = BorderStroke(0.8.dp, if (isCurrent) Color(0xFF0284C7) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = sch,
+                            fontSize = 9.5.sp,
+                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isCurrent) Color.White else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(Modifier.height(6.dp))
 

@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.Dispatchers
 
-const val APP_DATABASE_VERSION = 38
+const val APP_DATABASE_VERSION = 39
 
 /**
  * Keeps every migration compatible with both Room database backends. Room calls
@@ -479,6 +479,27 @@ val MIGRATION_37_38 = sqlMigration(
     "CREATE INDEX IF NOT EXISTS `index_store_credit_ledger_timestamp` ON `store_credit_ledger` (`timestamp`)"
 )
 
+val MIGRATION_38_39 = sqlMigration(
+    38, 39,
+    "ALTER TABLE products ADD COLUMN genericName TEXT",
+    "ALTER TABLE products ADD COLUMN dosageForm TEXT",
+    "ALTER TABLE products ADD COLUMN strength TEXT",
+    "ALTER TABLE products ADD COLUMN companyName TEXT",
+    "ALTER TABLE products ADD COLUMN stripSize INTEGER NOT NULL DEFAULT 10",
+    "ALTER TABLE products ADD COLUMN stripPrice REAL NOT NULL DEFAULT 0.0",
+    "ALTER TABLE products ADD COLUMN packPrice REAL NOT NULL DEFAULT 0.0",
+    "ALTER TABLE products ADD COLUMN isAntibiotic INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE products ADD COLUMN shelfLocation TEXT",
+    "ALTER TABLE products ADD COLUMN batchNumber TEXT",
+    "ALTER TABLE sale_items ADD COLUMN unitType TEXT NOT NULL DEFAULT 'strip'",
+    "ALTER TABLE sale_items ADD COLUMN dosageSchedule TEXT",
+    "ALTER TABLE sale_items ADD COLUMN batchNumber TEXT",
+    "ALTER TABLE sale_items ADD COLUMN expiryDate TEXT",
+    "ALTER TABLE sale_items ADD COLUMN isAntibiotic INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE sales ADD COLUMN doctorName TEXT",
+    "ALTER TABLE sales ADD COLUMN doctorBmdcReg TEXT"
+)
+
 @Database(
     entities = [
         Product::class,
@@ -549,7 +570,7 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
             MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33,
             MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37,
-            MIGRATION_37_38
+            MIGRATION_37_38, MIGRATION_38_39
         )
 
         fun getDatabase(context: Context): AppDatabase {

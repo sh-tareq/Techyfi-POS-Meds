@@ -109,9 +109,15 @@ class DataRepository(
     private val expenseAuditLogDao = database.expenseAuditLogDao()
     private val storeCreditVoucherDao = database.storeCreditVoucherDao()
     private val storeCreditLedgerDao = database.storeCreditLedgerDao()
+    val medicineRepository = MedicineRepository.getInstance(context)
 
     init {
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            try {
+                medicineRepository.initializeDatabase()
+            } catch (e: Exception) {
+                Log.e("DataRepository", "Failed initializing medicine database: ${e.message}", e)
+            }
             try {
                 normalizeLegacyStockAdjustmentReasons()
             } catch (ignored: Exception) {
@@ -1143,7 +1149,9 @@ class DataRepository(
         storeCreditApplied: Double = 0.0,
         appliedVoucherCode: String? = null,
         nonTaxableBarcodes: Set<String> = emptySet(),
-        isTaxInclusive: Boolean = false
+        isTaxInclusive: Boolean = false,
+        doctorName: String? = null,
+        doctorBmdcReg: String? = null
     ): Long = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.SALES_SELL)
         val computedCartHash = com.example.techyfipos.ui.viewmodel.CartViewModel.computeCartHashFromTriples(cartItemsWithNotes)
@@ -1415,7 +1423,9 @@ class DataRepository(
                 isTaxInclusive = isTaxInclusive,
                 voucherCode = finalVoucherCode,
                 voucherAmount = finalVoucherAmount,
-                customerCreditAmount = finalCustomerCreditAmount
+                customerCreditAmount = finalCustomerCreditAmount,
+                doctorName = doctorName,
+                doctorBmdcReg = doctorBmdcReg
             )
             val saleId = try {
                 saleDao.insertSale(sale)
@@ -1451,7 +1461,12 @@ class DataRepository(
                     quantity = quantity,
                     note = note,
                     purchasePriceAtSale = product.purchasePrice,
-                    taxable = product.barcode !in nonTaxableBarcodes
+                    taxable = product.barcode !in nonTaxableBarcodes,
+                    unitType = product.unit.ifBlank { "Pcs" },
+                    dosageSchedule = note?.takeIf { it.contains("সেবনবিধি:") }?.substringAfter("সেবনবিধি:")?.substringBefore("•")?.trim(),
+                    batchNumber = product.batchNumber,
+                    expiryDate = product.expiryDate,
+                    isAntibiotic = product.isAntibiotic
                 )
             }
             try {

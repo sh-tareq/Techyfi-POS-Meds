@@ -46,7 +46,9 @@ data class CartItem(
     val product: Product,
     val quantity: Double = 1.0,
     val note: String? = null,
-    val taxable: Boolean = true
+    val taxable: Boolean = true,
+    val unitType: String = "strip", // "pc", "strip", "box"
+    val dosageSchedule: String? = null // e.g. "১+০+১ (খাওয়ার পর)"
 )
 
 enum class CartBarcodeStatus {
@@ -651,8 +653,25 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
 
         fun buildSaleTriples(items: List<CartItem>, mode: PriceMode): List<Triple<Product, Double, String?>> =
             items.map {
-                val chargedPrice = effectivePrice(it.product, mode)
-                Triple(it.product.copy(sellingPrice = chargedPrice), it.quantity, it.note)
+                val chargedPrice = when (it.unitType.lowercase()) {
+                    "strip" -> {
+                        if (it.product.stripPrice > 0.0) it.product.stripPrice
+                        else {
+                            val size = if (it.product.stripSize > 0) it.product.stripSize else 10
+                            effectivePrice(it.product, mode) * size
+                        }
+                    }
+                    "box" -> {
+                        if (it.product.packPrice > 0.0) it.product.packPrice
+                        else effectivePrice(it.product, mode) * 100.0
+                    }
+                    else -> effectivePrice(it.product, mode)
+                }
+                val fullNote = listOfNotNull(
+                    it.note,
+                    it.dosageSchedule?.let { d -> "সেবনবিধি: $d" }
+                ).joinToString(" • ").takeIf { s -> s.isNotBlank() }
+                Triple(it.product.copy(sellingPrice = chargedPrice, unit = it.unitType), it.quantity, fullNote)
             }
 
         fun computeCartHashFromTriples(items: List<Triple<Product, Double, String?>>): String {
@@ -1177,10 +1196,62 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
+    fun effectiveItemPrice(item: CartItem, mode: PriceMode = priceMode.value): Double {
+        return when (item.unitType.lowercase()) {
+            "strip" -> {
+                if (item.product.stripPrice > 0.0) item.product.stripPrice
+                else {
+                    val size = if (item.product.stripSize > 0) item.product.stripSize else 10
+                    effectivePrice(item.product, mode) * size
+                }
+            }
+            "box" -> {
+                if (item.product.packPrice > 0.0) item.product.packPrice
+                else effectivePrice(item.product, mode) * 100.0
+            }
+            else -> effectivePrice(item.product, mode)
+        }
+    }
+
     // Calculated fields
     val subtotal: StateFlow<Double> = combine(_cartItems, priceMode) { items, mode ->
-        items.sumOf { item -> effectivePrice(item.product, mode) * item.quantity }
+        items.sumOf { item -> effectiveItemPrice(item, mode) * item.quantity }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val hasAntibioticInCart: StateFlow<Boolean> = _cartItems.map { items ->
+        items.any { it.product.isAntibiotic }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    private val _doctorName = MutableStateFlow("")
+    val doctorName: StateFlow<String> = _doctorName.asStateFlow()
+
+    private val _doctorBmdc = MutableStateFlow("")
+    val doctorBmdc: StateFlow<String> = _doctorBmdc.asStateFlow()
+
+    fun setDoctorDetails(name: String, bmdc: String) {
+        _doctorName.value = name
+        _doctorBmdc.value = bmdc
+    }
+
+    fun setItemUnitType(product: Product, unitType: String) {
+        val currentList = _cartItems.value.toMutableList()
+        val index = currentList.indexOfFirst { it.product.barcode == product.barcode }
+        if (index != -1) {
+            currentList[index] = currentList[index].copy(unitType = unitType)
+            _cartItems.value = currentList
+            persistCartSnapshot(currentList)
+        }
+    }
+
+    fun setItemDosageSchedule(product: Product, dosageSchedule: String) {
+        val currentList = _cartItems.value.toMutableList()
+        val index = currentList.indexOfFirst { it.product.barcode == product.barcode }
+        if (index != -1) {
+            currentList[index] = currentList[index].copy(dosageSchedule = dosageSchedule)
+            _cartItems.value = currentList
+            persistCartSnapshot(currentList)
+        }
+    }
 
     /** Total MRP price of all items currently in cart (using product.mrpPrice if > 0 else sellingPrice). */
     val mrpSubtotal: StateFlow<Double> = _cartItems.map { items ->
@@ -1622,7 +1693,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     fun effectivePrice(product: Product, mode: PriceMode): Double = Companion.effectivePrice(product, mode)
 
     /** Public accessor so UI (cart rows, receipt line items) can display the same price mode-aware unit price used for the cart total. */
-    fun effectivePriceFor(item: CartItem): Double = effectivePrice(item.product, priceMode.value)
+    fun effectivePriceFor(item: CartItem): Double = effectiveItemPrice(item, priceMode.value)
     fun effectivePriceFor(product: Product): Double = effectivePrice(product, priceMode.value)
 
     suspend fun completeSale(): Long = saleCompletionMutex.withLock {
@@ -1683,7 +1754,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 loyaltyPointsToRedeem = appliedLoyaltyPoints,
                 storeCreditApplied = _storeCreditApplied.value,
                 appliedVoucherCode = redeemedVoucher.value?.code,
-                isTaxInclusive = settings.taxInclusive
+                isTaxInclusive = settings.taxInclusive,
+                doctorName = _doctorName.value.takeIf { it.isNotBlank() },
+                doctorBmdcReg = _doctorBmdc.value.takeIf { it.isNotBlank() }
             )
 
             clearCart()
@@ -1947,8 +2020,137 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), InventoryAlertsData())
 
+    private val _medicineSearchResults = MutableStateFlow<List<com.example.techyfipos.data.MedicineItem>>(emptyList())
+    val medicineSearchResults: StateFlow<List<com.example.techyfipos.data.MedicineItem>> = _medicineSearchResults.asStateFlow()
+
+    private val _isSearchingMedicines = MutableStateFlow(false)
+    val isSearchingMedicines: StateFlow<Boolean> = _isSearchingMedicines.asStateFlow()
+
+    private val _selectedDosageForm = MutableStateFlow("all")
+    val selectedDosageForm: StateFlow<String> = _selectedDosageForm.asStateFlow()
+
+    private val _filterAntibioticOnly = MutableStateFlow(false)
+    val filterAntibioticOnly: StateFlow<Boolean> = _filterAntibioticOnly.asStateFlow()
+
+    private val _dosageFormsList = MutableStateFlow<List<String>>(emptyList())
+    val dosageFormsList: StateFlow<List<String>> = _dosageFormsList.asStateFlow()
+
+    private val _companiesList = MutableStateFlow<List<String>>(emptyList())
+    val companiesList: StateFlow<List<String>> = _companiesList.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            loadInitialMedicines()
+        }
+    }
+
+    fun loadInitialMedicines() {
+        viewModelScope.launch {
+            _isSearchingMedicines.value = true
+            try {
+                _dosageFormsList.value = repository.medicineRepository.getAllDosageForms()
+                _companiesList.value = repository.medicineRepository.getAllCompanies()
+                val list = repository.medicineRepository.searchMedicines(
+                    query = _searchQuery.value,
+                    dosageForm = if (_selectedDosageForm.value == "all") null else _selectedDosageForm.value,
+                    isAntibiotic = if (_filterAntibioticOnly.value) true else null,
+                    limit = 60
+                )
+                _medicineSearchResults.value = list
+            } catch (e: Exception) {
+                android.util.Log.e("ProductsViewModel", "Error loading initial medicines: ${e.message}", e)
+            } finally {
+                _isSearchingMedicines.value = false
+            }
+        }
+    }
+
+    fun searchDIMSMedicines(
+        query: String = _searchQuery.value,
+        dosageForm: String? = _selectedDosageForm.value,
+        isAntibiotic: Boolean? = _filterAntibioticOnly.value,
+        company: String? = null
+    ) {
+        viewModelScope.launch {
+            _isSearchingMedicines.value = true
+            try {
+                val list = repository.medicineRepository.searchMedicines(
+                    query = query,
+                    dosageForm = if (dosageForm == "all") null else dosageForm,
+                    isAntibiotic = isAntibiotic,
+                    company = company,
+                    limit = 80
+                )
+                _medicineSearchResults.value = list
+            } catch (e: Exception) {
+                android.util.Log.e("ProductsViewModel", "Error searching medicines: ${e.message}", e)
+            } finally {
+                _isSearchingMedicines.value = false
+            }
+        }
+    }
+
+    fun setDosageFormFilter(form: String) {
+        _selectedDosageForm.value = form
+        searchDIMSMedicines(dosageForm = form)
+    }
+
+    fun toggleAntibioticFilter() {
+        val next = !_filterAntibioticOnly.value
+        _filterAntibioticOnly.value = next
+        searchDIMSMedicines(isAntibiotic = if (next) true else null)
+    }
+
+    suspend fun getSubstitutes(med: com.example.techyfipos.data.MedicineItem): List<com.example.techyfipos.data.MedicineItem> {
+        val gen = med.genericName ?: return emptyList()
+        return repository.medicineRepository.findSubstitutes(
+            genericName = gen,
+            dosageForm = med.dosageForm,
+            strength = med.strength,
+            excludeId = med.id,
+            limit = 10
+        )
+    }
+
+    suspend fun getClinicalInfo(genericId: Long?): com.example.techyfipos.data.ClinicalGeneric? {
+        if (genericId == null || genericId <= 0) return null
+        return repository.medicineRepository.getClinicalGenericInfo(genericId)
+    }
+
+    suspend fun convertAndSaveMedicineToProduct(med: com.example.techyfipos.data.MedicineItem): Product {
+        val canonicalBarcode = med.barcode?.ifBlank { null } ?: med.sku
+        val existing = repository.getProductByBarcode(canonicalBarcode)
+        if (existing != null) return existing
+
+        val product = Product(
+            barcode = canonicalBarcode,
+            name = med.displayName,
+            category = med.dosageForm,
+            purchasePrice = med.unitPrice * 0.85,
+            sellingPrice = med.unitPrice,
+            stockQty = med.stockQty,
+            reorderLevel = med.reorderLevel,
+            mrpPrice = med.unitPrice,
+            genericName = med.genericName,
+            dosageForm = med.dosageForm,
+            strength = med.strength,
+            companyName = med.companyName,
+            stripSize = med.stripSize,
+            stripPrice = med.stripPrice,
+            packPrice = med.packPrice,
+            isAntibiotic = med.isAntibiotic,
+            shelfLocation = med.shelfLocation,
+            batchNumber = med.batchNumber,
+            expiryDate = med.expiryDate,
+            unit = "Pcs"
+        )
+        repository.insertProduct(product)
+        return product
+    }
+
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+        searchDIMSMedicines(query = query)
     }
 
     suspend fun getProductByBarcode(barcode: String): Product? {

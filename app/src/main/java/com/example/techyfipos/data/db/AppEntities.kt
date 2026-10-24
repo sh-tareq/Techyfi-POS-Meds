@@ -29,6 +29,16 @@ data class Product(
     val wholesalePrice: Double = 0.0,
     val mrpPrice: Double = 0.0,
     val discountedPrice: Double = 0.0,
+    val genericName: String? = null,
+    val dosageForm: String? = null,
+    val strength: String? = null,
+    val companyName: String? = null,
+    val stripSize: Int = 10,
+    val stripPrice: Double = 0.0,
+    val packPrice: Double = 0.0,
+    val isAntibiotic: Boolean = false,
+    val shelfLocation: String? = null,
+    val batchNumber: String? = null,
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis()
 )
@@ -225,7 +235,9 @@ data class Sale(
     val isTaxInclusive: Boolean = false,
     val voucherCode: String? = null,
     val voucherAmount: Double = 0.0,
-    val customerCreditAmount: Double = 0.0
+    val customerCreditAmount: Double = 0.0,
+    val doctorName: String? = null,
+    val doctorBmdcReg: String? = null
 )
 
 fun Sale.getFormattedPaymentMethod(): String {
@@ -289,7 +301,12 @@ data class SaleItem(
     // even if the product's cost is edited (or the product is deleted) afterward. Null on rows
     // written before this field existed; reports fall back to a live/estimated cost for those.
     val purchasePriceAtSale: Double? = null,
-    val taxable: Boolean = true
+    val taxable: Boolean = true,
+    val unitType: String = "strip", // "pc", "strip", "box"
+    val dosageSchedule: String? = null, // e.g. "১+০+১ (খাওয়ার পর)"
+    val batchNumber: String? = null,
+    val expiryDate: String? = null,
+    val isAntibiotic: Boolean = false
 )
 
 @Entity(tableName = "customer_dues")

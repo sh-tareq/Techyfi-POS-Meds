@@ -1,0 +1,226 @@
+﻿brand_id,brand_name,generic_id,form,strength,price,packsize,company_id
+1,Adovas,1,Syrup,,"70.00,110.00","100ml, 200ml Bott",250
+3,Amcivit,3,Syrup,,60,100 ml,250
+4,Arubin,4,Capsule,500mg,4.00,30's Pack,250
+5,Colmint,5,Soft Gelatin Capsule,187mg,6.00,30's Paack,250
+6,Dubarel,6,Syrup,,"50.00,100.00","100ml,200ml",250
+7,Enerton,7,Syrup,,170.00,200ml,250
+8,Eprim,8,Soft gelatin Capsule,500mg,7.00,30's Pack,250
+9,Eprim Plus,8,Soft gelatin Capsule,1000mg,12.00,30's Pack,250
+10,Eredex,10,Capsule,5.4mg,30.00,24's Pack,250
+11,Ocubil,11,Capsule,160mg,20.00,30's Pack,250
+12,Gelaseed,12,Soft gelatin capsule,1000mg,7.00,30's Pack,250
+13,Garlin,13,Soft Gelatin Capsule,10mg,6.00,30's Pack,250
+14,Giloba 60,14,Capsule,60mg,10.00,30's Pack,250
+15,Giloba 120,14,Capsule,120mg,15.00,30's Pack,250
+16,Gintex,16,Capsule,500 mg,12.00,30's Pack,250
+19,Jorvan,19,Capsule,500 mg,8.00,30's,250
+20,Lecor,20,Syrup,,140.00,200 ml,250
+21,Livolite,21,Capsule,200mg,5.00,30's Pack,250
+22,Monera,22,Syrup,,80.00,100ml,250
+23,Navit,23,Capsule,500mg,8.00,30's Pack,250
+24,Pepnor,24,Syrup,,80.00,100ml,250
+25,Probio,87,Capsule,4 billion cfu,25.00,30's Pack,250
+26,Redclov,26,Capsule,40mg,12.00,30's Pack,250
+27,Revatol,27,Syrup,,130.00,200ml,250
+28,Silybin 140,28,Capsule,140mg,10.00,30's Pack,250
+29,Silybin 70,28,Capsule,70mg,6.00,30's Pack,250
+30,Torel,30,Cream,,70.00,20 gm,250
+32,Fiberlax Ultra,32,Effervescent Granules,,20.00,20's Pack,116
+36,Procold 500,35,Capsule,500mg,7.00,30's Pack,116
+38,Femorose 500,8,Capsule,500mg,8.00,30's,116
+39,Protinavit,23,Capsule,500mg,9.00,30's Pack,116
+40,Mestiza 40,37,Capsule,40mg,8.00,30's Pack,116
+42,Recoseng 500,16,Capsule,500mg,7.00,60's Pack,116
+43,Livasil 70,28,Capsule,70mg,7.00,30's Pack,116
+44,Premelos 60,14,Capsule,60mg,7.00,30's Pack,116
+45,Rimodep 300,38,Capsule,300mg,6.00,30's Pack,116
+47,Premelos 120,14,Capsule,120mg,11.00,30's,116
+48,Livasil 140,28,Capsule,140mg,11.00,30's Pack,116
+49,Remocof,1,Syrup,,"55.00,110.00","100ml,200ml",116
+51,Fiberlax,17,Powder,,400.00,1's Pack,116
+52,Ispergul Container,17,Powder,,395.00,120gm,250
+54,Ispergul Sachet,17,Powder,3.5 gm,15.00,15's Pack,250
+58,Probio Sachet,87,Sachet,1gm,25.00,15's Pack,250
+60,Reli Balm,39,Cream,80mg + 180mg + 45mg + 10mg,200.00,20gm,250
+61,Nilagel,40,Capsule,500mg,7.50,30's Pack,250
+62,Uripm,41,Softgel Capsules,160mg + 1.7mg + 3.3mg + 33.1mg + 2mg,20.00,30's Pack,250
+76,Cardi Q 50,44,Softgel capsule,50mg,12.00,50's Pack,250
+77,Cardi Q 100,44,Softgel capsule,100mg,20.00,30's Pack,250
+78,Flemo 40,45,Capsule,40mg,20.00,30's Pack,250
+79,Synogen,45,Capsule,40mg,25.00,20's Pack,116
+80,Femorose,8,Capsule,1000mg,12.00,30s Pack,116
+81,Welgut,86,Capsule,20 billion CFU,30.00,20's Pack,116
+82,Gastrolax,46,Sachets,0.11 g + 2.6 g + 0.62 g,20.00,20's Pack,116
+83,Lactocard,47,Capsule,2 billion CFU,20.00,20's Pack,116
+84,Luvena,48,Capsule,2.3 billion CFU,30.00,20's Pack,116
+85,Cran-B,49,Softgel capsule,300mg,14.00,30's Pack,116
+86,Zerova,50,Tablet,30mg,3.00,100's Pack,116
+87,Zerova,50,Sachets,30mg,4.00,30's Pack,116
+88,Evit Soft 200 IU,51,Softgel Capsule,200IU,4.00,30's Pack,250
+89,Evit Soft 400 IU,51,Softgel Capsule,400IU,6.00,30's Pack,250
+90,DK,52,Softgel Capsule,400IU +  60mcg +  30mcg,6.00,30's Pack,250
+91,Betaburn,53,Ointment,0.25%,100.00,25gm,250
+95,PrimaVera,8,Capsule,500mg,12.00,30's Pack,842
+96,PrimaVera,8,Capsule,1000mg,15.00,30's Pack,842
+97,Nutrilina,23,Capsule,500mg,12.00,60's Pack,842
+98,Ginera,16,Capsule,500mg,25.00,30's Pack,842
+100,Lactohil,54,Powder,,500.00,100gm jar,842
+101,Bacilax 9,25,Capsule,9 billion,25.00,30's Pack,250
+103,Bolardi 250,56,Capsule,250mg,10.00,30's Pack,250
+104,Bolardi 500,56,Capsule,500mg,16.00,30's Pack,250
+105,Biloba,14,Capsule,60mg,6.00,32's Pack,71
+106,Biogut,56,Capsule,250mg,8.00,20’s Pack,71
+107,Biogut,56,Capsule,500mg,14.00,20's Pack,71
+108,Devas,54,Syrup,,"70.00,90.00","100ml,200ml",71
+109,D-Flax,12,Soft Capsule,1000mg,7.00,30's Pack,71
+110,Garlicap,13,Soft Capsule,10mg,3.00,50's Pack,71
+111,Ginax,16,Capsule,500mg,7.00,32’s Pack,71
+112,Hepanor,28,Capsule,70mg,6.00,32's Pack,71
+113,Hepanor,28,Capsule,140mg,9.00,20's Pack,71
+114,Hepanor,28,Capsule,500mg,20.00,20’s Pack,71
+115,Laxadil Sachet,17,Sachet,3.5gm,7.00,15’s Pack,71
+116,Primacap,8,Soft Capsule,500mg,6.00,50’s Pack,71
+117,Primacap,8,Soft Capsule,1000mg,10.00,30’s Pack,71
+118,Prolacto,87,Capsule,,12.00,32’s Pack,71
+119,Spirucap,23,Capsule,500mg,4.00,40’s Pack,71
+120,Thyvy,57,Syrup,,150.00,100ml,71
+121,Difans,58,Syrup,,"60.00, 90.00,130.00","100ml, 225ml & 450ml",71
+122,D-Sefa,40,Soft Capsule,500mg,7.00,50’s Pack,71
+123,Hemosaf,59,Syrup,,"60.00,120.00,175.00","100ml, 225ml, 450ml",71
+124,Madhuvas,60,Syrup,,100.00,100ml,71
+125,Naturovit,61,Syrup,,"65.00,100.00,200.00","100ml,225ml,450ml",71
+126,Polybion-M,62,Soft Capsule,,9.00,30’s Pack,71
+127,Polybion-G,63,Soft Capsule,,12.00,30’s Pack,71
+128,Tifal,64,Syrup,,60.00,100ml,71
+129,Zurid,65,Syrup,,"60.00,140.00","100ml, 450ml",71
+130,Laxadil EP Container,17,Powder,3.5gm/5.38gm,375.00,120gm,71
+131,D-Alovera,66,Syrup,,250.00,450ml,71
+132,Melbit,67,Capsule,400mg,3.00,40’s Pack,71
+133,Alocap,68,Soft Capsule,100mg,8.00,50’s Pack,71
+134,Tims,69,Syrup,,"60.00,150.00","100ml,450ml",71
+135,Amlabery,3,Syrup,,350.00,450ml,71
+137,Toco Soft,70,Softgel Capsule,50mg (74.5 IU) + 13.5 mg(20 IU),15.00,30’s Pack,250
+138,Probio R,86,Capsule,20 billion cfu,25.00,30's Pack,250
+140,Bioprem,72,Soft gelatin Capsule,1mg,15.00,30's Pack,250
+141,Bioprem,72,Soft gelatin Capsule,2.50 mg,25.00,30’s Pack,250
+142,Prolaxan,73,Capsule,10 billion,40.00,20's Pack,116
+143,Imugen,74,Capsule,10 billion,30.00,20's Pack,116
+153,Antiscar,79,Gel,100mg + 50IU + 10mg,300.00,20 gm tube,250
+154,Orthogen,80,Tablet,20mg + 750mg + 50mg & 0.75 mg.,25.0,30's Pack,3
+155,Caripa,81,Syrup,200ml,450.00,1's Pack,250
+159,Goodbac-3S,87,Capsule,4 billion,40.00,18's Pack,22
+160,Goodbac-SB,56,Capsule,5  billion,15.00,20's Pack,22
+161,Joinflex-40,45,Capsule,40mg,25.00,30's pack,22
+162,Fibosyl,17,Effervescent Powder,,"400.00, 15.00","130 g in container (1's Pack)
+ 3.5 g in sachet (30's Pack)",22
+163,Arulina-500,23,Capsule,500mg,12.00,30's Pack,22
+164,Anseng,16,Capsule,500 mg,20.00,30's Pack,22
+165,Ginkgo-B,14,Capsule,60mg,20.00,30's Pack,22
+166,Primrole,8,Softgel Capsule,500mg,12.00,30's Pack,22
+167,Primrole,8,Softgel Capsule,1000mg,15.00,30's Pack,22
+168,Hepamarin,28,Capsule,140 mg,11.00,30's Pack,22
+169,Felmo Plus,85,Capsule,40mg + 150mg + 120 mg,25.00,30’s Pack,250
+170,Maximilk,88,Capsule,83.33mg + 83.33mg + 83.33mg + 83.33mg + 16.67mg + 16.67mg,15.00,30's Pack,250
+171,Flemo Plus,85,Capsule,150mg +  120mg + 40mg,25.00,30’s Pack,250
+172,Femony,89,Capsule,93.33mg + 83.33mg + 41.67mg + 41.67mg + 20.00mg,15.00,30’s Pack,250
+178,Spiromun,23,Capsule,500mg,12.00,30's Pack,848
+180,Off Cyst,91,Capsule,500mg,80.00,10's Pack,848
+181,Pearlical D,92,Capsule,325mg,12.00,30's Pack,848
+182,Probiotica,25,Capsule,4 billion,35.00,20's Pack,848
+184,Maxton,16,Capsule,500 mg,25.00,30's pack,846
+185,Gobison,14,Capsule,120 mg,25.00,30's pack,846
+186,Sunex B,75,Capsule,,20.00,30's pack,846
+187,Methicap,28,Capsule,140 mg,,30's pack,846
+188,Paltex,78,Capsule,160mg,20.00,30's pack,846
+189,Wascot,94,Capsule,,20.00,30's pack,846
+190,Brogel,23,Capsule,500 mg,20.00,30's pack,846
+206,Bioglo,72,Capsule,1000 mcg,15.00,30's pack,71
+207,Bioglo,72,Capsule,2500 mcg,25.00,30's pack,71
+208,Urican,49,Capsule,400 mg,14.00,32's pack,71
+209,Stimugin,16,Capsule,500 mg,25.00,30's pack,850
+210,Immuna,23,Capsule,450 mg,15.50,30's pack,850
+211,ENQ,44,Tablet,100 mg,40.00,30's pack,850
+213,Fertility,95,Tablet,25 mg,34.52,42's pack,850
+214,Protolactin,96,Capsule,300 mg +150 mg + 50 mg,27.00,30's pack,850
+215,Lactoforte,97,Tablet,333 mg + 400 mg + 333 mg + 37.33 mg + 50 mg + 10.75 mg,25.00,30's pack,850
+216,Laxant,98,Tablet,50 mg + 120 mg + 30 mg + 80 mg,21.33,30's pack,850
+217,Glutalight,99,Capsule,500 mg,40.00,30's pack,850
+218,CM Care,100,Capsule,225 mg + 112.50 mg + 75 mg + 75 mg + 37.50 mg + 25 mg + 25 mg + 25 mg + 25 mg + 25 mg,60.50,20's pack,850
+219,Ovulation Inducer,113,Capsule,250 mg + 200 mg + 100 mg + 75 mg + 37.50 mg + 25 mg + 25 mg + 25 mg + 22.50 mg + 2.50 mg,45.67,30's pack,850
+220,Pearlcal,102,Tablet,500 mg,15.50,30's pack,850
+221,Myositol,103,Tablet,500 mg + 50 mg,48.33,30's pack,850
+222,Joint Relief Plus,104,Tablet,500 mg + 100 mg + 250 mg + 100 mg,36.00,30's pack,850
+229,Trumega,71,Soft Gelatin Capsule,1000 mg,20.00,30's pack,250
+230,Synogen Plus,85,Tablet,150 mg+120 mg+40 mg,30.00,30's pack,116
+231,Synogen Alfa,106,Capsule,40 mg+100 mg,35.00,20's pack,116
+232,Goslim,107,Capsule,500 mg,30.00,30's pack,116
+233,Goodbac-L,108,Syrup,2 Billion CFU / 5 ml,200.00,70 ml bot,22
+234,Cystnil,109,Tablet,150 mg+550 mg,50.00,10's pack,3
+235,Sperm Care,111,Capsule,116.60 mg + 8.50 mg + 16.60 mg + 33.30 mg + 100 mg + 1666 IU + 8.50 µg + 83.30 mg + 133 IU + 50 IU + 10 mg + 166 µg + 3.30 mg,51.33,30's pack,850
+236,Pregniforte,101,Tablet,1100 mg + 27.60 mg + 200 µg + 3 mg + 400 IU,53.33,30's pack,850
+237,Soft Joint,80,Tablet,20mg + 750 mg + 0.75 mg,30.00,"10's, 30's, 50's pack",848
+238,Optimum Medicated Soap,112,Soap,100 gm + 3 gm.,460.00,100gm bar.,848
+239,Tocogel,51,Capsule,200 IU,6.00,30's pack,22
+240,Fibosyl-S,43,Effervescent Powder,(3.5 gm+7.5 mg)/5.38 gm,20.00,20's pack,22
+241,Fibosyl-S,43,Effervescent Powder,(3.5 gm+7.5 mg)/5.38 gm,400.00,100 gm container,22
+242,Cutin,72,Capsule,1000 mcg,20.00,30's pack,22
+243,Cutin,72,Capsule,2500 mcg,25.00,30's pack,22
+244,Cutin,72,Capsule,5000 mcg,40.00,30's pack,22
+245,HQ-10,114,Capsule,"100 mg, 200mg","45.00,80.00",30's,855
+246,Hyrocyst,91,Capsule,500 mg,74.00,15's,855
+247,Tryception,95,Tablet,50mg,52.00,30's,855
+248,Perfectil,72,Tablet,1000mg,23.00,30's,855
+249,Hyorose,8,Capsule,500mg,25.00,30's,855
+250,Feepro,25,Capsule,10 billion,35.00,30's,855
+251,Lactomom,115,Capsule,20 mg,23.00,30's,855
+252,Hyogul,119,Capsule,500 mg,18.00,30'S,855
+253,Haicamin,117,Tablet,,30.00,30's,855
+254,Lycium,118,Tablet,20mg + 5mg,23.00,30's,855
+255,Pepelif,81,Syrup,275mg/5ml,450.00,200 ml,22
+256,Gastoforte,120,Tablet,620 mg +85 mg + 45 mg + 42.50 mg + 7.50 mg,15.00,30's pack,850
+257,Bone Fuel Plus,121,Tablet,333 mg + 134 mg + 8.50 mg + 200 IU,21.33,30's pack,850
+258,Bio-Plus,122,Capsule,3350 mcg + 333 mg + 83 mg + 350 mcg + 166 mg,29.00,30's pack,850
+259,Retainage-A,123,Serum,0.3% + 3% + 0.25%,580.00,1's,850
+260,Lactocalm,124,Drop,100 mg equivalent to 3000 FCC,350.00,1's pack,850
+261,Brongel,125,Gel,5% + 5%,695.00,1's pack,850
+262,Bron Wash,126,Facewash,2%,465.00,1's,850
+263,Vitashine,127,Shampoo,5% + 3% + 1% + 3% + 0.25% + 1% + 3%,1160.00,1's,850
+264,Seldan Plus,128,Shampoo,2.25%,610.00,1's pack,850
+265,Geltar,112,Shampoo,1% + 3%,500.00,1's,850
+266,Crack Cure,129,Cream,2% + 3%,350.00,1's,850
+267,Dilastin,130,Gel,4% + 10% + 5%,580.00,1's pack,850
+268,Ginsenia,131,Capsule,60 mg + 100 mg,25.00,30'S,22
+269,Ivycof,57,Syrup,(37.5 mg+50 mg)/5 ml,150.00,100 ml bot,22
+270,ToothPaste,133,Tooth Paste,,,"50,75,100,150 gm",848
+271,Deloba,14,Capsule,120 mg,20.00,30's pack,857
+272,Kohos,37,Capsule,40mg,10.00,30's pack,857
+273,DP Silma,28,Capsule,140mg,20.00,30's pack,857
+274,Laxova,17,Sachet,,20.00,20's pack,857
+275,Laxova,17,Sachet,,480.00,130 gm,857
+276,Penaxlaid,16,Capsule,500mg,25.00,30's pack,857
+277,Spirulaid,23,Capsule,500mg,12.00,30's pack,857
+278,Tensof,38,Capsule,300mg,15.00,30's pack,857
+279,Canbery,49,Capsule,400mg,20.00,30's pack,857
+280,Senarich,43,Container,,450.00,100gm,857
+281,Lactoflow,88,Capsule,,15.00,30's pack,857
+282,Enterogermina,132,Oral Suspension,2 billion/5 ml,70.00,10's pack,229
+283,Senarich,43,Sachet,,22.00,20's pack,857
+284,Sotia,134,Capsule,400mg,6.00,30's pack,857
+285,DP Zema,135,Ointment,,80.00,10 gm tube,857
+286,Prodine,136,Capsule,100 gm,45.00,18's pack,857
+287,X-Memory,14,Capsule,120mg,27.00,30's pack,860
+288,Ovarice,109,Capsule,512.50mg,60.00,30's pack,860
+289,O-Care,80,Tablet,820.75mg,32.00,30's pack,860
+290,Liver-Fast,28,Tablet,540mg,36.61,28's pack,860
+291,Gluco-CMC,104,Tablet,950mg,35.00,30's pack,860
+292,Allcal-Plus,137,Tablet,510mg,30.36,28's pack,860
+293,B-Kill,138,Capsule,10 Billion,40.00,30's pack,860
+294,Folimas-D,139,Tablet,500mg,42.85,28's pack,860
+296,Neuro-Alfa,141,Tablet,640mg,42.00,30's pack,860
+297,Lukone,68,Body Lotion,100ml,750.00,1's pack,860
+298,EPO-Rose,8,Capsule,500mg,27.00,30's pack,860
+299,Pirufort,23,Tablet,250mg,17.00,30's pack,860
+300,Bio-X4,72,Tablet,1000mcg,27.00,30's pack,860
+301,Hairmax,140,Shampoo,100ml,750.00,1 Unit,860
+302,Fosibon-DK,137,Tablet,500 mg+1000 IU +75 mcg,15.00,30's pack,22

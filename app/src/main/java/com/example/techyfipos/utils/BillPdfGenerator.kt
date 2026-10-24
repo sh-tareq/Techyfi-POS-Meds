@@ -38,7 +38,10 @@ data class BillLineItem(
     val mrpPrice: Double = 0.0,
     val purchasePrice: Double? = null,
     val taxable: Boolean = true,
-    val barcode: String = ""
+    val barcode: String = "",
+    val dosageSchedule: String? = null,
+    val batchNumber: String? = null,
+    val expiryDate: String? = null
 )
 
 data class BillData(
@@ -81,7 +84,10 @@ data class BillData(
     val voucherRemainingBalance: Double? = null,
     val hasReturns: Boolean = false,
     val returnRefundAmount: Double = 0.0,
-    val returnCount: Int = 0
+    val returnCount: Int = 0,
+    val doctorName: String? = null,
+    val doctorBmdcReg: String? = null,
+    val drugLicenseNo: String? = null
 ) {
     /** True when this sale (fully or partially, via Split) put money on the customer's due account. */
     fun hasDuePortion(): Boolean {
@@ -290,6 +296,15 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
         val cashierVal = bill.cashierName.ifBlank { settings.cashierName }
         sb.appendLine(if (isBn) "ক্যাশিয়ার : $cashierVal" else "Cashier  : $cashierVal")
     }
+    if (!bill.drugLicenseNo.isNullOrBlank()) {
+        sb.appendLine(if (isBn) "ড্রাগ লাইসেন্স: ${bill.drugLicenseNo}" else "Drug Lic : ${bill.drugLicenseNo}")
+    }
+    if (!bill.doctorName.isNullOrBlank()) {
+        sb.appendLine(if (isBn) "চিকিৎসক  : ${bill.doctorName}" else "Doctor   : ${bill.doctorName}")
+        if (!bill.doctorBmdcReg.isNullOrBlank()) {
+            sb.appendLine(if (isBn) "বিএমডিসি : ${bill.doctorBmdcReg}" else "BMDC Reg : ${bill.doctorBmdcReg}")
+        }
+    }
     sb.appendLine("------------------------------------------")
     sb.appendLine(if (isBn) "আইটেম                 পরিমাণ    দর     মোট" else "Item                 Qty   Price   Total")
     sb.appendLine("------------------------------------------")
@@ -316,6 +331,15 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
             val mrpSubline = if (isBn) "  অফার: ${formatTaka(itemOfferPrice)} (সাশ্রয় ${formatTaka(itemSavings)})"
                              else "  Offer: ${formatTaka(itemOfferPrice)} (Save ${formatTaka(itemSavings)})"
             sb.appendLine(mrpSubline)
+        }
+        if (!item.dosageSchedule.isNullOrBlank()) {
+            sb.appendLine(if (isBn) "  • সেবনবিধি: ${item.dosageSchedule}" else "  • Dosage: ${item.dosageSchedule}")
+        }
+        if (!item.batchNumber.isNullOrBlank() || !item.expiryDate.isNullOrBlank()) {
+            val b = item.batchNumber?.let { "B:${it}" } ?: ""
+            val e = item.expiryDate?.let { "Exp:${it}" } ?: ""
+            val be = listOf(b, e).filter { it.isNotBlank() }.joinToString(" • ")
+            sb.appendLine("  • $be")
         }
         if (!item.note.isNullOrBlank()) {
             sb.appendLine(if (isBn) "  • ${item.note}" else "  • Note: ${item.note}")
