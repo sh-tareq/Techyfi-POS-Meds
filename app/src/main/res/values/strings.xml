@@ -3489,6 +3489,13 @@
     <string name="med_filter_syrup">Syrup</string>
     <string name="med_filter_injection">Injection</string>
     <string name="med_filter_eye_drops">Eye Drops</string>
+    <string name="cart_reason_expired_medicine_blocked">Expired medicines cannot be sold. Please remove from cart.</string>
+    <string name="expired_medicine_sale_prohibited_title">Expired Medicine in Cart</string>
+    <string name="expired_medicine_sale_prohibited_desc">Sale of expired drugs is strictly prohibited by DGDA regulations. Remove the item to complete checkout.</string>
+    <string name="settings_field_drug_license">DGDA Drug License No.</string>
+    <string name="settings_field_pharmacist_reg">Pharmacist Reg. No. (PCB)</string>
+    <string name="settings_show_drug_license_receipt">Show Drug License on Receipts</string>
+    <string name="settings_show_drug_license_receipt_desc">Print DGDA license and pharmacist registration numbers on thermal slips</string>
 </resources>
 
 

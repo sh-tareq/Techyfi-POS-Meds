@@ -789,13 +789,28 @@ class DataRepository(
                 saleWithItems.items.groupBy { it.productBarcode }.forEach { (barcode, soldItems) ->
                     val product = productDao.getProductByBarcode(barcode)
                     if (product != null) {
-                        val soldQuantity = soldItems.sumOf { it.quantity }
+                        val soldBaseUnits = soldItems.sumOf { item ->
+                            val u = (item.unitType ?: product.unit).lowercase().trim()
+                            val mult = when (u) {
+                                "strip", "পাতা" -> if (product.stripSize > 0) product.stripSize.toDouble() else 10.0
+                                "box", "বক্স", "প্যাক" -> {
+                                    val basePrice = if (product.mrpPrice > 0.0) product.mrpPrice else product.purchasePrice.takeIf { it > 0 } ?: 0.0
+                                    val boxUnits = if (product.packPrice > 0.0 && basePrice > 0.0) (product.packPrice / basePrice).toInt() else 0
+                                    if (boxUnits >= 10) boxUnits.toDouble()
+                                    else if (product.stripSize > 0) (product.stripSize * 10).toDouble()
+                                    else 100.0
+                                }
+                                else -> 1.0
+                            }
+                            item.quantity * mult
+                        }
                         val returnedQuantity = returnedByBarcode[barcode] ?: 0.0
-                        val netQuantitySold = (soldQuantity - returnedQuantity).coerceAtLeast(0.0)
+                        val netQuantitySold = (soldBaseUnits - returnedQuantity).coerceAtLeast(0.0)
                         if (netQuantitySold > 0.0) {
                             val currentSettings = settingsDataStore.invoiceSettingsDataFlow.first()
                             val allowNegative = currentSettings.allowNegativeInventory || isSessionManagerOrOwner()
                             productDao.adjustStockQty(barcode, netQuantitySold, allowNegative)
+                            medicineRepository.adjustStockByBarcodeOrSku(barcode, netQuantitySold)
                             val after = productDao.getProductByBarcode(barcode)
                             val finalNewStock = after?.stockQty ?: (product.stockQty + netQuantitySold)
                             val finalDiff = if (after != null) (after.stockQty - product.stockQty) else netQuantitySold
@@ -1376,7 +1391,21 @@ class DataRepository(
                 .filterNot { (product, _, _) -> product.barcode.startsWith("CUSTOM-") || product.barcode.startsWith("ADHOC-") }
                 .groupBy { it.first.barcode }
                 .forEach { (barcode, lines) ->
-                    val requested = lines.sumOf { it.second }
+                    val requested = lines.sumOf { (product, qty, _) ->
+                        val u = product.unit.lowercase().trim()
+                        val mult = when (u) {
+                            "strip", "পাতা" -> if (product.stripSize > 0) product.stripSize.toDouble() else 10.0
+                            "box", "বক্স", "প্যাক" -> {
+                                val basePrice = if (product.mrpPrice > 0.0) product.mrpPrice else product.purchasePrice.takeIf { it > 0 } ?: 0.0
+                                val boxUnits = if (product.packPrice > 0.0 && basePrice > 0.0) (product.packPrice / basePrice).toInt() else 0
+                                if (boxUnits >= 10) boxUnits.toDouble()
+                                else if (product.stripSize > 0) (product.stripSize * 10).toDouble()
+                                else 100.0
+                            }
+                            else -> 1.0
+                        }
+                        qty * mult
+                    }
                     val rows = productDao.decrementStockIfAvailable(barcode, requested)
                     if (rows == 0 && !allowNegative) {
                         throw InsufficientStockException("Insufficient stock for ${lines.first().first.name}")
@@ -1384,6 +1413,7 @@ class DataRepository(
                     if (rows != 1) {
                         productDao.adjustStockQty(barcode, -requested, allowNegative)
                     }
+                    medicineRepository.adjustStockByBarcodeOrSku(barcode, -requested)
                 }
 
             val maxAllowedPercent = AppPermissions.getEffectiveMaxDiscount(sessionUser)

@@ -4117,6 +4117,28 @@ private fun ShopIdentitySettings(
                 )
             }
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = currentSettings.drugLicenseNumber,
+                    onValueChange = { onSettingsChanged(currentSettings.copy(drugLicenseNumber = it)) },
+                    label = { Text(stringResource(R.string.settings_field_drug_license)) },
+                    placeholder = { Text("DGDA-DL-...") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = currentSettings.pharmacistRegNumber,
+                    onValueChange = { onSettingsChanged(currentSettings.copy(pharmacistRegNumber = it)) },
+                    label = { Text(stringResource(R.string.settings_field_pharmacist_reg)) },
+                    placeholder = { Text("PCB-A-...") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
             OutlinedTextField(
                 value = currentSettings.cashierName,
                 onValueChange = { onSettingsChanged(currentSettings.copy(cashierName = it)) },
@@ -4637,6 +4659,14 @@ private fun ReceiptLayoutSettings(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.settings_show_customer_details), fontSize = 13.sp)
                 Switch(checked = currentSettings.showCustomerDetails, onCheckedChange = { onSettingsChanged(currentSettings.copy(showCustomerDetails = it)) })
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(stringResource(R.string.settings_show_drug_license_receipt), fontSize = 13.sp)
+                    Text(stringResource(R.string.settings_show_drug_license_receipt_desc), fontSize = 11.sp, color = Color.Gray)
+                }
+                Switch(checked = currentSettings.showDrugLicense, onCheckedChange = { onSettingsChanged(currentSettings.copy(showDrugLicense = it)) })
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

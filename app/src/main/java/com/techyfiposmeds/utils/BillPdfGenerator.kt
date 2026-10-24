@@ -87,7 +87,8 @@ data class BillData(
     val returnCount: Int = 0,
     val doctorName: String? = null,
     val doctorBmdcReg: String? = null,
-    val drugLicenseNo: String? = null
+    val drugLicenseNo: String? = null,
+    val pharmacistRegNo: String? = null
 ) {
     /** True when this sale (fully or partially, via Split) put money on the customer's due account. */
     fun hasDuePortion(): Boolean {
@@ -296,8 +297,11 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
         val cashierVal = bill.cashierName.ifBlank { settings.cashierName }
         sb.appendLine(if (isBn) "ক্যাশিয়ার : $cashierVal" else "Cashier  : $cashierVal")
     }
-    if (!bill.drugLicenseNo.isNullOrBlank()) {
+    if (settings.showDrugLicense && !bill.drugLicenseNo.isNullOrBlank()) {
         sb.appendLine(if (isBn) "ড্রাগ লাইসেন্স: ${bill.drugLicenseNo}" else "Drug Lic : ${bill.drugLicenseNo}")
+    }
+    if (settings.showDrugLicense && !bill.pharmacistRegNo.isNullOrBlank()) {
+        sb.appendLine(if (isBn) "ফার্মাসিস্ট রেজি: ${bill.pharmacistRegNo}" else "Pharm Reg: ${bill.pharmacistRegNo}")
     }
     if (!bill.doctorName.isNullOrBlank()) {
         sb.appendLine(if (isBn) "চিকিৎসক  : ${bill.doctorName}" else "Doctor   : ${bill.doctorName}")
@@ -528,6 +532,10 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     // 3. Invoice Meta
     totalHeight += rowStep * 2 // Invoice ID & Date
     if (settings.showCashier) totalHeight += rowStep // Cashier
+    if (settings.showDrugLicense && !bill.drugLicenseNo.isNullOrBlank()) totalHeight += rowStep
+    if (settings.showDrugLicense && !bill.pharmacistRegNo.isNullOrBlank()) totalHeight += rowStep
+    if (!bill.doctorName.isNullOrBlank()) totalHeight += rowStep
+    if (!bill.doctorBmdcReg.isNullOrBlank()) totalHeight += rowStep
     totalHeight += 40f // Single divider
 
     // 4. Item Table Header
@@ -734,6 +742,22 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     if (settings.showCashier) {
         canvas.drawText(String.format(Locale.US, if (isBn) "ক্যাশিয়ার : %s" else "Cashier  : %s", cashierVal), sidePad, currentY + 20f, paintText)
         currentY += rowStep
+    }
+    if (settings.showDrugLicense && !bill.drugLicenseNo.isNullOrBlank()) {
+        canvas.drawText(if (isBn) "ড্রাগ লাইসেন্স: ${bill.drugLicenseNo}" else "Drug Lic : ${bill.drugLicenseNo}", sidePad, currentY + 20f, paintText)
+        currentY += rowStep
+    }
+    if (settings.showDrugLicense && !bill.pharmacistRegNo.isNullOrBlank()) {
+        canvas.drawText(if (isBn) "ফার্মাসিস্ট রেজি: ${bill.pharmacistRegNo}" else "Pharm Reg: ${bill.pharmacistRegNo}", sidePad, currentY + 20f, paintText)
+        currentY += rowStep
+    }
+    if (!bill.doctorName.isNullOrBlank()) {
+        canvas.drawText(if (isBn) "চিকিৎসক  : ${bill.doctorName}" else "Doctor   : ${bill.doctorName}", sidePad, currentY + 20f, paintText)
+        currentY += rowStep
+        if (!bill.doctorBmdcReg.isNullOrBlank()) {
+            canvas.drawText(if (isBn) "বিএমডিসি : ${bill.doctorBmdcReg}" else "BMDC Reg : ${bill.doctorBmdcReg}", sidePad, currentY + 20f, paintText)
+            currentY += rowStep
+        }
     }
 
     // Single Divider

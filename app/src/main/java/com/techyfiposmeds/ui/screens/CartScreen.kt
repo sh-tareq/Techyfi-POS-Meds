@@ -696,7 +696,8 @@ fun CartScreen(
                 voucherRemainingBalance = postSaleRemainingVoucherBalance,
                 doctorName = cartViewModel.doctorName.value.takeIf { it.isNotBlank() },
                 doctorBmdcReg = cartViewModel.doctorBmdc.value.takeIf { it.isNotBlank() },
-                drugLicenseNo = "DGDA-PH-2026-8849"
+                drugLicenseNo = if (invoiceSettingsData.showDrugLicense) (invoiceSettingsData.drugLicenseNumber.takeIf { it.isNotBlank() } ?: "DGDA-PH-2026-8849") else null,
+                pharmacistRegNo = if (invoiceSettingsData.showDrugLicense) invoiceSettingsData.pharmacistRegNumber.takeIf { it.isNotBlank() } else null
             ))
 
             if (invoiceSettingsData.cashDrawerKickEnabled && (snapshotPaymentMethod == "Cash" || snapshotPaymentMethod == "Split")) {
@@ -2757,13 +2758,49 @@ fun CartScreen(
                                 else -> true
                             }
                         }
+                        val hasExpiredItem = cartItems.any { item ->
+                            val expMillis = parseExpiryDateToMillis(item.product.expiryDate)
+                            expMillis != null && expMillis < System.currentTimeMillis()
+                        }
                         val isTotalValid = grandTotal > 0.0
-                        val isCheckoutEnabled = cartItems.isNotEmpty() && isTotalValid && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
+                        val isCheckoutEnabled = cartItems.isNotEmpty() && !hasExpiredItem && isTotalValid && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
+
+                        if (hasExpiredItem) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("🚫", fontSize = 20.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.expired_medicine_sale_prohibited_title),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.expired_medicine_sale_prohibited_desc),
+                                            fontSize = 11.5.sp,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                }
+                            }
+                        }
 
                         if (!canSell) {
                             Text(stringResource(R.string.perm_checkout_required, stringResource(R.string.perm_sales_sell_title)), color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
                         } else if (!isCheckoutEnabled) {
                             val reason = when {
+                                hasExpiredItem -> stringResource(R.string.cart_reason_expired_medicine_blocked)
                                 !isTotalValid -> stringResource(R.string.cart_reason_total_zero)
                                 !isDueValid -> stringResource(R.string.cart_reason_due_details_required)
                                 isSplitPayment && !isNonCashWithinBounds -> stringResource(R.string.cart_reason_split_non_cash_overtender)
@@ -2804,6 +2841,10 @@ fun CartScreen(
                         Button(
                             onClick = {
                                 if (!isCompletingSale) {
+                                    if (hasExpiredItem) {
+                                        Toast.makeText(context, context.getString(R.string.cart_reason_expired_medicine_blocked), Toast.LENGTH_LONG).show()
+                                        return@Button
+                                    }
                                     val newDue = currentPaymentBreakdown.dueAmount
 
                                     val proceedWithSale = {

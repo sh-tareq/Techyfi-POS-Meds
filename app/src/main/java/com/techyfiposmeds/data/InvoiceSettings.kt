@@ -112,6 +112,9 @@ data class InvoiceSettingsData(
     val dueReceiptCustomTitle: String = "Notice & Terms",
     val dueReceiptCustomNotes: String = "Received with thanks. All credit adjustments are final. Keep this slip for record.",
     val idleLockDurationMinutes: Int = 15,
+    val drugLicenseNumber: String = "",
+    val pharmacistRegNumber: String = "",
+    val showDrugLicense: Boolean = true,
     val customInfoBlocks: List<CustomInfoBlock> = listOf(
         CustomInfoBlock(
             id = "return-policy",
@@ -263,6 +266,9 @@ data class InvoiceSettingsData(
             put("dueReceiptCustomTitle", dueReceiptCustomTitle)
             put("dueReceiptCustomNotes", dueReceiptCustomNotes)
             put("idleLockDurationMinutes", idleLockDurationMinutes)
+            put("drugLicenseNumber", drugLicenseNumber)
+            put("pharmacistRegNumber", pharmacistRegNumber)
+            put("showDrugLicense", showDrugLicense)
 
             val blocksArr = JSONArray()
             customInfoBlocks.forEach { blocksArr.put(it.toJsonObject()) }
@@ -403,6 +409,9 @@ data class InvoiceSettingsData(
                             0
                         }
                     },
+                    drugLicenseNumber = json.optString("drugLicenseNumber", ""),
+                    pharmacistRegNumber = json.optString("pharmacistRegNumber", ""),
+                    showDrugLicense = json.optBoolean("showDrugLicense", true),
                     customInfoBlocks = if (blocksList.isNotEmpty()) blocksList else InvoiceSettingsData().customInfoBlocks
                 )
             } catch (e: Exception) {

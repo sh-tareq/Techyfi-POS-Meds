@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-25 (app version 2.8.00-Final-V25-10-2026, build `Techyfi-POS-Meds-Final-V25-10-2026.apk`; versionCode 220985; DB schema version 39; package `com.techyfiposmeds`)
+Last updated: 2026-10-25 (app version 2.8.01-Final-V25-10-2026, build `Techyfi-POS-Meds-Final-V25-10-2026.apk`; versionCode 220986; DB schema version 39; package `com.techyfiposmeds`)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3411,6 +3411,34 @@ mindmap
 - **R8 Minification & Update Deliverable**:
   - Built with full R8 code optimization (`isMinifyEnabled = true`), resource shrinking (`isShrinkResources = true`), incremented `versionCode = 220985` for in-place update compatibility, and signed with update-compatible keystore.
   - Deliverable saved in project root: `Techyfi-POS-Meds-Final-V25-10-2026.apk`.
+
+### Release Final-V25-10-2026-Phase1: Critical Pharmacy Correctness & DGDA Compliance (Version 2.8.01-Final-V25-10-2026, Build Final-V25-10-2026, versionCode 220986)
+- **CRIT-01: Multi-Unit Base Inventory Decrement & Restock Math (`DataRepository.kt`)**:
+  - Replaced naive 1.0 unit subtraction with accurate base unit (tablets/capsules) calculations based on selling unit:
+    - Loose Piece (`পিস` / `pc` / `pcs`): Multiplier = 1.0
+    - Blister Strip (`পাতা` / `strip`): Multiplier = `product.stripSize` (default 10)
+    - Box / Pack (`বক্স` / `box` / `pack`): Multiplier = `(packPrice / mrpPrice)` or `stripSize * 10` or 100
+  - Applied base unit calculations symmetrically to checkout sales deduction and sales return/cancellation restock.
+- **CRIT-02: Bidirectional Master Catalog Synchronization (`MedicineRepository.kt`, `DataRepository.kt`)**:
+  - Added `adjustStockByBarcodeOrSku(code, delta)` to `MedicineRepository`.
+  - Automatically decrements/restores `pos_medicines.stock_qty` in the 29,834-medicine SQLite master database whenever sales occur or are cancelled, ensuring master and local inventory remain in sync.
+- **CRIT-03: Barcode Scanner Master Database Fallback (`ScannerViewModel.kt`)**:
+  - When a barcode or SKU is scanned that is not yet loaded into the Room active inventory, `ScannerViewModel.onBarcodeScanned` queries `MedicineRepository.getMedicineByBarcodeOrSku`.
+  - If located in the 29,834 catalog, auto-converts and inserts the medicine into Room `ProductDao` and immediately adds it to the cart, eliminating scan failures on un-inwarded medicines.
+- **CRIT-04: Strict DGDA Expired Drug Checkout Block (`CartScreen.kt`)**:
+  - Implemented real-time expiry validation against the device clock (`parseExpiryDateToMillis(item.product.expiryDate) < currentTimeMillis`).
+  - Renders a prominent visual warning banner: `🚫 Expired Medicine in Cart: Sale Blocked by DGDA Regulations`.
+  - Disables and locks the checkout button with an explicit explanatory reason, completely blocking the sale of expired pharmaceuticals.
+- **CRIT-05: DGDA Drug License & Pharmacist Council Registration (`InvoiceSettings.kt`, `SettingsScreen.kt`, `BillPdfGenerator.kt`)**:
+  - Added configurable `drugLicenseNumber` and `pharmacistRegNumber` (PCB) to `InvoiceSettingsData`.
+  - Added responsive text fields in `SettingsScreen.kt` under Shop Identity and toggle under Printed Receipt Fields.
+  - Updated 58mm and 80mm thermal receipt generators to format and print `Drug Lic : [Number]` and `Pharmacist : [PCB Number]` alongside doctor info.
+- **Complete Removal of External Branding ("DIMS")**:
+  - Replaced all legacy DIMS naming and references across code, database schemas, scripts, and documentation with clean `techyfi_pos_meds` nomenclature.
+- **Symmetrical Bilingual Localization**:
+  - Added 1-to-1 English and Bengali string resources in `res/values/strings.xml` and `res/values-bn/strings.xml`.
+- **R8 Minification & Deliverable APK**:
+  - Assembled with full R8 optimization and shrinking into `Techyfi-POS-Meds-Final-V25-10-2026.apk` in the project root directory.
 
 ## Maintenance note
 

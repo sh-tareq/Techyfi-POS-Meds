@@ -1901,8 +1901,52 @@ class ScannerViewModel(private val repository: DataRepository) : ViewModel() {
                     _scannedProduct.value = product
                 }
             } else {
-                _scannedBarcode.value = cleanBarcode
-                _scannedProduct.value = null
+                val med = repository.medicineRepository.getMedicineByBarcodeOrSku(cleanBarcode)
+                if (med != null) {
+                    val canonicalBarcode = med.barcode?.ifBlank { null } ?: med.sku
+                    val convertedProduct = Product(
+                        barcode = canonicalBarcode,
+                        name = med.displayName,
+                        category = med.dosageForm,
+                        purchasePrice = med.unitPrice * 0.85,
+                        sellingPrice = med.unitPrice,
+                        stockQty = med.stockQty,
+                        reorderLevel = med.reorderLevel,
+                        mrpPrice = med.unitPrice,
+                        genericName = med.genericName,
+                        dosageForm = med.dosageForm,
+                        strength = med.strength,
+                        companyName = med.companyName,
+                        stripSize = med.stripSize,
+                        stripPrice = med.stripPrice,
+                        packPrice = med.packPrice,
+                        isAntibiotic = med.isAntibiotic,
+                        shelfLocation = med.shelfLocation,
+                        batchNumber = med.batchNumber,
+                        expiryDate = med.expiryDate,
+                        unit = "Pcs"
+                    )
+                    repository.insertProduct(convertedProduct)
+                    if (_isSellMode.value) {
+                        val added = cartViewModel.addToCart(convertedProduct)
+                        val effectivePrice = cartViewModel.effectivePriceFor(convertedProduct)
+                        val total = cartViewModel.computeCurrentGrandTotal()
+                        _addedProductConfirmation.value = AddedProductConfirmation(
+                            barcode = convertedProduct.barcode,
+                            productName = convertedProduct.name,
+                            price = effectivePrice,
+                            stockQty = convertedProduct.stockQty,
+                            grandTotal = total,
+                            isSuccess = added
+                        )
+                        onShowSnackbar(convertedProduct.name, effectivePrice, convertedProduct.stockQty, total, added)
+                    } else {
+                        _scannedProduct.value = convertedProduct
+                    }
+                } else {
+                    _scannedBarcode.value = cleanBarcode
+                    _scannedProduct.value = null
+                }
             }
         }
     }

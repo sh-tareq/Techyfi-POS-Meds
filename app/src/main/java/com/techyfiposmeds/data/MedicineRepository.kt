@@ -390,6 +390,20 @@ class MedicineRepository private constructor(private val context: Context) {
         }
     }
 
+    suspend fun adjustStockByBarcodeOrSku(code: String, delta: Double): Boolean = withContext(Dispatchers.IO) {
+        initializeDatabase()
+        val d = getReadableDb()
+        val trimmed = code.trim()
+        if (trimmed.isBlank()) return@withContext false
+        try {
+            d.execSQL("UPDATE pos_medicines SET stock_qty = MAX(0.0, stock_qty + ?) WHERE barcode = ? OR sku = ?", arrayOf(delta, trimmed, trimmed))
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adjusting stock by barcode/sku: ${e.message}", e)
+            false
+        }
+    }
+
     suspend fun insertCustomMedicine(item: MedicineItem): Long = withContext(Dispatchers.IO) {
         initializeDatabase()
         val d = getReadableDb()

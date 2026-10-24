@@ -3491,4 +3491,11 @@
     <string name="med_filter_syrup">সিরাপ</string>
     <string name="med_filter_injection">ইনজেকশন</string>
     <string name="med_filter_eye_drops">আই ড্রপ</string>
+    <string name="cart_reason_expired_medicine_blocked">মেয়াদোত্তীর্ণ ওষুধ বিক্রি করা নিষিদ্ধ। কার্ট থেকে সরিয়ে ফেলুন।</string>
+    <string name="expired_medicine_sale_prohibited_title">কার্টে মেয়াদোত্তীর্ণ ওষুধ রয়েছে</string>
+    <string name="expired_medicine_sale_prohibited_desc">ডিজিডিএ (DGDA) ড্রাগ আইন অনুযায়ী মেয়াদোত্তীর্ণ ওষুধ বিক্রি সম্পূর্ণ নিষিদ্ধ। বিল সম্পন্ন করতে আইটেমটি কার্ট থেকে বাদ দিন।</string>
+    <string name="settings_field_drug_license">ডিজিডিএ ড্রাগ লাইসেন্স নং</string>
+    <string name="settings_field_pharmacist_reg">ফার্মাসিস্ট রেজিস্ট্রেশন নং</string>
+    <string name="settings_show_drug_license_receipt">রসিদে ড্রাগ লাইসেন্স প্রদর্শন</string>
+    <string name="settings_show_drug_license_receipt_desc">থার্মাল রসিদে ড্রাগ লাইসেন্স ও ফার্মাসিস্ট নিবন্ধন নম্বর প্রিন্ট করুন</string>
 </resources>
