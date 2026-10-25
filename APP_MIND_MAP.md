@@ -3451,6 +3451,25 @@ mindmap
   - Thermal printing of medicine batch numbers and expiration dates (`• ব্যাচ: BX... • মেয়াদ: YYYY-MM-DD`).
   - Seamless support for 58mm & 80mm thermal printers, raw ESC/POS, and Sunmi built-in POS terminals.
 
+### Release Final-V26-10-2026-Phase3: Pharmacy Workflows, Regulatory Registers & Compliance (Version 2.8.05-Final-V26-10-2026, Build Final-V26-10-2026, versionCode 220990)
+- **DGDA Antibiotic Dispensing Register Report (`SalesReportScreen.kt`)**:
+  - Implemented regulatory Antibiotic Register tab with automated classification of systemic and ophthalmic antibiotics (`isAntibioticMedicine`).
+  - Displays patient details, prescribing physician name & BMDC registration number, full dose instructions, dispensing date/time, and dispensing status.
+  - Formatted CSV export conforming to DGDA inspection guidelines with date range filtering.
+- **DNC Narcotics & Psychotropics Register (`SalesReportScreen.kt`)**:
+  - Automated detection of 26+ Schedule G / controlled substances (e.g., Pethidine, Morphine, Fentanyl, Clonazepam, Diazepam, Alprazolam, Midazolam, Buprenorphine, Tramadol, Tapentadol, Methylphenidate, Ketamine, Phenobarbital, Zolpidem, Bromazepam).
+  - High-security controlled substance ledger tracking patient phone, doctor credentials, and quantity dispensed.
+  - Dedicated CSV export complying with Department of Narcotics Control (DNC) audit formats.
+- **Prescription Camera Attachment & Full-Screen Image Inspection (`CartScreen.kt`, `SalesReportScreen.kt`)**:
+  - Instant camera capture and attachment of physical doctor prescriptions during cart staging.
+  - Thumbnail badges in cart and sales history with tap-to-open `PrescriptionImageViewerDialog` for full-screen pan, zoom, and pharmacist clinical inspection.
+- **Chronic Patient Repeat Prescription Refill Reminders (`CartScreen.kt`, `ScheduledDueReminder`)**:
+  - Refill reminder toggle switch and 15 / 30 / 60 day quick chips directly in customer checkout staging.
+  - Auto-schedules refill notification alerts stored in Room `ScheduledDueReminder` for proactive customer CRM and chronic care management (hypertension, diabetes, cardiovascular therapies).
+- **Search Debouncing & Touch Target Standardization (`POSViewModels.kt`, `ProductsScreen.kt`)**:
+  - 180ms coroutine debouncing in `ProductsViewModel` for instant, fluid catalog filtering without search stutter or excessive database queries.
+  - Material 3 touch target compliance standardizing camera viewfinder, clinical substitute buttons, and grid action targets to >= 48dp (`minimumInteractiveComponentSize()`).
+
 ## Maintenance note
 
 Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS Meds/`.

@@ -8,6 +8,7 @@ import java.util.Locale
 import android.content.Context
 import android.content.pm.PackageManager
 import com.techyfiposmeds.data.AppPermissions
+import com.techyfiposmeds.utils.DateFormatters
 import com.techyfiposmeds.utils.parseExpiryDateToMillis
 import com.techyfiposmeds.utils.PaymentMath
 import com.techyfiposmeds.utils.CartAuthHelper
@@ -355,6 +356,9 @@ fun CartScreen(
     val doctorBmdc by cartViewModel.doctorBmdc.collectAsStateWithLifecycle()
     val prescriptionImageUri by cartViewModel.prescriptionImageUri.collectAsStateWithLifecycle()
     val isEmergencyOtcOverride by cartViewModel.isEmergencyOtcOverride.collectAsStateWithLifecycle()
+    var isRefillReminderEnabled by remember { mutableStateOf(false) }
+    var refillDays by remember { mutableIntStateOf(30) }
+    var showRxViewerDialog by remember { mutableStateOf(false) }
     val defaultCashier = invoiceSettingsData.cashierName.ifBlank { cashierName.ifBlank { stringResource(R.string.default_cashier_admin) } }
     val currentDisplayCashier = checkoutCashierName.ifBlank { defaultCashier }
 
@@ -717,6 +721,32 @@ fun CartScreen(
                         android.util.Log.w("CartScreen", "Cash drawer kick failed", e)
                     }
                 }
+            }
+
+            if (isRefillReminderEnabled && snapshotCustomerPhone.isNotBlank()) {
+                val targetDateMillis = System.currentTimeMillis() + (refillDays.toLong() * 24L * 60L * 60L * 1000L)
+                val patientName = snapshotCustomerName.ifBlank { "Patient" }
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        val db = com.techyfiposmeds.data.db.AppDatabase.getDatabase(context)
+                        db.scheduledDueReminderDao().upsert(
+                            com.techyfiposmeds.data.db.ScheduledDueReminder(
+                                customerPhone = snapshotCustomerPhone,
+                                customerName = patientName,
+                                dueAmount = 0.0,
+                                channel = "REFILL",
+                                scheduledAt = System.currentTimeMillis(),
+                                fireAt = targetDateMillis,
+                                messageText = "Chronic prescription refill reminder ($refillDays days)",
+                                isRecurring = false
+                            )
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("CartScreen", "Error scheduling refill reminder", e)
+                    }
+                }
+                val dateFormatted = DateFormatters.formatDate(targetDateMillis)
+                Toast.makeText(context, context.getString(R.string.refill_reminder_scheduled_toast, dateFormatted), Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             android.util.Log.e("CartScreen", "Error completing sale", e)
@@ -1165,6 +1195,7 @@ fun CartScreen(
                             ) {
                                 if (prescriptionImageUri != null) {
                                     Surface(
+                                        onClick = { showRxViewerDialog = true },
                                         color = Color(0xFFFEE2E2),
                                         shape = RoundedCornerShape(8.dp),
                                         border = BorderStroke(1.dp, Color(0xFFFDA4AF))
@@ -2390,6 +2421,66 @@ fun CartScreen(
                                     }
                                 )
                             }
+
+                            if (customerPhone.isNotBlank()) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isRefillReminderEnabled) Color(0xFF10B981).copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    border = BorderStroke(1.dp, if (isRefillReminderEnabled) Color(0xFF10B981).copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
+                                                Text("🔄", fontSize = 14.sp)
+                                                Column {
+                                                    Text(
+                                                        text = stringResource(R.string.cart_refill_reminder_toggle),
+                                                        fontSize = 11.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        text = stringResource(R.string.cart_refill_reminder_desc),
+                                                        fontSize = 9.5.sp,
+                                                        color = MaterialTheme.colorScheme.outline
+                                                    )
+                                                }
+                                            }
+                                            Switch(
+                                                checked = isRefillReminderEnabled,
+                                                onCheckedChange = { isRefillReminderEnabled = it },
+                                                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF10B981), checkedTrackColor = Color(0xFF10B981).copy(alpha = 0.3f))
+                                            )
+                                        }
+                                        if (isRefillReminderEnabled) {
+                                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                listOf(15, 30, 60).forEach { days ->
+                                                    val isSelected = refillDays == days
+                                                    Surface(
+                                                        onClick = { refillDays = days },
+                                                        shape = RoundedCornerShape(8.dp),
+                                                        color = if (isSelected) Color(0xFF10B981) else MaterialTheme.colorScheme.surface,
+                                                        border = BorderStroke(1.dp, if (isSelected) Color(0xFF059669) else MaterialTheme.colorScheme.outlineVariant)
+                                                    ) {
+                                                        Text(
+                                                            text = stringResource(R.string.refill_in_days_fmt, days),
+                                                            fontSize = 11.sp,
+                                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                           }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -3032,6 +3123,11 @@ fun CartScreen(
                     }
                 }
             }
+        }
+    }
+    if (showRxViewerDialog && !prescriptionImageUri.isNullOrBlank()) {
+        PrescriptionImageViewerDialog(imageUriString = prescriptionImageUri!!) {
+            showRxViewerDialog = false
         }
     }
     val snapshot = billSnapshot

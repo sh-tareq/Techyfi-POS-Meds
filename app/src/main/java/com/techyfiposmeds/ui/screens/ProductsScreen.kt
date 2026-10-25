@@ -1507,7 +1507,7 @@ fun ProductsScreen(
                             shape = RoundedCornerShape(8.dp),
                             color = if (stockScannerEnabled) Color(0xFF4F46E5) else Color(0xFF4F46E5).copy(alpha = 0.12f),
                             border = BorderStroke(1.dp, Color(0xFF6366F1).copy(alpha = if (stockScannerEnabled) 0.8f else 0.35f)),
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 PreviewScannerViewfinderIcon(
@@ -5704,7 +5704,7 @@ fun MedicineItemRow(
                         shape = RoundedCornerShape(8.dp),
                         color = Color(0xFF3B82F6).copy(alpha = 0.12f),
                         border = BorderStroke(0.8.dp, Color(0xFF3B82F6).copy(alpha = 0.4f)),
-                        modifier = Modifier.height(34.dp)
+                        modifier = Modifier.minimumInteractiveComponentSize().height(34.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -5724,7 +5724,7 @@ fun MedicineItemRow(
                         shape = RoundedCornerShape(8.dp),
                         color = Color(0xFF8B5CF6).copy(alpha = 0.12f),
                         border = BorderStroke(0.8.dp, Color(0xFF8B5CF6).copy(alpha = 0.4f)),
-                        modifier = Modifier.height(34.dp)
+                        modifier = Modifier.minimumInteractiveComponentSize().height(34.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -5986,7 +5986,7 @@ fun MedicineGridCard(
                     shape = RoundedCornerShape(6.dp),
                     color = Color(0xFF3B82F6).copy(alpha = 0.12f),
                     border = BorderStroke(0.6.dp, Color(0xFF3B82F6).copy(alpha = 0.4f)),
-                    modifier = Modifier.size(30.dp)
+                    modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Repeat, contentDescription = "বিকল্প", tint = Color(0xFF2563EB), modifier = Modifier.size(14.dp))
@@ -5998,7 +5998,7 @@ fun MedicineGridCard(
                     shape = RoundedCornerShape(6.dp),
                     color = Color(0xFF8B5CF6).copy(alpha = 0.12f),
                     border = BorderStroke(0.6.dp, Color(0xFF8B5CF6).copy(alpha = 0.4f)),
-                    modifier = Modifier.size(30.dp)
+                    modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Info, contentDescription = "তথ্য", tint = Color(0xFF7C3AED), modifier = Modifier.size(14.dp))
@@ -6010,7 +6010,7 @@ fun MedicineGridCard(
                     shape = RoundedCornerShape(6.dp),
                     color = Color(0xFFF59E0B).copy(alpha = 0.12f),
                     border = BorderStroke(0.6.dp, Color(0xFFF59E0B).copy(alpha = 0.4f)),
-                    modifier = Modifier.size(30.dp)
+                    modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text("🏷️", fontSize = 12.sp)

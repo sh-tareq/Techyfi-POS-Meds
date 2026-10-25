@@ -2029,13 +2029,13 @@ class ScannerViewModel(private val repository: DataRepository) : ViewModel() {
     }
 }
 
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
 class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     val products: StateFlow<List<Product>> = _searchQuery
-        .debounce { query -> if (query.isBlank()) 0L else 300L }
+        .debounce { query -> if (query.isBlank()) 0L else 180L }
         .flatMapLatest { query ->
             if (query.isBlank()) {
                 repository.allProducts
@@ -2212,9 +2212,19 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         return product
     }
 
+    private var medicineSearchJob: kotlinx.coroutines.Job? = null
+
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
-        searchMedicines(query = query)
+        medicineSearchJob?.cancel()
+        if (query.isBlank()) {
+            searchMedicines(query = "")
+        } else {
+            medicineSearchJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(180)
+                searchMedicines(query = query)
+            }
+        }
     }
 
     suspend fun getProductByBarcode(barcode: String): Product? {

@@ -59,7 +59,10 @@ import kotlin.math.abs
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.graphics.asImageBitmap
+import android.graphics.BitmapFactory
 import com.techyfiposmeds.ui.viewmodel.HourlyReportData
 import com.techyfiposmeds.utils.DateFormatters
 
@@ -91,7 +94,9 @@ private enum class ReportTab {
     OVERVIEW,
     HOURLY,
     PRODUCTS,
-    PAYMENTS
+    PAYMENTS,
+    ANTIBIOTIC_REGISTER,
+    NARCOTICS_REGISTER
 }
 
 @Composable
@@ -100,6 +105,8 @@ private fun ReportTab.localizedTitle(): String = when (this) {
     ReportTab.HOURLY -> stringResource(R.string.sales_report_tab_hourly)
     ReportTab.PRODUCTS -> stringResource(R.string.sales_report_tab_products)
     ReportTab.PAYMENTS -> stringResource(R.string.sales_report_tab_payments)
+    ReportTab.ANTIBIOTIC_REGISTER -> stringResource(R.string.sales_report_tab_antibiotic_register)
+    ReportTab.NARCOTICS_REGISTER -> stringResource(R.string.sales_report_tab_narcotics_register)
 }
 
 private enum class TrendMetric(@get:androidx.annotation.StringRes val labelRes: Int) {
@@ -229,6 +236,113 @@ fun SalesReportScreen(
                 } catch (e: Exception) {
                     android.util.Log.e("SalesReportScreen", "Excel export failed", e)
                     Toast.makeText(context, context.getString(R.string.sales_report_export_general_error, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    var viewingPrescriptionUri by remember { mutableStateOf<String?>(null) }
+
+    val antibioticRecords = remember(salesSnapshot, rangeStart, rangeEnd) {
+        val list = mutableListOf<AntibioticDispenseRecord>()
+        salesSnapshot.filter { it.sale.timestamp in rangeStart until rangeEnd }.forEach { saleWithItems ->
+            val sale = saleWithItems.sale
+            saleWithItems.items.filter { it.isAntibiotic }.forEach { item ->
+                list.add(
+                    AntibioticDispenseRecord(
+                        saleId = sale.id,
+                        timestamp = sale.timestamp,
+                        patientName = sale.customerName?.takeIf { it.isNotBlank() } ?: "Walk-in Patient",
+                        patientPhone = sale.customerPhone?.takeIf { it.isNotBlank() } ?: "N/A",
+                        doctorName = sale.doctorName?.takeIf { it.isNotBlank() } ?: "",
+                        doctorBmdcReg = sale.doctorBmdcReg?.takeIf { it.isNotBlank() } ?: "",
+                        hasPrescriptionPhoto = !sale.prescriptionImageUri.isNullOrBlank(),
+                        isEmergencyOtc = sale.doctorName.isNullOrBlank() && sale.prescriptionImageUri.isNullOrBlank(),
+                        medicineName = item.productName,
+                        genericName = item.genericName ?: "",
+                        batchNumber = item.batchNumber ?: "N/A",
+                        expiryDate = item.expiryDate ?: "N/A",
+                        quantity = item.quantity,
+                        unitType = item.unitType,
+                        price = item.price,
+                        totalAmount = item.price * item.quantity,
+                        dosageSchedule = item.dosageSchedule,
+                        prescriptionImageUri = sale.prescriptionImageUri
+                    )
+                )
+            }
+        }
+        list
+    }
+
+    val narcoticsRecords = remember(salesSnapshot, rangeStart, rangeEnd) {
+        val list = mutableListOf<NarcoticsDispenseRecord>()
+        salesSnapshot.filter { it.sale.timestamp in rangeStart until rangeEnd }.forEach { saleWithItems ->
+            val sale = saleWithItems.sale
+            saleWithItems.items.filter { isControlledOrNarcoticMedicine(it.genericName, it.productName) }.forEach { item ->
+                list.add(
+                    NarcoticsDispenseRecord(
+                        saleId = sale.id,
+                        timestamp = sale.timestamp,
+                        patientName = sale.customerName?.takeIf { it.isNotBlank() } ?: "Walk-in Patient",
+                        patientPhone = sale.customerPhone?.takeIf { it.isNotBlank() } ?: "N/A",
+                        doctorName = sale.doctorName?.takeIf { it.isNotBlank() } ?: "",
+                        doctorBmdcReg = sale.doctorBmdcReg?.takeIf { it.isNotBlank() } ?: "",
+                        hasPrescriptionPhoto = !sale.prescriptionImageUri.isNullOrBlank(),
+                        medicineName = item.productName,
+                        controlledGeneric = item.genericName ?: item.productName,
+                        batchNumber = item.batchNumber ?: "N/A",
+                        expiryDate = item.expiryDate ?: "N/A",
+                        quantity = item.quantity,
+                        unitType = item.unitType,
+                        price = item.price,
+                        totalAmount = item.price * item.quantity,
+                        dosageSchedule = item.dosageSchedule,
+                        prescriptionImageUri = sale.prescriptionImageUri
+                    )
+                )
+            }
+        }
+        list
+    }
+
+    val exportAntibioticCsvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                try {
+                    val stream = context.contentResolver.openOutputStream(uri)
+                    if (stream != null) {
+                        stream.use { s ->
+                            val csv = generateAntibioticRegisterCsv(antibioticRecords, currentRangeLabel)
+                            s.write(csv.toByteArray(Charsets.UTF_8))
+                        }
+                        Toast.makeText(context, exportSuccessToast, Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Export error: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    val exportNarcoticsCsvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                try {
+                    val stream = context.contentResolver.openOutputStream(uri)
+                    if (stream != null) {
+                        stream.use { s ->
+                            val csv = generateNarcoticsRegisterCsv(narcoticsRecords, currentRangeLabel)
+                            s.write(csv.toByteArray(Charsets.UTF_8))
+                        }
+                        Toast.makeText(context, exportSuccessToast, Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Export error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -459,6 +573,8 @@ fun SalesReportScreen(
                                         ReportTab.HOURLY -> Realistic3DHistoryClockIcon(size = 18.dp)
                                         ReportTab.PRODUCTS -> Realistic3DLeaderboardTrophyIcon(size = 18.dp)
                                         ReportTab.PAYMENTS -> Realistic3DMultiPaymentMixIcon(size = 18.dp)
+                                        ReportTab.ANTIBIOTIC_REGISTER -> Realistic3DAmberHazardDiamond(size = 18.dp)
+                                        ReportTab.NARCOTICS_REGISTER -> Realistic3DStealthShieldIcon(isStealthActive = true, size = 18.dp)
                                     }
                                     Spacer(Modifier.width(6.dp))
                                     Text(
@@ -492,10 +608,32 @@ fun SalesReportScreen(
                     ReportTab.HOURLY -> HourlyPanel(data, canViewPnl = canViewPnl)
                     ReportTab.PRODUCTS -> ProductsPanel(data)
                     ReportTab.PAYMENTS -> PaymentsPanel(data)
+                    ReportTab.ANTIBIOTIC_REGISTER -> AntibioticRegisterPanel(
+                        records = antibioticRecords,
+                        onExportCsv = {
+                            val cleanDate = DateFormatters.formatExportDate(rangeStart)
+                            exportAntibioticCsvLauncher.launch("dgda-antibiotic-register-$cleanDate.csv")
+                        },
+                        onViewPrescription = { uri -> viewingPrescriptionUri = uri }
+                    )
+                    ReportTab.NARCOTICS_REGISTER -> NarcoticsRegisterPanel(
+                        records = narcoticsRecords,
+                        onExportCsv = {
+                            val cleanDate = DateFormatters.formatExportDate(rangeStart)
+                            exportNarcoticsCsvLauncher.launch("narcotics-controlled-register-$cleanDate.csv")
+                        },
+                        onViewPrescription = { uri -> viewingPrescriptionUri = uri }
+                    )
                 }
             }
             Spacer(Modifier.height(16.dp))
         }
+        }
+    }
+
+    if (viewingPrescriptionUri != null) {
+        PrescriptionImageViewerDialog(imageUriString = viewingPrescriptionUri!!) {
+            viewingPrescriptionUri = null
         }
     }
 
@@ -2330,4 +2468,720 @@ private fun PaymentsPanel(data: SalesReportData) {
         }
     }
 }
+
+// ============================================================================
+// PHASE 3: REGULATORY DISPENSING REGISTERS & COMPLIANCE (DGDA & NARCOTICS)
+// ============================================================================
+
+fun isControlledOrNarcoticMedicine(genericName: String?, productName: String? = null): Boolean {
+    val g = (genericName ?: "").lowercase()
+    val p = (productName ?: "").lowercase()
+    val controlledKeywords = listOf(
+        "morphine", "pethidine", "fentanyl", "tramadol", "tapentadol", "codeine", "buprenorphine",
+        "diazepam", "clonazepam", "alprazolam", "lorazepam", "midazolam", "bromazepam", "clobazam",
+        "chlordiazepoxide", "nitrazepam", "flurazepam", "oxazepam", "zolpidem", "zopiclone", "eszopiclone",
+        "phenobarbitone", "phenobarbital", "ketamine", "pentazocine", "methadone", "methylphenidate"
+    )
+    return controlledKeywords.any { g.contains(it) || p.contains(it) }
+}
+
+data class AntibioticDispenseRecord(
+    val saleId: Long,
+    val timestamp: Long,
+    val patientName: String,
+    val patientPhone: String,
+    val doctorName: String,
+    val doctorBmdcReg: String,
+    val hasPrescriptionPhoto: Boolean,
+    val isEmergencyOtc: Boolean,
+    val medicineName: String,
+    val genericName: String,
+    val batchNumber: String,
+    val expiryDate: String,
+    val quantity: Double,
+    val unitType: String,
+    val price: Double,
+    val totalAmount: Double,
+    val dosageSchedule: String?,
+    val prescriptionImageUri: String?
+)
+
+data class NarcoticsDispenseRecord(
+    val saleId: Long,
+    val timestamp: Long,
+    val patientName: String,
+    val patientPhone: String,
+    val doctorName: String,
+    val doctorBmdcReg: String,
+    val hasPrescriptionPhoto: Boolean,
+    val medicineName: String,
+    val controlledGeneric: String,
+    val batchNumber: String,
+    val expiryDate: String,
+    val quantity: Double,
+    val unitType: String,
+    val price: Double,
+    val totalAmount: Double,
+    val dosageSchedule: String?,
+    val prescriptionImageUri: String?
+)
+
+fun generateAntibioticRegisterCsv(records: List<AntibioticDispenseRecord>, rangeLabel: String): String {
+    val sb = StringBuilder()
+    sb.append("DGDA Antibiotic Dispensing Register (ডাইরেক্টরেট জেনারেল অব ড্রাগ অ্যাডমিনিস্ট্রেশন রেগুলেশন)\n")
+    sb.append("Period: $rangeLabel, Generated: ${DateFormatters.formatDateTime(System.currentTimeMillis())}\n\n")
+    sb.append("SL,Date & Time,Invoice ID,Patient Name,Patient Phone,Doctor Name,BMDC Reg No,Prescription Status,Medicine Brand,Generic Molecule,Batch No,Expiry Date,Qty,Unit,Unit Price,Total Price,Dosage Schedule\n")
+    records.forEachIndexed { index, r ->
+        val dateStr = DateFormatters.formatDateTime(r.timestamp).replace(",", " ")
+        val patientName = r.patientName.replace(",", " ")
+        val doctorName = r.doctorName.replace(",", " ")
+        val status = if (r.hasPrescriptionPhoto) "Prescription Attached" else if (r.isEmergencyOtc) "Emergency OTC Override" else if (r.doctorName.isNotBlank()) "Doctor Rx Verified" else "OTC"
+        val medName = r.medicineName.replace(",", " ")
+        val genName = r.genericName.replace(",", " ")
+        val dosage = (r.dosageSchedule ?: "N/A").replace(",", " ")
+        sb.append("${index + 1},\"$dateStr\",\"#${r.saleId}\",\"$patientName\",\"${r.patientPhone}\",\"$doctorName\",\"${r.doctorBmdcReg}\",\"$status\",\"$medName\",\"$genName\",\"${r.batchNumber}\",\"${r.expiryDate}\",${r.quantity},\"${r.unitType}\",${r.price},${r.totalAmount},\"$dosage\"\n")
+    }
+    return sb.toString()
+}
+
+fun generateNarcoticsRegisterCsv(records: List<NarcoticsDispenseRecord>, rangeLabel: String): String {
+    val sb = StringBuilder()
+    sb.append("Department of Narcotics Control (DNC) & DGDA Schedule G Register (মাদকদ্রব্য ও নিয়ন্ত্রিত ওষুধ রেজিস্টার)\n")
+    sb.append("Period: $rangeLabel, Generated: ${DateFormatters.formatDateTime(System.currentTimeMillis())}\n\n")
+    sb.append("SL,Date & Time,Invoice ID,Patient Name,Patient Phone,Doctor Name,BMDC Reg No,Prescription Status,Controlled Medicine,Active Controlled Molecule,Batch No,Expiry Date,Qty,Unit,Unit Price,Total Price,Dosage Schedule\n")
+    records.forEachIndexed { index, r ->
+        val dateStr = DateFormatters.formatDateTime(r.timestamp).replace(",", " ")
+        val patientName = r.patientName.replace(",", " ")
+        val doctorName = r.doctorName.replace(",", " ")
+        val status = if (r.hasPrescriptionPhoto) "Prescription Attached" else if (r.doctorName.isNotBlank()) "Doctor Rx Verified" else "Unverified"
+        val medName = r.medicineName.replace(",", " ")
+        val genName = r.controlledGeneric.replace(",", " ")
+        val dosage = (r.dosageSchedule ?: "N/A").replace(",", " ")
+        sb.append("${index + 1},\"$dateStr\",\"#${r.saleId}\",\"$patientName\",\"${r.patientPhone}\",\"$doctorName\",\"${r.doctorBmdcReg}\",\"$status\",\"$medName\",\"$genName\",\"${r.batchNumber}\",\"${r.expiryDate}\",${r.quantity},\"${r.unitType}\",${r.price},${r.totalAmount},\"$dosage\"\n")
+    }
+    return sb.toString()
+}
+
+@Composable
+fun PrescriptionImageViewerDialog(
+    imageUriString: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val imageBitmap = remember(imageUriString) {
+        try {
+            val uri = android.net.Uri.parse(imageUriString)
+            if (uri.scheme == "content" || uri.scheme == "file") {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                }
+            } else {
+                val file = java.io.File(imageUriString)
+                if (file.exists()) {
+                    BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
+                } else null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 12.dp
+        ) {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color(0xFFE11D48), modifier = Modifier.size(20.dp))
+                        Text(
+                            text = stringResource(R.string.prescription_view_title),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 16.sp
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                if (imageBitmap != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = imageBitmap,
+                        contentDescription = "Prescription Photo",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                    )
+                } else {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("প্রেসক্রিপশন ছবি লোড করা সম্ভব হয়নি", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AntibioticRegisterPanel(
+    records: List<AntibioticDispenseRecord>,
+    onExportCsv: () -> Unit,
+    onViewPrescription: (String) -> Unit
+) {
+    val totalDispensed = records.size
+    val totalRevenue = records.sumOf { it.totalAmount }
+    val rxVerifiedCount = records.count { !it.isEmergencyOtc && it.doctorName.isNotBlank() }
+    val emergencyOtcCount = records.count { it.isEmergencyOtc }
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // Regulatory Header Card
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.4f))
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Realistic3DAmberHazardDiamond(size = 28.dp)
+                    Column {
+                        Text(
+                            text = stringResource(R.string.antibiotic_register_title),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.antibiotic_register_desc),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+
+                // Summary KPIs
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFF59E0B).copy(alpha = 0.1f),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.3f))
+                    ) {
+                        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("মোট ডিসপেন্স", fontSize = 10.sp, color = Color(0xFFD97706), fontWeight = FontWeight.Bold)
+                            Text("$totalDispensed টি", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFB45309))
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF10B981).copy(alpha = 0.1f),
+                        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.3f))
+                    ) {
+                        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("প্রেসক্রিপশন", fontSize = 10.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
+                            Text("$rxVerifiedCount টি", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF047857))
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFEF4444).copy(alpha = 0.1f),
+                        border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.3f))
+                    ) {
+                        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("জরুরি OTC", fontSize = 10.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Bold)
+                            Text("$emergencyOtcCount টি", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFB91C1C))
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    ) {
+                        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("মোট বিক্রি", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text(formatTaka(totalRevenue), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+
+                // Export Button
+                Button(
+                    onClick = onExportCsv,
+                    enabled = records.isNotEmpty(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFF59E0B),
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.antibiotic_register_export_csv), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        }
+
+        // List of entries
+        if (records.isEmpty()) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(R.string.antibiotic_register_empty),
+                        color = MaterialTheme.colorScheme.outline,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            records.forEach { record ->
+                AntibioticRecordCard(record = record, onViewPrescription = onViewPrescription)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AntibioticRecordCard(
+    record: AntibioticDispenseRecord,
+    onViewPrescription: (String) -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Header: Invoice & Timestamp
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFFF59E0B).copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "#SALE-${record.saleId}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB45309),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+                Text(
+                    text = DateFormatters.formatDateTime(record.timestamp),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+
+            // Medicine Name & Molecule
+            Column {
+                Text(
+                    text = record.medicineName,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 14.5.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (record.genericName.isNotBlank()) {
+                    Text(
+                        text = "জেনেরিক: ${record.genericName}",
+                        fontSize = 11.5.sp,
+                        color = Color(0xFF0284C7),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            // Batch & Expiry Row
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (record.batchNumber.isNotBlank() && record.batchNumber != "N/A") {
+                    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                        Text("🏷️ ব্যাচ: ${record.batchNumber}", fontSize = 10.5.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                }
+                if (record.expiryDate.isNotBlank() && record.expiryDate != "N/A") {
+                    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                        Text("⏳ মেয়াদ: ${record.expiryDate}", fontSize = 10.5.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                }
+                if (!record.dosageSchedule.isNullOrBlank()) {
+                    Text("• ${record.dosageSchedule}", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+            // Patient & Doctor Info
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("👤 রোগী: ${record.patientName}", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                    if (record.patientPhone.isNotBlank() && record.patientPhone != "N/A") {
+                        Text("📞 ${record.patientPhone}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline)
+                    }
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    if (record.doctorName.isNotBlank()) {
+                        Text("🩺 ডা: ${record.doctorName}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF047857))
+                        if (record.doctorBmdcReg.isNotBlank()) {
+                            Text("BMDC: ${record.doctorBmdcReg}", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                        }
+                    } else if (record.isEmergencyOtc) {
+                        Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFFFEF2F2)) {
+                            Text("⚠️ জরুরি OTC", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFDC2626), modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                        }
+                    }
+                }
+            }
+
+            // Dispensed Quantity & Total + Prescription Photo Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val unitLabel = when (record.unitType.lowercase()) {
+                    "strip" -> "পাতা"
+                    "box" -> "বক্স"
+                    else -> "পিস"
+                }
+                Text(
+                    text = "${record.quantity.toInt()} $unitLabel × ${formatTaka(record.price)}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (record.hasPrescriptionPhoto && !record.prescriptionImageUri.isNullOrBlank()) {
+                        Surface(
+                            onClick = { onViewPrescription(record.prescriptionImageUri) },
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFE11D48).copy(alpha = 0.1f),
+                            border = BorderStroke(1.dp, Color(0xFFE11D48).copy(alpha = 0.3f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color(0xFFE11D48), modifier = Modifier.size(12.dp))
+                                Text("প্রেসক্রিপশন", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE11D48))
+                            }
+                        }
+                    }
+                    Text(
+                        text = formatTaka(record.totalAmount),
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NarcoticsRegisterPanel(
+    records: List<NarcoticsDispenseRecord>,
+    onExportCsv: () -> Unit,
+    onViewPrescription: (String) -> Unit
+) {
+    val totalDispensed = records.size
+    val totalRevenue = records.sumOf { it.totalAmount }
+    val uniquePatients = records.map { it.patientPhone }.distinct().size
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // Regulatory Header Card
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, Color(0xFF6366F1).copy(alpha = 0.4f))
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Realistic3DStealthShieldIcon(isStealthActive = true, size = 28.dp)
+                    Column {
+                        Text(
+                            text = stringResource(R.string.narcotics_register_title),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.narcotics_register_desc),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+
+                // Summary KPIs
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF6366F1).copy(alpha = 0.1f),
+                        border = BorderStroke(1.dp, Color(0xFF6366F1).copy(alpha = 0.3f))
+                    ) {
+                        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("মোট ডিসপেন্স", fontSize = 10.sp, color = Color(0xFF4F46E5), fontWeight = FontWeight.Bold)
+                            Text("$totalDispensed টি", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4338CA))
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF06B6D4).copy(alpha = 0.1f),
+                        border = BorderStroke(1.dp, Color(0xFF06B6D4).copy(alpha = 0.3f))
+                    ) {
+                        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("রোগী সংখ্যা", fontSize = 10.sp, color = Color(0xFF0891B2), fontWeight = FontWeight.Bold)
+                            Text("$uniquePatients জন", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0E7490))
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    ) {
+                        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("মোট বিক্রি", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text(formatTaka(totalRevenue), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+
+                // Export Button
+                Button(
+                    onClick = onExportCsv,
+                    enabled = records.isNotEmpty(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF6366F1),
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.narcotics_register_export_csv), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        }
+
+        // List of entries
+        if (records.isEmpty()) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(R.string.narcotics_register_empty),
+                        color = MaterialTheme.colorScheme.outline,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            records.forEach { record ->
+                NarcoticsRecordCard(record = record, onViewPrescription = onViewPrescription)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NarcoticsRecordCard(
+    record: NarcoticsDispenseRecord,
+    onViewPrescription: (String) -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Header: Invoice & Timestamp
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFF6366F1).copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "#SALE-${record.saleId}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4F46E5),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+                Text(
+                    text = DateFormatters.formatDateTime(record.timestamp),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+
+            // Medicine Name & Molecule
+            Column {
+                Text(
+                    text = record.medicineName,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 14.5.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "নিয়ন্ত্রিত মলিকিউল: ${record.controlledGeneric}",
+                    fontSize = 11.5.sp,
+                    color = Color(0xFF9333EA),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Batch & Expiry Row
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (record.batchNumber.isNotBlank() && record.batchNumber != "N/A") {
+                    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                        Text("🏷️ ব্যাচ: ${record.batchNumber}", fontSize = 10.5.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                }
+                if (record.expiryDate.isNotBlank() && record.expiryDate != "N/A") {
+                    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                        Text("⏳ মেয়াদ: ${record.expiryDate}", fontSize = 10.5.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                }
+                if (!record.dosageSchedule.isNullOrBlank()) {
+                    Text("• ${record.dosageSchedule}", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+            // Patient & Doctor Info
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("👤 রোগী: ${record.patientName}", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                    if (record.patientPhone.isNotBlank() && record.patientPhone != "N/A") {
+                        Text("📞 ${record.patientPhone}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline)
+                    }
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    if (record.doctorName.isNotBlank()) {
+                        Text("🩺 ডা: ${record.doctorName}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF047857))
+                        if (record.doctorBmdcReg.isNotBlank()) {
+                            Text("BMDC: ${record.doctorBmdcReg}", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                        }
+                    } else {
+                        Text("ডাক্তারের নাম অমিল", fontSize = 10.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Dispensed Quantity & Total + Prescription Photo Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val unitLabel = when (record.unitType.lowercase()) {
+                    "strip" -> "পাতা"
+                    "box" -> "বক্স"
+                    else -> "পিস"
+                }
+                Text(
+                    text = "${record.quantity.toInt()} $unitLabel × ${formatTaka(record.price)}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (record.hasPrescriptionPhoto && !record.prescriptionImageUri.isNullOrBlank()) {
+                        Surface(
+                            onClick = { onViewPrescription(record.prescriptionImageUri) },
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFE11D48).copy(alpha = 0.1f),
+                            border = BorderStroke(1.dp, Color(0xFFE11D48).copy(alpha = 0.3f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color(0xFFE11D48), modifier = Modifier.size(12.dp))
+                                Text("প্রেসক্রিপশন", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE11D48))
+                            }
+                        }
+                    }
+                    Text(
+                        text = formatTaka(record.totalAmount),
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
 
