@@ -551,8 +551,15 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     bill.items.forEach { item ->
         val nameLines = wrapItemNameByPixelWidth(item.name, colItemMaxWidth, tempPaint)
         val noteLines = if (!item.note.isNullOrBlank()) wrapItemNameByPixelWidth("• Note: ${item.note}", colItemMaxWidth, tempPaint) else emptyList()
+        val dosageLines = if (!item.dosageSchedule.isNullOrBlank()) wrapItemNameByPixelWidth(if (isBn) "• সেবনবিধি: ${item.dosageSchedule}" else "• Dosage: ${item.dosageSchedule}", colItemMaxWidth, tempPaint) else emptyList()
+        val beLines = if (!item.batchNumber.isNullOrBlank() || !item.expiryDate.isNullOrBlank()) {
+            val bStr = item.batchNumber?.let { if (isBn) "ব্যাচ: $it" else "Batch: $it" } ?: ""
+            val eStr = item.expiryDate?.let { if (isBn) "মেয়াদ: $it" else "Exp: $it" } ?: ""
+            val beStr = listOf(bStr, eStr).filter { it.isNotBlank() }.joinToString(" • ")
+            wrapItemNameByPixelWidth("• $beStr", colItemMaxWidth, tempPaint)
+        } else emptyList()
         val itemSavingsLine = if (bill.isSaleMode && bill.showItemWiseMrpDiscount && settings.showMrpDiscountInSaleMode && item.mrpPrice > item.unitPrice) 1 else 0
-        totalHeight += (nameLines.size + noteLines.size) * rowStep + (itemSavingsLine * (if (is58) 22f else 26f)) + 8f
+        totalHeight += (nameLines.size + noteLines.size + dosageLines.size + beLines.size) * rowStep + (itemSavingsLine * (if (is58) 22f else 26f)) + 8f
     }
     totalHeight += 40f // Single divider
 
@@ -820,6 +827,24 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
             val noteLines = wrapItemNameByPixelWidth("$notePrefix${item.note}", colItemMaxW, paintText)
             noteLines.forEach { nLine ->
                 canvas.drawText(nLine, colItemX + 8f, currentY + 20f, paintText)
+                currentY += rowStep
+            }
+        }
+        if (!item.dosageSchedule.isNullOrBlank()) {
+            val dosagePrefix = if (isBn) "• সেবনবিধি: " else "• Dosage: "
+            val dosageLines = wrapItemNameByPixelWidth("$dosagePrefix${item.dosageSchedule}", colItemMaxW, paintText)
+            dosageLines.forEach { dLine ->
+                canvas.drawText(dLine, colItemX + 8f, currentY + 20f, paintText)
+                currentY += rowStep
+            }
+        }
+        if (!item.batchNumber.isNullOrBlank() || !item.expiryDate.isNullOrBlank()) {
+            val bStr = item.batchNumber?.let { if (isBn) "ব্যাচ: $it" else "Batch: $it" } ?: ""
+            val eStr = item.expiryDate?.let { if (isBn) "মেয়াদ: $it" else "Exp: $it" } ?: ""
+            val beStr = listOf(bStr, eStr).filter { it.isNotBlank() }.joinToString(" • ")
+            val beLines = wrapItemNameByPixelWidth("• $beStr", colItemMaxW, paintText)
+            beLines.forEach { beLine ->
+                canvas.drawText(beLine, colItemX + 8f, currentY + 20f, paintText)
                 currentY += rowStep
             }
         }

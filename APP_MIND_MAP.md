@@ -3437,12 +3437,23 @@ mindmap
   - Replaced all legacy DIMS naming and references across code, database schemas, scripts, and documentation with clean `techyfi_pos_meds` nomenclature.
 - **Symmetrical Bilingual Localization**:
   - Added 1-to-1 English and Bengali string resources in `res/values/strings.xml` and `res/values-bn/strings.xml`.
-- **R8 Minification & Deliverable APK**:
-  - Assembled with full R8 optimization and shrinking into `Techyfi-POS-Meds-Final-V25-10-2026.apk` in the project root directory.
+### Release Final-V25-10-2026-Phase2: Multi-Batch FEFO Inventory, Quarantine & Patient Safety (Version 2.8.04-Final-V25-10-2026, Build Final-V25-10-2026, versionCode 220989)
+- **Multi-Batch FEFO Inventory Architecture (`ProductBatch.kt`, `ProductBatchDao.kt`)**:
+  - Independent `product_batches` Room entity tracking unique batch numbers, expiry dates, stock quantities, manufacturing dates, purchase costs, and MRP per batch.
+  - Automatic FEFO (First-Expiry-First-Out) stock sorting ensuring medicines nearing expiration are prioritized for counter sale.
+  - Multi-unit batch stock deduction (Pcs/Strip/Box) aligned with base tablet/capsule counts.
+- **Regulatory Quarantine & DGDA Recall System (`MedicineBatchesDialog.kt`, `QuarantineManagementDialog.kt`)**:
+  - Dedicated quarantine state (`isQuarantined = true`) with structured regulatory reasons (`মেয়াদোত্তীর্ণ` / Expired, `DGDA প্রত্যাহারের নির্দেশ` / DGDA Recall, `ক্ষতিগ্রস্ত` / Damaged, `কোম্পানি ফেরত` / Return Pending).
+  - Quarantined batches are immediately excluded from active selling stock and blocked at checkout.
+  - Comprehensive quarantine management hub with batch status filtering and 1-tap supplier return integration.
+- **Enhanced Thermal Receipt & Patient Safety (`BillPdfGenerator.kt`)**:
+  - Full thermal receipt bitmap rendering of patient dosage instructions (`• সেবনবিধি: ১+০+১ (খাওয়ার পর)`) directly below medicine name.
+  - Thermal printing of medicine batch numbers and expiration dates (`• ব্যাচ: BX... • মেয়াদ: YYYY-MM-DD`).
+  - Seamless support for 58mm & 80mm thermal printers, raw ESC/POS, and Sunmi built-in POS terminals.
 
 ## Maintenance note
 
-Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS Meds/`.
 
 
 
