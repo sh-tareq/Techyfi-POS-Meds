@@ -1228,9 +1228,23 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     private val _doctorBmdc = MutableStateFlow("")
     val doctorBmdc: StateFlow<String> = _doctorBmdc.asStateFlow()
 
+    private val _prescriptionImageUri = MutableStateFlow<String?>(null)
+    val prescriptionImageUri: StateFlow<String?> = _prescriptionImageUri.asStateFlow()
+
+    private val _isEmergencyOtcOverride = MutableStateFlow(false)
+    val isEmergencyOtcOverride: StateFlow<Boolean> = _isEmergencyOtcOverride.asStateFlow()
+
     fun setDoctorDetails(name: String, bmdc: String) {
         _doctorName.value = name
         _doctorBmdc.value = bmdc
+    }
+
+    fun setPrescriptionImageUri(uri: String?) {
+        _prescriptionImageUri.value = uri
+    }
+
+    fun setEmergencyOtcOverride(override: Boolean) {
+        _isEmergencyOtcOverride.value = override
     }
 
     fun setItemUnitType(product: Product, unitType: String) {
@@ -1686,6 +1700,10 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _resolvedCustomer.value = null
         _customerSuggestions.value = emptyList()
         _isAutoFilledName.value = false
+        _doctorName.value = ""
+        _doctorBmdc.value = ""
+        _prescriptionImageUri.value = null
+        _isEmergencyOtcOverride.value = false
         persistCartSnapshot(emptyList())
     }
 
@@ -1756,7 +1774,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 appliedVoucherCode = redeemedVoucher.value?.code,
                 isTaxInclusive = settings.taxInclusive,
                 doctorName = _doctorName.value.takeIf { it.isNotBlank() },
-                doctorBmdcReg = _doctorBmdc.value.takeIf { it.isNotBlank() }
+                doctorBmdcReg = _doctorBmdc.value.takeIf { it.isNotBlank() },
+                prescriptionImageUri = _prescriptionImageUri.value,
+                isEmergencyOtcOverride = _isEmergencyOtcOverride.value
             )
 
             clearCart()

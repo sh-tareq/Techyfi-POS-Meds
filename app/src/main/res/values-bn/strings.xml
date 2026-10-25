@@ -3498,4 +3498,18 @@
     <string name="settings_field_pharmacist_reg">ফার্মাসিস্ট রেজিস্ট্রেশন নং</string>
     <string name="settings_show_drug_license_receipt">রসিদে ড্রাগ লাইসেন্স প্রদর্শন</string>
     <string name="settings_show_drug_license_receipt_desc">থার্মাল রসিদে ড্রাগ লাইসেন্স ও ফার্মাসিস্ট নিবন্ধন নম্বর প্রিন্ট করুন</string>
+    <string name="settings_enforce_antibiotic_doctor">অ্যান্টিবায়োটিকে ডাক্তারের তথ্য বাধ্যতামূলক</string>
+    <string name="settings_enforce_antibiotic_doctor_desc">অ্যান্টিবায়োটিক বিক্রির জন্য ডাক্তারের নাম ও বিএমডিসি রেজি. নং বাধ্যতামূলক করুন (ডিজিডিএ নিয়ম)</string>
+    <string name="cart_reason_antibiotic_doctor_required">অ্যান্টিবায়োটিক বিক্রির জন্য ডাক্তারের নাম ও বিএমডিসি নং প্রদান করুন অথবা জরুরি ওভাররাইড নির্বাচন করুন।</string>
+    <string name="emergency_otc_override_label">জরুরি / ওটিসি ডিসপেন্সিং ওভাররাইড</string>
+    <string name="emergency_otc_override_desc">জরুরি প্রয়োজনে বা শারীরিক প্রেসক্রিপশন ছাড়া দায়িত্বশীল ফার্মাসিস্ট মূল্যায়নে বিক্রয়</string>
+    <string name="prescription_attach_button">প্রেসক্রিপশন ছবি তুলুন</string>
+    <string name="prescription_attached_badge">প্রেসক্রিপশন সংযুক্ত</string>
+    <string name="prescription_view_title">প্রেসক্রিপশনের ছবি</string>
+    <string name="prescription_remove_confirm">সংযুক্ত প্রেসক্রিপশন ছবি কি মুছে ফেলতে চান?</string>
+    <string name="sales_report_tab_antibiotic_register">অ্যান্টিবায়োটিক রেজিস্টার</string>
+    <string name="antibiotic_register_title">ডিজিডিএ অ্যান্টিবায়োটিক ডিসপেন্সিং রেজিস্টার</string>
+    <string name="antibiotic_register_desc">সরকারি নির্দেশনা অনুযায়ী অ্যান্টিবায়োটিক বিক্রয়, রোগী ও প্রেসক্রিপশনকারী ডাক্তারের রেজিস্টার খাতা</string>
+    <string name="antibiotic_register_empty">নির্বাচিত সময়ে কোনো অ্যান্টিবায়োটিক ওষুধ বিক্রয় হয়নি</string>
+    <string name="antibiotic_register_export_csv">রেজিস্টার এক্সপোর্ট (CSV)</string>
 </resources>

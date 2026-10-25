@@ -1167,7 +1167,9 @@ class DataRepository(
         nonTaxableBarcodes: Set<String> = emptySet(),
         isTaxInclusive: Boolean = false,
         doctorName: String? = null,
-        doctorBmdcReg: String? = null
+        doctorBmdcReg: String? = null,
+        prescriptionImageUri: String? = null,
+        isEmergencyOtcOverride: Boolean = false
     ): Long = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.SALES_SELL)
         val computedCartHash = com.techyfiposmeds.ui.viewmodel.CartViewModel.computeCartHashFromTriples(cartItemsWithNotes)
@@ -1472,8 +1474,9 @@ class DataRepository(
                 voucherCode = finalVoucherCode,
                 voucherAmount = finalVoucherAmount,
                 customerCreditAmount = finalCustomerCreditAmount,
-                doctorName = doctorName,
-                doctorBmdcReg = doctorBmdcReg
+                doctorName = if (isEmergencyOtcOverride && doctorName.isNullOrBlank()) "Emergency / OTC Override" else doctorName,
+                doctorBmdcReg = if (isEmergencyOtcOverride && doctorBmdcReg.isNullOrBlank()) "OTC-OVERRIDE" else doctorBmdcReg,
+                prescriptionImageUri = prescriptionImageUri
             )
             val saleId = try {
                 saleDao.insertSale(sale)
@@ -1514,7 +1517,8 @@ class DataRepository(
                     dosageSchedule = note?.takeIf { it.contains("সেবনবিধি:") }?.substringAfter("সেবনবিধি:")?.substringBefore("•")?.trim(),
                     batchNumber = product.batchNumber,
                     expiryDate = product.expiryDate,
-                    isAntibiotic = product.isAntibiotic
+                    isAntibiotic = product.isAntibiotic,
+                    genericName = product.genericName
                 )
             }
             try {

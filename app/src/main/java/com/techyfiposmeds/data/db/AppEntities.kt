@@ -276,7 +276,8 @@ data class Sale(
     val voucherAmount: Double = 0.0,
     val customerCreditAmount: Double = 0.0,
     val doctorName: String? = null,
-    val doctorBmdcReg: String? = null
+    val doctorBmdcReg: String? = null,
+    val prescriptionImageUri: String? = null
 )
 
 fun Sale.getFormattedPaymentMethod(): String {
@@ -345,7 +346,8 @@ data class SaleItem(
     val dosageSchedule: String? = null, // e.g. "১+০+১ (খাওয়ার পর)"
     val batchNumber: String? = null,
     val expiryDate: String? = null,
-    val isAntibiotic: Boolean = false
+    val isAntibiotic: Boolean = false,
+    val genericName: String? = null
 )
 
 @Entity(tableName = "customer_dues")

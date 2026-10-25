@@ -3496,6 +3496,20 @@
     <string name="settings_field_pharmacist_reg">Pharmacist Reg. No. (PCB)</string>
     <string name="settings_show_drug_license_receipt">Show Drug License on Receipts</string>
     <string name="settings_show_drug_license_receipt_desc">Print DGDA license and pharmacist registration numbers on thermal slips</string>
+    <string name="settings_enforce_antibiotic_doctor">Enforce Doctor Details for Antibiotics</string>
+    <string name="settings_enforce_antibiotic_doctor_desc">Require doctor name &amp; BMDC registration number before selling antibiotics (DGDA compliance)</string>
+    <string name="cart_reason_antibiotic_doctor_required">Doctor name and BMDC number are required for antibiotics, or select emergency override.</string>
+    <string name="emergency_otc_override_label">Emergency / OTC Dispensing Override</string>
+    <string name="emergency_otc_override_desc">Dispensing without physical paper prescription under pharmacist emergency assessment</string>
+    <string name="prescription_attach_button">Attach Prescription Photo</string>
+    <string name="prescription_attached_badge">Prescription Attached</string>
+    <string name="prescription_view_title">Prescription Image</string>
+    <string name="prescription_remove_confirm">Remove prescription photo?</string>
+    <string name="sales_report_tab_antibiotic_register">Antibiotic Register</string>
+    <string name="antibiotic_register_title">DGDA Antibiotic Dispensing Register</string>
+    <string name="antibiotic_register_desc">Mandatory regulatory log of all dispensed antibiotics with doctor and patient information</string>
+    <string name="antibiotic_register_empty">No antibiotic medicines dispensed in this period</string>
+    <string name="antibiotic_register_export_csv">Export Register (CSV)</string>
 </resources>
 
 

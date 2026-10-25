@@ -353,8 +353,16 @@ fun CartScreen(
     val hasAntibioticInCart by cartViewModel.hasAntibioticInCart.collectAsStateWithLifecycle()
     val doctorName by cartViewModel.doctorName.collectAsStateWithLifecycle()
     val doctorBmdc by cartViewModel.doctorBmdc.collectAsStateWithLifecycle()
+    val prescriptionImageUri by cartViewModel.prescriptionImageUri.collectAsStateWithLifecycle()
+    val isEmergencyOtcOverride by cartViewModel.isEmergencyOtcOverride.collectAsStateWithLifecycle()
     val defaultCashier = invoiceSettingsData.cashierName.ifBlank { cashierName.ifBlank { stringResource(R.string.default_cashier_admin) } }
     val currentDisplayCashier = checkoutCashierName.ifBlank { defaultCashier }
+
+    val rxImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        cartViewModel.setPrescriptionImageUri(uri?.toString())
+    }
 
     // Contact picker launcher
     val contactPickerLauncher = rememberLauncherForActivityResult(
@@ -1146,6 +1154,101 @@ fun CartScreen(
                                         focusedBorderColor = Color(0xFFE11D48),
                                         unfocusedBorderColor = Color(0xFFFDA4AF)
                                     )
+                                )
+                            }
+
+                            // Rx Attachment & Emergency Override
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (prescriptionImageUri != null) {
+                                    Surface(
+                                        color = Color(0xFFFEE2E2),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, Color(0xFFFDA4AF))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text("📄", fontSize = 12.sp)
+                                            Text(
+                                                text = stringResource(R.string.prescription_attached_badge),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFF9F1239)
+                                            )
+                                            IconButton(
+                                                onClick = { cartViewModel.setPrescriptionImageUri(null) },
+                                                modifier = Modifier.size(20.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Remove Rx Photo",
+                                                    tint = Color(0xFFE11D48),
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = { rxImagePickerLauncher.launch("image/*") },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, Color(0xFFE11D48).copy(alpha = 0.5f))
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CameraAlt,
+                                            contentDescription = null,
+                                            tint = Color(0xFFE11D48),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = stringResource(R.string.prescription_attach_button),
+                                            fontSize = 11.sp,
+                                            color = Color(0xFFE11D48)
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Checkbox(
+                                        checked = isEmergencyOtcOverride,
+                                        onCheckedChange = { cartViewModel.setEmergencyOtcOverride(it) },
+                                        colors = CheckboxDefaults.colors(
+                                            checkedColor = Color(0xFFE11D48),
+                                            checkmarkColor = Color.White
+                                        ),
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.emergency_otc_override_label),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF9F1239)
+                                    )
+                                }
+                            }
+
+                            val isAntibioticMissingDoctor = invoiceSettingsData.enforceAntibioticDoctor &&
+                                    doctorName.isBlank() &&
+                                    prescriptionImageUri.isNullOrBlank() &&
+                                    !isEmergencyOtcOverride
+
+                            if (isAntibioticMissingDoctor) {
+                                Text(
+                                    text = "⚠️ " + stringResource(R.string.cart_reason_antibiotic_doctor_required),
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFBE123C)
                                 )
                             }
                         }
@@ -2762,8 +2865,13 @@ fun CartScreen(
                             val expMillis = parseExpiryDateToMillis(item.product.expiryDate)
                             expMillis != null && expMillis < System.currentTimeMillis()
                         }
+                        val isAntibioticMissingDoctor = hasAntibioticInCart &&
+                            invoiceSettingsData.enforceAntibioticDoctor &&
+                            doctorName.isBlank() &&
+                            prescriptionImageUri.isNullOrBlank() &&
+                            !isEmergencyOtcOverride
                         val isTotalValid = grandTotal > 0.0
-                        val isCheckoutEnabled = cartItems.isNotEmpty() && !hasExpiredItem && isTotalValid && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
+                        val isCheckoutEnabled = cartItems.isNotEmpty() && !hasExpiredItem && !isAntibioticMissingDoctor && isTotalValid && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
 
                         if (hasExpiredItem) {
                             Surface(
@@ -2801,6 +2909,7 @@ fun CartScreen(
                         } else if (!isCheckoutEnabled) {
                             val reason = when {
                                 hasExpiredItem -> stringResource(R.string.cart_reason_expired_medicine_blocked)
+                                isAntibioticMissingDoctor -> stringResource(R.string.cart_reason_antibiotic_doctor_required)
                                 !isTotalValid -> stringResource(R.string.cart_reason_total_zero)
                                 !isDueValid -> stringResource(R.string.cart_reason_due_details_required)
                                 isSplitPayment && !isNonCashWithinBounds -> stringResource(R.string.cart_reason_split_non_cash_overtender)
@@ -2843,6 +2952,10 @@ fun CartScreen(
                                 if (!isCompletingSale) {
                                     if (hasExpiredItem) {
                                         Toast.makeText(context, context.getString(R.string.cart_reason_expired_medicine_blocked), Toast.LENGTH_LONG).show()
+                                        return@Button
+                                    }
+                                    if (isAntibioticMissingDoctor) {
+                                        Toast.makeText(context, context.getString(R.string.cart_reason_antibiotic_doctor_required), Toast.LENGTH_LONG).show()
                                         return@Button
                                     }
                                     val newDue = currentPaymentBreakdown.dueAmount

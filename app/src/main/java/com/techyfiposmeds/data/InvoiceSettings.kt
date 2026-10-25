@@ -115,6 +115,7 @@ data class InvoiceSettingsData(
     val drugLicenseNumber: String = "",
     val pharmacistRegNumber: String = "",
     val showDrugLicense: Boolean = true,
+    val enforceAntibioticDoctor: Boolean = true,
     val customInfoBlocks: List<CustomInfoBlock> = listOf(
         CustomInfoBlock(
             id = "return-policy",
@@ -269,6 +270,7 @@ data class InvoiceSettingsData(
             put("drugLicenseNumber", drugLicenseNumber)
             put("pharmacistRegNumber", pharmacistRegNumber)
             put("showDrugLicense", showDrugLicense)
+            put("enforceAntibioticDoctor", enforceAntibioticDoctor)
 
             val blocksArr = JSONArray()
             customInfoBlocks.forEach { blocksArr.put(it.toJsonObject()) }
@@ -412,6 +414,7 @@ data class InvoiceSettingsData(
                     drugLicenseNumber = json.optString("drugLicenseNumber", ""),
                     pharmacistRegNumber = json.optString("pharmacistRegNumber", ""),
                     showDrugLicense = json.optBoolean("showDrugLicense", true),
+                    enforceAntibioticDoctor = json.optBoolean("enforceAntibioticDoctor", true),
                     customInfoBlocks = if (blocksList.isNotEmpty()) blocksList else InvoiceSettingsData().customInfoBlocks
                 )
             } catch (e: Exception) {

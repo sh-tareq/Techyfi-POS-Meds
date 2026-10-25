@@ -5693,10 +5693,10 @@ fun MedicineItemRow(
                     }
                 }
 
-                // Action Buttons: Substitutes + Clinical + Quick Add
+                // Action Buttons: Substitutes + Clinical + Batches + Quick Add
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     // Substitute Finder Button
                     Surface(
@@ -5709,10 +5709,12 @@ fun MedicineItemRow(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            modifier = Modifier.padding(horizontal = 8.dp)
+                            modifier = Modifier.padding(horizontal = if (isTablet) 8.dp else 6.dp)
                         ) {
-                            Icon(Icons.Default.Repeat, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(13.dp))
-                            Text("বিকল্প", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                            Icon(Icons.Default.Repeat, contentDescription = "বিকল্প", tint = Color(0xFF2563EB), modifier = Modifier.size(13.dp))
+                            if (isTablet) {
+                                Text("বিকল্প", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                            }
                         }
                     }
 
@@ -5727,10 +5729,12 @@ fun MedicineItemRow(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            modifier = Modifier.padding(horizontal = 8.dp)
+                            modifier = Modifier.padding(horizontal = if (isTablet) 8.dp else 6.dp)
                         ) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFF7C3AED), modifier = Modifier.size(13.dp))
-                            Text("তথ্য", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7C3AED))
+                            Icon(Icons.Default.Info, contentDescription = "তথ্য", tint = Color(0xFF7C3AED), modifier = Modifier.size(13.dp))
+                            if (isTablet) {
+                                Text("তথ্য", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7C3AED))
+                            }
                         }
                     }
 
@@ -5745,10 +5749,12 @@ fun MedicineItemRow(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            modifier = Modifier.padding(horizontal = 8.dp)
+                            modifier = Modifier.padding(horizontal = if (isTablet) 8.dp else 6.dp)
                         ) {
                             Text("🏷️", fontSize = 11.sp)
-                            Text("ব্যাচ", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                            if (isTablet) {
+                                Text("ব্যাচ", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                            }
                         }
                     }
 

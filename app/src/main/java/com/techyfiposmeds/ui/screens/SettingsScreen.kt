@@ -4670,6 +4670,14 @@ private fun ReceiptLayoutSettings(
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(stringResource(R.string.settings_enforce_antibiotic_doctor), fontSize = 13.sp)
+                    Text(stringResource(R.string.settings_enforce_antibiotic_doctor_desc), fontSize = 11.sp, color = Color.Gray)
+                }
+                Switch(checked = currentSettings.enforceAntibioticDoctor, onCheckedChange = { onSettingsChanged(currentSettings.copy(enforceAntibioticDoctor = it)) })
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.settings_show_discount_line), fontSize = 13.sp)
                 Switch(checked = currentSettings.showDiscount, onCheckedChange = { onSettingsChanged(currentSettings.copy(showDiscount = it)) })
             }
