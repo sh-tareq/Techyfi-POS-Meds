@@ -110,6 +110,7 @@ class DataRepository(
     private val storeCreditVoucherDao = database.storeCreditVoucherDao()
     private val storeCreditLedgerDao = database.storeCreditLedgerDao()
     private val medicineBatchDao = database.medicineBatchDao()
+    private val prescribingDoctorDao = database.prescribingDoctorDao()
     val medicineRepository = MedicineRepository.getInstance(context)
 
     init {
@@ -6584,6 +6585,28 @@ class DataRepository(
                 ))
             }
         }
+    }
+
+    val allPrescribingDoctors: kotlinx.coroutines.flow.Flow<List<PrescribingDoctor>> = prescribingDoctorDao.getAllActiveDoctors()
+    val topPrescribingDoctors: kotlinx.coroutines.flow.Flow<List<PrescribingDoctor>> = prescribingDoctorDao.getTopPrescribingDoctors(6)
+
+    fun searchDoctors(query: String): kotlinx.coroutines.flow.Flow<List<PrescribingDoctor>> = prescribingDoctorDao.searchDoctors(query)
+
+    suspend fun upsertDoctor(doctor: PrescribingDoctor): Long = withContext(Dispatchers.IO) {
+        if (doctor.id != 0L) {
+            prescribingDoctorDao.updateDoctor(doctor)
+            doctor.id
+        } else {
+            prescribingDoctorDao.insertDoctor(doctor)
+        }
+    }
+
+    suspend fun deleteDoctor(doctor: PrescribingDoctor) = withContext(Dispatchers.IO) {
+        prescribingDoctorDao.deleteDoctor(doctor)
+    }
+
+    suspend fun recordPrescriptionUsage(name: String, bmdc: String, degrees: String = "", clinic: String = "", phone: String = "") = withContext(Dispatchers.IO) {
+        prescribingDoctorDao.recordPrescription(name, bmdc, degrees, clinic, phone)
     }
 
     private fun getTierRank(tier: String?): Int = when (tier?.lowercase(java.util.Locale.ROOT)) {

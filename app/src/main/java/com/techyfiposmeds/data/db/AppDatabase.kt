@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.Dispatchers
 
-const val APP_DATABASE_VERSION = 41
+const val APP_DATABASE_VERSION = 42
 
 /**
  * Keeps every migration compatible with both Room database backends. Room calls
@@ -539,6 +539,37 @@ val MIGRATION_40_41 = sqlMigration(
     "ALTER TABLE `sale_items` ADD COLUMN `genericName` TEXT"
 )
 
+val MIGRATION_41_42 = sqlMigration(
+    41, 42,
+    """
+    CREATE TABLE IF NOT EXISTS `prescribing_doctors` (
+        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        `name` TEXT NOT NULL,
+        `bmdcRegNo` TEXT NOT NULL,
+        `specialty` TEXT NOT NULL DEFAULT '',
+        `degrees` TEXT NOT NULL DEFAULT '',
+        `clinicOrHospital` TEXT NOT NULL DEFAULT '',
+        `phone` TEXT NOT NULL DEFAULT '',
+        `prescriptionCount` INTEGER NOT NULL DEFAULT 1,
+        `lastPrescribedAt` INTEGER NOT NULL DEFAULT 0,
+        `isActive` INTEGER NOT NULL DEFAULT 1,
+        `createdAt` INTEGER NOT NULL DEFAULT 0
+    )
+    """.trimIndent(),
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_prescribing_doctors_bmdcRegNo` ON `prescribing_doctors` (`bmdcRegNo`)",
+    "CREATE INDEX IF NOT EXISTS `index_prescribing_doctors_name` ON `prescribing_doctors` (`name`)",
+    "CREATE INDEX IF NOT EXISTS `index_prescribing_doctors_prescriptionCount` ON `prescribing_doctors` (`prescriptionCount`)",
+    """
+    INSERT OR IGNORE INTO `prescribing_doctors` (`name`, `bmdcRegNo`, `specialty`, `degrees`, `clinicOrHospital`, `phone`, `prescriptionCount`, `lastPrescribedAt`, `isActive`, `createdAt`)
+    VALUES 
+    ('ডা. মোঃ রফিকুল ইসলাম', 'A-34821', 'Medicine', 'MBBS, FCPS (Medicine)', 'ঢাকা মেডিকেল কলেজ হাসপাতাল', '01711000001', 12, 1729800000000, 1, 1729800000000),
+    ('ডা. ফারহানা আক্তার', 'A-49215', 'Gynecology & Obs', 'MBBS, DGO, MCPS', 'বঙ্গবন্ধু শেখ মুজিব মেডিকেল বিশ্ববিদ্যালয় (BSMMU)', '01819000002', 8, 1729850000000, 1, 1729850000000),
+    ('ডা. তানভীর আহমেদ', 'A-56102', 'Pediatrics (শিশু বিশেষজ্ঞ)', 'MBBS, DCH, MD (Child Health)', 'ঢাকা শিশু হাসপাতাল', '01912000003', 15, 1729900000000, 1, 1729900000000),
+    ('ডা. সৈয়দ আশরাফুল হক', 'A-28940', 'Cardiology (হৃদরোগ বিশেষজ্ঞ)', 'MBBS, MD (Cardiology)', 'জাতীয় হৃদরোগ ইনস্টিটিউট (NICVD)', '01613000004', 6, 1729750000000, 1, 1729750000000),
+    ('ডা. নাজমুন নাহার', 'A-61783', 'General Physician', 'MBBS, PGT', 'পপুলার ডায়াগনস্টিক সেন্টার', '01715000005', 10, 1729920000000, 1, 1729920000000)
+    """.trimIndent()
+)
+
 
 @Database(
     entities = [
@@ -569,7 +600,8 @@ val MIGRATION_40_41 = sqlMigration(
         ExpenseAuditLog::class,
         StoreCreditVoucher::class,
         StoreCreditLedgerEntry::class,
-        MedicineBatch::class
+        MedicineBatch::class,
+        PrescribingDoctor::class
     ],
     version = APP_DATABASE_VERSION,
     exportSchema = true
@@ -597,6 +629,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun storeCreditVoucherDao(): StoreCreditVoucherDao
     abstract fun storeCreditLedgerDao(): StoreCreditLedgerDao
     abstract fun medicineBatchDao(): MedicineBatchDao
+    abstract fun prescribingDoctorDao(): PrescribingDoctorDao
 
     companion object {
         @Volatile
@@ -612,7 +645,8 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
             MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33,
             MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37,
-            MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40, MIGRATION_40_41
+            MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40, MIGRATION_40_41,
+            MIGRATION_41_42
         )
 
         fun getDatabase(context: Context): AppDatabase {

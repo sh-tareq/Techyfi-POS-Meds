@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-25 (app version 2.8.04-Final-V25-10-2026, build `Techyfi-POS-Meds-Final-V25-10-2026.apk`; versionCode 220989; DB schema version 41; package `com.techyfiposmeds`)
+Last updated: 2026-10-26 (app version 2.8.06-Final-V26-10-2026, build `Techyfi-POS-Meds-Final-V26-10-2026-Phase4.apk`; versionCode 220991; DB schema version 42; package `com.techyfiposmeds`)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3469,6 +3469,26 @@ mindmap
 - **Search Debouncing & Touch Target Standardization (`POSViewModels.kt`, `ProductsScreen.kt`)**:
   - 180ms coroutine debouncing in `ProductsViewModel` for instant, fluid catalog filtering without search stutter or excessive database queries.
   - Material 3 touch target compliance standardizing camera viewfinder, clinical substitute buttons, and grid action targets to >= 48dp (`minimumInteractiveComponentSize()`).
+
+### Release Final-V26-10-2026-Phase4: Prescribing Doctor Registry, Sticky Dosage Labels & DGDA MRP Guard (Version 2.8.06-Final-V26-10-2026, Build Final-V26-10-2026-Phase4, versionCode 220991, DB Schema 42)
+- **Prescribing Doctor Registry (`PrescribingDoctor` Entity, `PrescribingDoctorDao`, `DoctorDirectoryDialog.kt`)**:
+  - Independent Room database entity `prescribing_doctors` tracking doctor full name, BMDC registration number, qualifications/degrees, clinical specialty, chamber/hospital affiliation, phone number, prescription volume count, and active status.
+  - Seamless Room migration `MIGRATION_41_42` auto-seeding prominent verified Dhaka physicians and medical institutions.
+  - Interactive Doctor Directory Hub accessible via Store Operations Sheet (`MoreOperationsHubSheet`) and Cart screen with real-time search, BMDC verification, add/edit sheet, and prescription history tracking.
+- **50mm x 30mm Miniature Sticky Dosage Packet Label Generator (`DosageLabelBitmapGenerator.kt`, `DosageLabelDialog.kt`)**:
+  - Generates 203 DPI (384x240 dots) high-contrast thermal adhesive label bitmaps designed specifically for medicine packet envelopes, strips, and bottle surfaces.
+  - Renders pharmacy header, patient name, medicine trade name, generic composition, dosage schedule (e.g. `১ + ০ + ১`), administration instructions (`খাওয়ার পর` / `খাওয়ার আগে` / `খাওয়ার সাথে`), batch number, and expiry date.
+  - Live preview modal in Cart items with dosage preset chips, food timing selector, copy count stepper, direct thermal printing via ESC/POS / Sunmi, and Android system image sharing (`FileProvider`).
+- **Doctor Autocomplete & Quick-Select in Cart (`CartScreen.kt`, `CartViewModel`)**:
+  - Auto-suggests and quick-selects registered doctors directly within the Cart prescription metadata section.
+  - Top 5 most-prescribing doctors shown as 1-tap quick chips.
+  - Auto-increments doctor prescription count (`recordPrescriptionUsage`) upon successful checkout.
+- **DGDA Maximum Retail Price (MRP) Lock Compliance Guard (`CartScreen.kt`, `CartViewModel`)**:
+  - Validates selling price against official DGDA MRP ceiling price for all cart items.
+  - When item price violates legal MRP (`item.unitPrice > item.mrp`), checkout button is locked with red alert badge (`dgda_mrp_exceeded_title`) preventing non-compliant dispensing.
+- **Shelf / Rack Physical Location Quick-Filter (`ProductsScreen.kt`, `ProductsViewModel`)**:
+  - Dynamic horizontal chip bar showing all unique physical pharmacy shelf/rack locations (`📍 A-01 (14)`, `📍 B-03 (8)`).
+  - Enables instant 1-tap filtering for rapid counter retrieval during peak customer traffic.
 
 ## Maintenance note
 

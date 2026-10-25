@@ -313,6 +313,8 @@ fun ProductsScreen(
     val isSearchingMedicines by productsViewModel.isSearchingMedicines.collectAsStateWithLifecycle()
     val selectedDosageForm by productsViewModel.selectedDosageForm.collectAsStateWithLifecycle()
     val filterAntibioticOnly by productsViewModel.filterAntibioticOnly.collectAsStateWithLifecycle()
+    var selectedShelfLocation by rememberSaveable { mutableStateOf<String?>(null) }
+    val allRacksAndShelves by productsViewModel.allRacksAndShelves.collectAsStateWithLifecycle()
 
     var substituteTargetMedicine by remember { mutableStateOf<MedicineItem?>(null) }
     var substituteList by remember { mutableStateOf<List<MedicineItem>>(emptyList()) }
@@ -448,6 +450,7 @@ fun ProductsScreen(
         productsList.map { it.category.trim() }.filter { it.isNotBlank() }.distinct().sorted()
     }
     val activeFilterCount = (if (selectedCategory != null) 1 else 0) +
+        (if (selectedShelfLocation != null) 1 else 0) +
         (if (stockFilter != ProductStockFilter.ALL) 1 else 0) +
         (if (highMarginOnly) 1 else 0) +
         (if (dateFilter != ProductDateFilter.ALL) 1 else 0) +
@@ -476,6 +479,9 @@ fun ProductsScreen(
             .asSequence()
             .filter { product ->
                 selectedCategory == null || product.category.trim().equals(selectedCategory?.trim(), ignoreCase = true)
+            }
+            .filter { product ->
+                selectedShelfLocation == null || product.shelfLocation?.trim().equals(selectedShelfLocation?.trim(), ignoreCase = true)
             }
             .filter { product ->
                 if (!highMarginOnly || !canViewCosts) true
@@ -2439,6 +2445,53 @@ fun ProductsScreen(
                                         fontSize = 12.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 📍 Shelf / Rack Location Chips
+                    if (allRacksAndShelves.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val isAllRacksSelected = selectedShelfLocation == null
+                            Surface(
+                                onClick = { selectedShelfLocation = null },
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isAllRacksSelected) Color(0xFF0D9488) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = if (isAllRacksSelected) BorderStroke(1.dp, Color(0xFF0F766E)) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.shelf_rack_filter_all),
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isAllRacksSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isAllRacksSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                                )
+                            }
+
+                            allRacksAndShelves.forEach { rack ->
+                                val isSelected = selectedShelfLocation == rack
+                                val count = allProductsList.count { it.shelfLocation?.trim().equals(rack, ignoreCase = true) }
+                                Surface(
+                                    onClick = { selectedShelfLocation = if (isSelected) null else rack },
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isSelected) Color(0xFF0D9488) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    border = if (isSelected) BorderStroke(1.dp, Color(0xFF0F766E)) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.shelf_rack_filter_chip, rack, count),
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
                                     )
                                 }
                             }

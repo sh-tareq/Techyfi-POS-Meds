@@ -487,6 +487,7 @@ fun MainNavigation() {
 
         var showMoreHubSheet by remember { mutableStateOf(false) }
         var showQuarantineManager by remember { mutableStateOf(false) }
+        var showDoctorDirectoryHub by remember { mutableStateOf(false) }
         var showUserDropdown by remember { mutableStateOf(false) }
         var showLogoutConfirmDialog by remember { mutableStateOf(false) }
         var unacknowledgedOwnerAlert by remember { mutableStateOf<com.techyfiposmeds.data.OwnerAuditEvent?>(null) }
@@ -664,6 +665,10 @@ fun MainNavigation() {
                     onNavigateToQuarantine = {
                         showMoreHubSheet = false
                         showQuarantineManager = true
+                    },
+                    onNavigateToDoctors = {
+                        showMoreHubSheet = false
+                        showDoctorDirectoryHub = true
                     }
                 )
             }
@@ -686,6 +691,17 @@ fun MainNavigation() {
                     onDisposeBatch = { id, qty, reason, notes ->
                         productsViewModel.disposeBatch(id, qty, reason, notes)
                     }
+                )
+            }
+
+            if (showDoctorDirectoryHub) {
+                val allDoctors by cartViewModel.allPrescribingDoctors.collectAsStateWithLifecycle()
+                DoctorDirectoryDialog(
+                    doctors = allDoctors,
+                    onDismiss = { showDoctorDirectoryHub = false },
+                    onSelectDoctor = null,
+                    onSaveDoctor = { cartViewModel.saveDoctorToRegistry(it) },
+                    onDeleteDoctor = { cartViewModel.deleteDoctorFromRegistry(it) }
                 )
             }
 
@@ -1691,6 +1707,7 @@ fun MoreOperationsHubSheet(
     onNavigateToLoyalty: () -> Unit,
     onNavigateToCustomers: () -> Unit,
     onNavigateToQuarantine: () -> Unit = {},
+    onNavigateToDoctors: () -> Unit = {},
     onLockOrLogout: () -> Unit = {},
     isOwner: Boolean,
     isSupervisor: Boolean = false,
@@ -1743,6 +1760,7 @@ fun MoreOperationsHubSheet(
                             onNavigateToLoyalty = onNavigateToLoyalty,
                             onNavigateToCustomers = onNavigateToCustomers,
                             onNavigateToQuarantine = onNavigateToQuarantine,
+                            onNavigateToDoctors = onNavigateToDoctors,
                             onLockOrLogout = onLockOrLogout,
                             isOwner = isOwner,
                             isSupervisor = isSupervisor,
@@ -1784,6 +1802,7 @@ fun MoreOperationsHubSheet(
                     onNavigateToLoyalty = onNavigateToLoyalty,
                     onNavigateToCustomers = onNavigateToCustomers,
                     onNavigateToQuarantine = onNavigateToQuarantine,
+                    onNavigateToDoctors = onNavigateToDoctors,
                     onLockOrLogout = onLockOrLogout,
                     isOwner = isOwner,
                     isSupervisor = isSupervisor,
@@ -1812,6 +1831,7 @@ private fun MoreOperationsHubContent(
     onNavigateToLoyalty: () -> Unit,
     onNavigateToCustomers: () -> Unit,
     onNavigateToQuarantine: () -> Unit = {},
+    onNavigateToDoctors: () -> Unit = {},
     onLockOrLogout: () -> Unit = {},
     isOwner: Boolean,
     isSupervisor: Boolean = false,
@@ -1903,6 +1923,19 @@ private fun MoreOperationsHubContent(
                 category = OperationCategory.MANAGEMENT,
                 isLocked = false,
                 onClick = onNavigateToQuarantine
+            )
+        )
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.doctor_directory_hub_title),
+                subtitle = stringResource(R.string.doctor_directory_hub_subtitle),
+                navType = Nav3DType.CUSTOMERS,
+                badge = "BMDC",
+                badgeColor = Color(0xFFE11D48),
+                isSelected = false,
+                category = OperationCategory.MANAGEMENT,
+                isLocked = false,
+                onClick = onNavigateToDoctors
             )
         )
         add(

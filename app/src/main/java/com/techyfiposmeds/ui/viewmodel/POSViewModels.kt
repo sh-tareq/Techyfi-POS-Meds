@@ -1243,6 +1243,50 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _prescriptionImageUri.value = uri
     }
 
+    val allPrescribingDoctors: StateFlow<List<PrescribingDoctor>> = repository.allPrescribingDoctors
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val topPrescribingDoctors: StateFlow<List<PrescribingDoctor>> = repository.topPrescribingDoctors
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun selectDoctor(doctor: PrescribingDoctor) {
+        _doctorName.value = doctor.name
+        _doctorBmdc.value = doctor.bmdcRegNo
+    }
+
+    fun saveDoctorToRegistry(doctor: PrescribingDoctor) {
+        viewModelScope.launch {
+            repository.upsertDoctor(doctor)
+        }
+    }
+
+    fun deleteDoctorFromRegistry(doctor: PrescribingDoctor) {
+        viewModelScope.launch {
+            repository.deleteDoctor(doctor)
+        }
+    }
+
+    /**
+     * DGDA Maximum Retail Price (MRP) Lock Compliance Guard.
+     * Evaluates cart items to check if any item is priced higher than its official MRP ceiling.
+     * Selling above printed MRP is prohibited under the Bangladesh Drugs Act.
+     */
+    val itemsExceedingMrp: StateFlow<List<CartItem>> = combine(_cartItems, priceMode) { items, mode ->
+        items.filter { item ->
+            val charged = when (item.unitType.lowercase()) {
+                "strip" -> if (item.product.stripPrice > 0.0) item.product.stripPrice else effectivePrice(item.product, mode) * (if (item.product.stripSize > 0) item.product.stripSize else 10)
+                "box" -> if (item.product.packPrice > 0.0) item.product.packPrice else effectivePrice(item.product, mode) * 100.0
+                else -> effectivePrice(item.product, mode)
+            }
+            val legalMrp = when (item.unitType.lowercase()) {
+                "strip" -> if (item.product.stripPrice > 0.0) item.product.stripPrice else (if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice) * (if (item.product.stripSize > 0) item.product.stripSize else 10)
+                "box" -> if (item.product.packPrice > 0.0) item.product.packPrice else (if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice) * 100.0
+                else -> if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice
+            }
+            charged > (legalMrp + 0.05) // float tolerance
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     fun setEmergencyOtcOverride(override: Boolean) {
         _isEmergencyOtcOverride.value = override
     }
@@ -1779,6 +1823,16 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 isEmergencyOtcOverride = _isEmergencyOtcOverride.value
             )
 
+            val usedDocName = _doctorName.value.trim()
+            val usedDocBmdc = _doctorBmdc.value.trim()
+            if (usedDocName.isNotBlank()) {
+                try {
+                    repository.recordPrescriptionUsage(usedDocName, usedDocBmdc)
+                } catch (e: Exception) {
+                    android.util.Log.w("CartViewModel", "Failed to update doctor prescription count", e)
+                }
+            }
+
             clearCart()
             return@withLock saleId
         } finally {
@@ -2051,6 +2105,13 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
     val isProductsLoaded: StateFlow<Boolean> = repository.allProducts
         .map { true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val allRacksAndShelves: StateFlow<List<String>> = repository.allProducts.map { list ->
+        list.mapNotNull { it.shelfLocation?.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allAlerts: StateFlow<InventoryAlertsData> = allProducts.map { products ->
         val now = System.currentTimeMillis()

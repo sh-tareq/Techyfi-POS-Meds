@@ -356,6 +356,11 @@ fun CartScreen(
     val doctorBmdc by cartViewModel.doctorBmdc.collectAsStateWithLifecycle()
     val prescriptionImageUri by cartViewModel.prescriptionImageUri.collectAsStateWithLifecycle()
     val isEmergencyOtcOverride by cartViewModel.isEmergencyOtcOverride.collectAsStateWithLifecycle()
+    val topDoctors by cartViewModel.topPrescribingDoctors.collectAsStateWithLifecycle()
+    val allDoctors by cartViewModel.allPrescribingDoctors.collectAsStateWithLifecycle()
+    val itemsExceedingMrp by cartViewModel.itemsExceedingMrp.collectAsStateWithLifecycle()
+    var showDoctorDirectoryDialog by remember { mutableStateOf(false) }
+    var dosageLabelItem by remember { mutableStateOf<CartItem?>(null) }
     var isRefillReminderEnabled by remember { mutableStateOf(false) }
     var refillDays by remember { mutableIntStateOf(30) }
     var showRxViewerDialog by remember { mutableStateOf(false) }
@@ -1155,6 +1160,69 @@ fun CartScreen(
                                 }
                             }
 
+                            // Prescribing Doctor Header & Directory Shortcut
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "🩺 " + stringResource(R.string.prescribing_doctor_heading),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF9F1239)
+                                )
+                                Surface(
+                                    onClick = { showDoctorDirectoryDialog = true },
+                                    color = Color(0xFFE11D48).copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = BorderStroke(0.6.dp, Color(0xFFFDA4AF))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Text("📖", fontSize = 10.sp)
+                                        Text(
+                                            text = stringResource(R.string.doctor_directory_hub_title),
+                                            fontSize = 9.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFE11D48)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Quick Chips of Top Frequent Prescribers
+                            if (topDoctors.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    topDoctors.forEach { doc ->
+                                        val isSelected = doctorName == doc.name && doctorBmdc == doc.bmdcRegNo
+                                        Surface(
+                                            onClick = { cartViewModel.selectDoctor(doc) },
+                                            shape = RoundedCornerShape(999.dp),
+                                            color = if (isSelected) Color(0xFFE11D48) else Color(0xFFFFF1F2),
+                                            border = BorderStroke(0.8.dp, if (isSelected) Color(0xFFBE123C) else Color(0xFFFECACA))
+                                        ) {
+                                            Text(
+                                                text = "👨‍⚕️ ${doc.name.take(16)} (${doc.bmdcRegNo})",
+                                                fontSize = 9.5.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) Color.White else Color(0xFF9F1239),
+                                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1340,7 +1408,8 @@ fun CartScreen(
                             },
                             onEditNote = { editingNoteBarcode = item.product.barcode },
                             onUnitTypeChanged = { unit -> cartViewModel.setItemUnitType(item.product, unit) },
-                            onDosageScheduleChanged = { schedule -> cartViewModel.setItemDosageSchedule(item.product, schedule) }
+                            onDosageScheduleChanged = { schedule -> cartViewModel.setItemDosageSchedule(item.product, schedule) },
+                            onPrintDosageLabel = { dosageLabelItem = item }
                         )
                     }
                 }
@@ -2956,13 +3025,14 @@ fun CartScreen(
                             val expMillis = parseExpiryDateToMillis(item.product.expiryDate)
                             expMillis != null && expMillis < System.currentTimeMillis()
                         }
+                        val hasItemExceedingMrp = itemsExceedingMrp.isNotEmpty()
                         val isAntibioticMissingDoctor = hasAntibioticInCart &&
                             invoiceSettingsData.enforceAntibioticDoctor &&
                             doctorName.isBlank() &&
                             prescriptionImageUri.isNullOrBlank() &&
                             !isEmergencyOtcOverride
                         val isTotalValid = grandTotal > 0.0
-                        val isCheckoutEnabled = cartItems.isNotEmpty() && !hasExpiredItem && !isAntibioticMissingDoctor && isTotalValid && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
+                        val isCheckoutEnabled = cartItems.isNotEmpty() && !hasExpiredItem && !hasItemExceedingMrp && !isAntibioticMissingDoctor && isTotalValid && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
 
                         if (hasExpiredItem) {
                             Surface(
@@ -2995,11 +3065,44 @@ fun CartScreen(
                             }
                         }
 
+                        if (hasItemExceedingMrp) {
+                            Surface(
+                                color = Color(0xFFFEF3C7),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("⚠️", fontSize = 20.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.dgda_mrp_exceeded_title),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = Color(0xFFB45309)
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.dgda_mrp_exceeded_desc, itemsExceedingMrp.size),
+                                            fontSize = 10.5.sp,
+                                            color = Color(0xFF92400E)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         if (!canSell) {
                             Text(stringResource(R.string.perm_checkout_required, stringResource(R.string.perm_sales_sell_title)), color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
                         } else if (!isCheckoutEnabled) {
                             val reason = when {
                                 hasExpiredItem -> stringResource(R.string.cart_reason_expired_medicine_blocked)
+                                hasItemExceedingMrp -> stringResource(R.string.cart_reason_mrp_exceeded)
                                 isAntibioticMissingDoctor -> stringResource(R.string.cart_reason_antibiotic_doctor_required)
                                 !isTotalValid -> stringResource(R.string.cart_reason_total_zero)
                                 !isDueValid -> stringResource(R.string.cart_reason_due_details_required)
@@ -3129,6 +3232,31 @@ fun CartScreen(
         PrescriptionImageViewerDialog(imageUriString = prescriptionImageUri!!) {
             showRxViewerDialog = false
         }
+    }
+
+    if (showDoctorDirectoryDialog) {
+        DoctorDirectoryDialog(
+            doctors = allDoctors,
+            onDismiss = { showDoctorDirectoryDialog = false },
+            onSelectDoctor = { cartViewModel.selectDoctor(it) },
+            onSaveDoctor = { cartViewModel.saveDoctorToRegistry(it) },
+            onDeleteDoctor = { cartViewModel.deleteDoctorFromRegistry(it) }
+        )
+    }
+
+    if (dosageLabelItem != null) {
+        DosageLabelDialog(
+            storeName = invoiceSettingsData.storeName,
+            storePhone = invoiceSettingsData.phonePrimary,
+            initialPatientName = customerName,
+            medicineName = dosageLabelItem!!.product.name,
+            genericName = dosageLabelItem!!.product.genericName,
+            initialDosageSchedule = dosageLabelItem!!.dosageSchedule.orEmpty(),
+            batchNumber = dosageLabelItem!!.product.batchNumber,
+            expiryDate = dosageLabelItem!!.product.expiryDate,
+            settings = invoiceSettingsData,
+            onDismiss = { dosageLabelItem = null }
+        )
     }
     val snapshot = billSnapshot
     if (showReceiptDialog && snapshot != null) {
@@ -3657,7 +3785,8 @@ fun CartItemRow(
     unitPrice: Double = item.product.sellingPrice,
     allowNegativeInventory: Boolean = false,
     onUnitTypeChanged: ((String) -> Unit)? = null,
-    onDosageScheduleChanged: ((String) -> Unit)? = null
+    onDosageScheduleChanged: ((String) -> Unit)? = null,
+    onPrintDosageLabel: (() -> Unit)? = null
 ) {
     var showQuantityDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -3880,6 +4009,27 @@ fun CartItemRow(
                             fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                             color = if (isCurrent) Color.White else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = { onPrintDosageLabel?.invoke() },
+                    shape = RoundedCornerShape(999.dp),
+                    color = Color(0xFF0284C7).copy(alpha = 0.12f),
+                    border = BorderStroke(0.8.dp, Color(0xFF0284C7).copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text("🏷️", fontSize = 10.sp)
+                        Text(
+                            text = stringResource(R.string.print_dosage_sticker_chip),
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0284C7)
                         )
                     }
                 }

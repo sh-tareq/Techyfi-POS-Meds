@@ -3551,6 +3551,40 @@
     <string name="quarantine_reason_temperature_abuse">Cold-Chain Temperature Breach</string>
     <string name="quarantine_disposal_tab_active">In Quarantine (%1$d)</string>
     <string name="quarantine_disposal_tab_disposed">Disposal Certificates (%1$d)</string>
+
+    <!-- Phase 4: Prescribing Doctor Registry, Dosage Sticky Labels & DGDA MRP Guard -->
+    <string name="dosage_label_dialog_title">Medicine Packet Sticky Label</string>
+    <string name="dosage_label_dialog_subtitle">50mm x 30mm adhesive thermal sticker with patient dosage directions</string>
+    <string name="dosage_quick_select">Quick Dosage Instructions</string>
+    <string name="timing_quick_select">Food &amp; Administration Timing</string>
+    <string name="label_copies_count">Number of Label Copies</string>
+    <string name="share_label_title">Share Medicine Dosage Label</string>
+    <string name="share_label_btn">Share / Save</string>
+    <string name="print_dosage_sticker_btn">Print Sticker (50x30mm)</string>
+    <string name="print_dosage_sticker_chip">Sticker</string>
+    <string name="label_print_sent_toast">Dosage label sent to printer</string>
+    <string name="doctor_directory_title">Prescribing Doctors Registry</string>
+    <string name="doctor_directory_subtitle">%d registered physicians with BMDC credentials</string>
+    <string name="doctor_directory_hub_title">Doctor Directory</string>
+    <string name="doctor_directory_hub_subtitle">Prescribing physicians &amp; BMDC credentials</string>
+    <string name="add_doctor_btn">Add Doctor</string>
+    <string name="new_doctor_title">Add New Prescribing Physician</string>
+    <string name="edit_doctor_title">Edit Doctor Details</string>
+    <string name="doctor_degrees_label">Degrees &amp; Qualifications</string>
+    <string name="doctor_specialty_label">Specialty</string>
+    <string name="doctor_clinic_label">Chamber / Hospital / Clinic</string>
+    <string name="doctor_phone_label">Phone / Contact</string>
+    <string name="btn_save_doctor">Save Doctor</string>
+    <string name="search_doctor_hint">Search by doctor name, BMDC, or chamber...</string>
+    <string name="no_doctors_found">No prescribing physicians match your search</string>
+    <string name="select_doctor_btn">Select</string>
+    <string name="prescribing_doctor_heading">Prescribing Physician (Rx)</string>
+    <string name="dgda_mrp_exceeded_title">DGDA Maximum Retail Price (MRP) Violation</string>
+    <string name="dgda_mrp_exceeded_desc">%d item(s) in cart exceed official MRP ceiling price. Sale is locked by DGDA regulations.</string>
+    <string name="cart_reason_mrp_exceeded">Blocked: Item price exceeds legal DGDA MRP</string>
+    <string name="shelf_rack_filter_all">All Shelves</string>
+    <string name="shelf_rack_filter_chip">📍 %1$s (%2$d)</string>
+    <string name="patient_name_label">Patient Name</string>
 </resources>
 
 

@@ -3553,4 +3553,38 @@
     <string name="quarantine_reason_temperature_abuse">কোল্ড-চেইন বা তাপমাত্রা বিঘ্নিত</string>
     <string name="quarantine_disposal_tab_active">কোয়ারেন্টাইনে (%1$d)</string>
     <string name="quarantine_disposal_tab_disposed">বিনষ্ট প্রত্যয়নপত্র (%1$d)</string>
+
+    <!-- Phase 4: Prescribing Doctor Registry, Dosage Sticky Labels & DGDA MRP Guard -->
+    <string name="dosage_label_dialog_title">ওষুধের প্যাকেটের সেবনবিধি স্টিকার</string>
+    <string name="dosage_label_dialog_subtitle">রোগীর স্পষ্ট সেবনবিধিসহ ৫০x৩০ মিমি আঠালো থার্মাল স্টিকার</string>
+    <string name="dosage_quick_select">দ্রুত সেবনবিধি নির্বাচন</string>
+    <string name="timing_quick_select">খাবার ও সেবনের সময়</string>
+    <string name="label_copies_count">স্টিকারের কপির সংখ্যা</string>
+    <string name="share_label_title">সেবনবিধি স্টিকার শেয়ার করুন</string>
+    <string name="share_label_btn">শেয়ার / সেভ</string>
+    <string name="print_dosage_sticker_btn">স্টিকার প্রিন্ট করুন (৫০x৩০ মিমি)</string>
+    <string name="print_dosage_sticker_chip">স্টিকার</string>
+    <string name="label_print_sent_toast">সেবনবিধি স্টিকার প্রিন্টারে পাঠানো হয়েছে</string>
+    <string name="doctor_directory_title">প্রেসক্রিপশন প্রদানকারী চিকিৎসক ডিরেক্টরি</string>
+    <string name="doctor_directory_subtitle">%d জন বিএমডিসি নিবন্ধিত চিকিৎসক তালিকাভুক্ত</string>
+    <string name="doctor_directory_hub_title">চিকিৎসক ডিরেক্টরি</string>
+    <string name="doctor_directory_hub_subtitle">প্রেসক্রিপশন প্রদানকারী চিকিৎসক ও বিএমডিসি সনদ</string>
+    <string name="add_doctor_btn">নতুন চিকিৎসক</string>
+    <string name="new_doctor_title">নতুন চিকিৎসক তালিকাভুক্ত করুন</string>
+    <string name="edit_doctor_title">চিকিৎসকের তথ্য পরিবর্তন</string>
+    <string name="doctor_degrees_label">ডিগ্রি ও শিক্ষাগত যোগ্যতা</string>
+    <string name="doctor_specialty_label">বিশেষজ্ঞ বিভাগ</string>
+    <string name="doctor_clinic_label">চেম্বার / হাসপাতাল / ক্লিনিক</string>
+    <string name="doctor_phone_label">মোবাইল / যোগাযোগের নম্বর</string>
+    <string name="btn_save_doctor">চিকিৎসক সংরক্ষণ করুন</string>
+    <string name="search_doctor_hint">চিকিৎসকের নাম, বিএমডিসি বা চেম্বার খুঁজুন...</string>
+    <string name="no_doctors_found">কোনো চিকিৎসকের তথ্য পাওয়া যায়নি</string>
+    <string name="select_doctor_btn">নির্বাচন</string>
+    <string name="prescribing_doctor_heading">প্রেসক্রিপশন প্রদানকারী চিকিৎসক (Rx)</string>
+    <string name="dgda_mrp_exceeded_title">ডিজিডিএ নির্ধারিত সর্বোচ্চ খুচরা মূল্য (MRP) লঙ্ঘন</string>
+    <string name="dgda_mrp_exceeded_desc">কার্টের %dটি ওষুধের বিক্রয়মূল্য সরকারি MRP এর চেয়ে বেশি। আইন অনুযায়ী বিক্রয় নিষিদ্ধ করা হয়েছে।</string>
+    <string name="cart_reason_mrp_exceeded">নিষেধাজ্ঞা: বিক্রয়মূল্য সরকারি MRP এর চেয়ে বেশি</string>
+    <string name="shelf_rack_filter_all">সব র্যাক / তাক</string>
+    <string name="shelf_rack_filter_chip">📍 %1$s (%2$d)</string>
+    <string name="patient_name_label">রোগীর নাম</string>
 </resources>

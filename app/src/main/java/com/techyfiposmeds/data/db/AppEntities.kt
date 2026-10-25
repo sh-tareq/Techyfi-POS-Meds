@@ -652,3 +652,25 @@ data class StoreCreditLedgerEntry(
     val note: String? = null,
     val timestamp: Long = System.currentTimeMillis()
 )
+
+@Entity(
+    tableName = "prescribing_doctors",
+    indices = [
+        Index(value = ["bmdcRegNo"], unique = true),
+        Index(value = ["name"]),
+        Index(value = ["prescriptionCount"])
+    ]
+)
+data class PrescribingDoctor(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val bmdcRegNo: String,
+    val specialty: String = "",
+    val degrees: String = "",
+    val clinicOrHospital: String = "",
+    val phone: String = "",
+    val prescriptionCount: Int = 1,
+    val lastPrescribedAt: Long = System.currentTimeMillis(),
+    val isActive: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis()
+)

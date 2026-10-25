@@ -905,3 +905,67 @@ interface MedicineBatchDao {
     suspend fun adjustBatchStock(id: Long, delta: Double): Int
 }
 
+@Dao
+interface PrescribingDoctorDao {
+    @Query("SELECT * FROM prescribing_doctors WHERE isActive = 1 ORDER BY prescriptionCount DESC, lastPrescribedAt DESC")
+    fun getAllActiveDoctors(): Flow<List<PrescribingDoctor>>
+
+    @Query("SELECT * FROM prescribing_doctors WHERE isActive = 1 ORDER BY prescriptionCount DESC, lastPrescribedAt DESC LIMIT :limit")
+    fun getTopPrescribingDoctors(limit: Int = 6): Flow<List<PrescribingDoctor>>
+
+    @Query("SELECT * FROM prescribing_doctors WHERE isActive = 1 AND (name LIKE '%' || :query || '%' OR bmdcRegNo LIKE '%' || :query || '%' OR clinicOrHospital LIKE '%' || :query || '%' OR specialty LIKE '%' || :query || '%') ORDER BY prescriptionCount DESC, lastPrescribedAt DESC")
+    fun searchDoctors(query: String): Flow<List<PrescribingDoctor>>
+
+    @Query("SELECT * FROM prescribing_doctors WHERE bmdcRegNo = :bmdc LIMIT 1")
+    suspend fun getDoctorByBmdc(bmdc: String): PrescribingDoctor?
+
+    @Query("SELECT * FROM prescribing_doctors WHERE name = :name LIMIT 1")
+    suspend fun getDoctorByName(name: String): PrescribingDoctor?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDoctor(doctor: PrescribingDoctor): Long
+
+    @Update
+    suspend fun updateDoctor(doctor: PrescribingDoctor): Int
+
+    @Delete
+    suspend fun deleteDoctor(doctor: PrescribingDoctor): Int
+
+    @Query("DELETE FROM prescribing_doctors WHERE id = :id")
+    suspend fun deleteDoctorById(id: Long): Int
+
+    @Query("UPDATE prescribing_doctors SET prescriptionCount = prescriptionCount + 1, lastPrescribedAt = :timestamp WHERE bmdcRegNo = :bmdc")
+    suspend fun incrementPrescriptionCount(bmdc: String, timestamp: Long): Int
+
+    @Transaction
+    suspend fun recordPrescription(name: String, bmdc: String, degrees: String = "", clinic: String = "", phone: String = "", timestamp: Long = System.currentTimeMillis()) {
+        val cleanName = name.trim()
+        val cleanBmdc = bmdc.trim().uppercase()
+        if (cleanName.isBlank()) return
+        val existing = if (cleanBmdc.isNotBlank()) getDoctorByBmdc(cleanBmdc) else getDoctorByName(cleanName)
+        if (existing != null) {
+            updateDoctor(
+                existing.copy(
+                    prescriptionCount = existing.prescriptionCount + 1,
+                    lastPrescribedAt = timestamp,
+                    degrees = if (degrees.isNotBlank()) degrees else existing.degrees,
+                    clinicOrHospital = if (clinic.isNotBlank()) clinic else existing.clinicOrHospital,
+                    phone = if (phone.isNotBlank()) phone else existing.phone
+                )
+            )
+        } else {
+            insertDoctor(
+                PrescribingDoctor(
+                    name = cleanName,
+                    bmdcRegNo = if (cleanBmdc.isNotBlank()) cleanBmdc else "A-${(10000..99999).random()}",
+                    degrees = degrees,
+                    clinicOrHospital = clinic,
+                    phone = phone,
+                    prescriptionCount = 1,
+                    lastPrescribedAt = timestamp
+                )
+            )
+        }
+    }
+}
+
