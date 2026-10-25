@@ -16,3 +16,4 @@ Backup Files/
 .vscode/
 screenshots/
 .venv/
+pyrefly.toml

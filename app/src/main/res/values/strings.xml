@@ -3510,6 +3510,47 @@
     <string name="antibiotic_register_desc">Mandatory regulatory log of all dispensed antibiotics with doctor and patient information</string>
     <string name="antibiotic_register_empty">No antibiotic medicines dispensed in this period</string>
     <string name="antibiotic_register_export_csv">Export Register (CSV)</string>
+    <string name="sales_report_tab_narcotics_register">Narcotics Register</string>
+    <string name="narcotics_register_title">Narcotics &amp; Controlled Substances Register</string>
+    <string name="narcotics_register_desc">Mandatory Schedule G &amp; Narcotic Control Act log for psychotropic and controlled medications</string>
+    <string name="narcotics_register_empty">No controlled / narcotic medicines dispensed in this period</string>
+    <string name="narcotics_register_export_csv">Export Narcotics Register (CSV)</string>
+    <string name="cart_refill_reminder_toggle">Set Refill Reminder</string>
+    <string name="cart_refill_reminder_desc">Remind patient when chronic medicine is due to finish</string>
+    <string name="refill_in_days_fmt">%d Days</string>
+    <string name="refill_reminder_scheduled_toast">Refill reminder scheduled for %s</string>
+    <string name="refill_reminders_tab_title">Refill Reminders</string>
+    <string name="prescription_photo_view">View Prescription</string>
+
+    <!-- Phase 2: FEFO Batch Inventory & Quarantine Localization -->
+    <string name="fefo_badge">FEFO</string>
+    <string name="fefo_dispatched_hint">Dispatched by Expiry Date (FEFO)</string>
+    <string name="fefo_expiry_assigned">Batch %1$s (Exp: %2$s)</string>
+    <string name="nav_inventory_quarantine">Quarantine</string>
+    <string name="quarantine_title">Quarantine &amp; Expired Drug Management</string>
+    <string name="quarantine_desc">Regulatory segregation and certified disposal for expired, recalled, or damaged medicines.</string>
+    <string name="quarantine_empty">No medicines currently in quarantine. All active inventory is sellable.</string>
+    <string name="quarantine_badge_status">Quarantined</string>
+    <string name="quarantine_log_entry">Quarantine Medicine</string>
+    <string name="quarantine_export_dgda_report">DGDA Disposal Certificate (CSV)</string>
+    <string name="quarantine_disposal_method">Disposal Method</string>
+    <string name="quarantine_disposal_method_incineration">High-Temperature Incineration</string>
+    <string name="quarantine_disposal_method_landfill">Landfill Encapsulation</string>
+    <string name="quarantine_disposal_method_chemical">Chemical Inactivation</string>
+    <string name="quarantine_disposal_method_supplier_return">Return to Supplier / Manufacturer</string>
+    <string name="quarantine_witness_placeholder">Licensed Pharmacist or DGDA Inspector Name</string>
+    <string name="quarantine_confirm_disposal">Complete Certified Disposal</string>
+    <string name="quarantine_dispose_action">Dispose &amp; Record</string>
+    <string name="quarantine_success">Medicine successfully moved to quarantine.</string>
+    <string name="quarantine_disposed_success">Stock disposed and certificate logged successfully.</string>
+    <string name="quarantine_select_medicine">Select Medicine for Quarantine</string>
+    <string name="quarantine_reason">Quarantine Reason</string>
+    <string name="quarantine_reason_expired">Batch Expired</string>
+    <string name="quarantine_reason_damaged">Damaged or Broken Packaging</string>
+    <string name="quarantine_reason_recalled">DGDA or Manufacturer Recall</string>
+    <string name="quarantine_reason_temperature_abuse">Cold-Chain Temperature Breach</string>
+    <string name="quarantine_disposal_tab_active">In Quarantine (%1$d)</string>
+    <string name="quarantine_disposal_tab_disposed">Disposal Certificates (%1$d)</string>
 </resources>
 
 

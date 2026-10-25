@@ -3512,4 +3512,45 @@
     <string name="antibiotic_register_desc">সরকারি নির্দেশনা অনুযায়ী অ্যান্টিবায়োটিক বিক্রয়, রোগী ও প্রেসক্রিপশনকারী ডাক্তারের রেজিস্টার খাতা</string>
     <string name="antibiotic_register_empty">নির্বাচিত সময়ে কোনো অ্যান্টিবায়োটিক ওষুধ বিক্রয় হয়নি</string>
     <string name="antibiotic_register_export_csv">রেজিস্টার এক্সপোর্ট (CSV)</string>
+    <string name="sales_report_tab_narcotics_register">চেতনানাশক রেজিস্টার</string>
+    <string name="narcotics_register_title">চেতনানাশক ও নিয়ন্ত্রিত ওষুধ রেজিস্টার</string>
+    <string name="narcotics_register_desc">সরকারি শিডিউল-জি ও মাদকদ্রব্য নিয়ন্ত্রণ আইন অনুযায়ী মনোদৈহিক ও নিয়ন্ত্রিত ওষুধের বাধ্যবাধকতামূলক লগ</string>
+    <string name="narcotics_register_empty">নির্বাচিত সময়ে কোনো চেতনানাশক বা নিয়ন্ত্রিত ওষুধ বিক্রয় হয়নি</string>
+    <string name="narcotics_register_export_csv">চেতনানাশক রেজিস্টার এক্সপোর্ট (CSV)</string>
+    <string name="cart_refill_reminder_toggle">রিফিল রিমাইন্ডার সেট করুন</string>
+    <string name="cart_refill_reminder_desc">রোগীর দীর্ঘমেয়াদী ওষুধ শেষ হওয়ার পূর্বে সতর্কবার্তা প্রদান</string>
+    <string name="refill_in_days_fmt">%d দিন</string>
+    <string name="refill_reminder_scheduled_toast">%s তারিখের জন্য রিফিল রিমাইন্ডার সেট করা হয়েছে</string>
+    <string name="refill_reminders_tab_title">ওষুধের রিফিল রিমাইন্ডার</string>
+    <string name="prescription_photo_view">প্রেসক্রিপশন দেখুন</string>
+
+    <!-- Phase 2: FEFO Batch Inventory & Quarantine Localization -->
+    <string name="fefo_badge">FEFO</string>
+    <string name="fefo_dispatched_hint">মেয়াদকাল অনুযায়ী ডিসপ্যাচ হয়েছে (FEFO)</string>
+    <string name="fefo_expiry_assigned">ব্যাচ %1$s (মেয়াদ: %2$s)</string>
+    <string name="nav_inventory_quarantine">কোয়ারেন্টাইন</string>
+    <string name="quarantine_title">মেয়াদোত্তীর্ণ ও নষ্ট ওষুধ কোয়ারেন্টাইন</string>
+    <string name="quarantine_desc">মেয়াদোত্তীর্ণ, বাজার থেকে প্রত্যাহারকৃত বা নষ্ট ওষুধ মূল স্টক থেকে সম্পূর্ণ আলাদা সংরক্ষণ ও বিনষ্টকরণ ব্যবস্থাপনা।</string>
+    <string name="quarantine_empty">কোনো ওষুধ কোয়ারেন্টাইনে নেই। সক্রিয় স্টকের সব ওষুধ বিক্রয়যোগ্য।</string>
+    <string name="quarantine_badge_status">কোয়ারেন্টাইনকৃত</string>
+    <string name="quarantine_log_entry">ওষুধ কোয়ারেন্টাইন করুন</string>
+    <string name="quarantine_export_dgda_report">ডিজিডিএ অপসারণ প্রত্যয়নপত্র (CSV)</string>
+    <string name="quarantine_disposal_method">অপসারণ বা বিনষ্টকরণ পদ্ধতি</string>
+    <string name="quarantine_disposal_method_incineration">উচ্চ-তাপমাত্রায় পোড়ানো (Incineration)</string>
+    <string name="quarantine_disposal_method_landfill">ল্যান্ডফিল এনক্যাপসুলেশন</string>
+    <string name="quarantine_disposal_method_chemical">রাসায়নিক নিষ্ক্রিয়করণ</string>
+    <string name="quarantine_disposal_method_supplier_return">সরবরাহকারী/কোম্পানিতে ফেরত</string>
+    <string name="quarantine_witness_placeholder">লাইসেন্সপ্রাপ্ত ফার্মাসিস্ট বা ডিজিডিএ পরিদর্শকের নাম</string>
+    <string name="quarantine_confirm_disposal">সার্টিফাইড অপসারণ সম্পন্ন করুন</string>
+    <string name="quarantine_dispose_action">বিনষ্ট করুন ও রেকর্ড রাখুন</string>
+    <string name="quarantine_success">ওষুধ সফলভাবে কোয়ারেন্টাইনে স্থানান্তর করা হয়েছে।</string>
+    <string name="quarantine_disposed_success">ওষুধের স্টক সফলভাবে বিনষ্ট ও সনদ রেকর্ড করা হয়েছে।</string>
+    <string name="quarantine_select_medicine">কোয়ারেন্টাইনের জন্য ওষুধ নির্বাচন করুন</string>
+    <string name="quarantine_reason">কোয়ারেন্টাইনের কারণ</string>
+    <string name="quarantine_reason_expired">ব্যাচের মেয়াদ উত্তীর্ণ</string>
+    <string name="quarantine_reason_damaged">প্যাকেট ক্ষতিগ্রস্থ বা ভাঙা</string>
+    <string name="quarantine_reason_recalled">কোম্পানি বা ডিজিডিএ প্রত্যাহার</string>
+    <string name="quarantine_reason_temperature_abuse">কোল্ড-চেইন বা তাপমাত্রা বিঘ্নিত</string>
+    <string name="quarantine_disposal_tab_active">কোয়ারেন্টাইনে (%1$d)</string>
+    <string name="quarantine_disposal_tab_disposed">বিনষ্ট প্রত্যয়নপত্র (%1$d)</string>
 </resources>
