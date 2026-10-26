@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.Dispatchers
 
-const val APP_DATABASE_VERSION = 42
+const val APP_DATABASE_VERSION = 43
 
 /**
  * Keeps every migration compatible with both Room database backends. Room calls
@@ -570,6 +570,48 @@ val MIGRATION_41_42 = sqlMigration(
     """.trimIndent()
 )
 
+val MIGRATION_42_43 = sqlMigration(
+    42, 43,
+    """
+    CREATE TABLE IF NOT EXISTS `patient_vitals` (
+        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        `customerPhone` TEXT,
+        `customerName` TEXT,
+        `systolicBp` INTEGER,
+        `diastolicBp` INTEGER,
+        `pulseBpm` INTEGER,
+        `bloodSugarMmol` REAL,
+        `sugarTestType` TEXT NOT NULL DEFAULT 'RBS',
+        `weightKg` REAL,
+        `temperatureF` REAL,
+        `clinicalNotes` TEXT,
+        `recordedBy` TEXT NOT NULL DEFAULT 'Pharmacist',
+        `recordedAt` INTEGER NOT NULL
+    )
+    """.trimIndent(),
+    "CREATE INDEX IF NOT EXISTS `index_patient_vitals_customerPhone` ON `patient_vitals` (`customerPhone`)",
+    "CREATE INDEX IF NOT EXISTS `index_patient_vitals_recordedAt` ON `patient_vitals` (`recordedAt`)",
+    "CREATE INDEX IF NOT EXISTS `index_patient_vitals_customerName` ON `patient_vitals` (`customerName`)",
+    """
+    CREATE TABLE IF NOT EXISTS `refrigerator_temp_logs` (
+        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        `unitName` TEXT NOT NULL DEFAULT 'Main Pharma Vaccine Fridge',
+        `temperatureC` REAL NOT NULL,
+        `isBreach` INTEGER NOT NULL DEFAULT 0,
+        `breachActionTaken` TEXT,
+        `recordedBy` TEXT NOT NULL DEFAULT 'Pharmacist',
+        `loggedAt` INTEGER NOT NULL
+    )
+    """.trimIndent(),
+    "CREATE INDEX IF NOT EXISTS `index_refrigerator_temp_logs_loggedAt` ON `refrigerator_temp_logs` (`loggedAt`)",
+    "CREATE INDEX IF NOT EXISTS `index_refrigerator_temp_logs_unitName` ON `refrigerator_temp_logs` (`unitName`)",
+    "CREATE INDEX IF NOT EXISTS `index_refrigerator_temp_logs_isBreach` ON `refrigerator_temp_logs` (`isBreach`)",
+    """
+    INSERT OR IGNORE INTO `refrigerator_temp_logs` (`unitName`, `temperatureC`, `isBreach`, `recordedBy`, `loggedAt`)
+    VALUES ('Main Pharma Vaccine Fridge', 4.2, 0, 'Pharmacist', 1729900000000)
+    """.trimIndent()
+)
+
 
 @Database(
     entities = [
@@ -601,7 +643,9 @@ val MIGRATION_41_42 = sqlMigration(
         StoreCreditVoucher::class,
         StoreCreditLedgerEntry::class,
         MedicineBatch::class,
-        PrescribingDoctor::class
+        PrescribingDoctor::class,
+        PatientVitalRecord::class,
+        RefrigeratorTempLog::class
     ],
     version = APP_DATABASE_VERSION,
     exportSchema = true
@@ -630,6 +674,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun storeCreditLedgerDao(): StoreCreditLedgerDao
     abstract fun medicineBatchDao(): MedicineBatchDao
     abstract fun prescribingDoctorDao(): PrescribingDoctorDao
+    abstract fun patientVitalDao(): PatientVitalDao
+    abstract fun refrigeratorTempLogDao(): RefrigeratorTempLogDao
 
     companion object {
         @Volatile
@@ -646,7 +692,7 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33,
             MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37,
             MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40, MIGRATION_40_41,
-            MIGRATION_41_42
+            MIGRATION_41_42, MIGRATION_42_43
         )
 
         fun getDatabase(context: Context): AppDatabase {

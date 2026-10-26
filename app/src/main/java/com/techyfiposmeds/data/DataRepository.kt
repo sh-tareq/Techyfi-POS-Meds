@@ -111,6 +111,8 @@ class DataRepository(
     private val storeCreditLedgerDao = database.storeCreditLedgerDao()
     private val medicineBatchDao = database.medicineBatchDao()
     private val prescribingDoctorDao = database.prescribingDoctorDao()
+    private val patientVitalDao = database.patientVitalDao()
+    private val refrigeratorTempLogDao = database.refrigeratorTempLogDao()
     val medicineRepository = MedicineRepository.getInstance(context)
 
     init {
@@ -6607,6 +6609,32 @@ class DataRepository(
 
     suspend fun recordPrescriptionUsage(name: String, bmdc: String, degrees: String = "", clinic: String = "", phone: String = "") = withContext(Dispatchers.IO) {
         prescribingDoctorDao.recordPrescription(name, bmdc, degrees, clinic, phone)
+    }
+
+    // Phase 6: Patient Chronic Health Vitals Tracker
+    val allPatientVitals: kotlinx.coroutines.flow.Flow<List<PatientVitalRecord>> = patientVitalDao.getAllVitals()
+    fun getCustomerVitals(phone: String): kotlinx.coroutines.flow.Flow<List<PatientVitalRecord>> = patientVitalDao.getVitalsForCustomer(phone)
+    suspend fun getLatestCustomerVital(phone: String): PatientVitalRecord? = withContext(Dispatchers.IO) {
+        patientVitalDao.getLatestVitalForCustomer(phone)
+    }
+    suspend fun savePatientVital(record: PatientVitalRecord): Long = withContext(Dispatchers.IO) {
+        patientVitalDao.insertVital(record)
+    }
+    suspend fun deletePatientVital(record: PatientVitalRecord) = withContext(Dispatchers.IO) {
+        patientVitalDao.deleteVital(record)
+    }
+
+    // Phase 6: Cold-Chain 2°C – 8°C Refrigerator Monitor
+    val allRefrigeratorTempLogs: kotlinx.coroutines.flow.Flow<List<RefrigeratorTempLog>> = refrigeratorTempLogDao.getAllTempLogs()
+    val breachRefrigeratorTempLogs: kotlinx.coroutines.flow.Flow<List<RefrigeratorTempLog>> = refrigeratorTempLogDao.getBreachLogs()
+    suspend fun getLatestRefrigeratorTempLog(): RefrigeratorTempLog? = withContext(Dispatchers.IO) {
+        refrigeratorTempLogDao.getLatestTempLog()
+    }
+    suspend fun saveRefrigeratorTempLog(log: RefrigeratorTempLog): Long = withContext(Dispatchers.IO) {
+        refrigeratorTempLogDao.insertTempLog(log)
+    }
+    suspend fun deleteRefrigeratorTempLog(log: RefrigeratorTempLog) = withContext(Dispatchers.IO) {
+        refrigeratorTempLogDao.deleteTempLog(log)
     }
 
     private fun getTierRank(tier: String?): Int = when (tier?.lowercase(java.util.Locale.ROOT)) {

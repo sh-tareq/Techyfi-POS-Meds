@@ -5601,6 +5601,22 @@ fun MedicineItemRow(
                             )
                         }
                     }
+
+                    if (com.techyfiposmeds.data.clinical.ColdChainHelper.isColdChainMedicine(medicine.brandName, medicine.genericName, medicine.category, medicine.shelfLocation)) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFE0F2FE),
+                            border = BorderStroke(0.5.dp, Color(0xFF0284C7))
+                        ) {
+                            Text(
+                                text = "❄️ 2°-8°C",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0284C7),
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
 
                 Spacer(Modifier.width(6.dp))
@@ -5987,6 +6003,14 @@ fun MedicineGridCard(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+                    if (com.techyfiposmeds.data.clinical.ColdChainHelper.isColdChainMedicine(medicine.brandName, medicine.genericName, medicine.category, medicine.shelfLocation)) {
+                        Text(
+                            text = "❄️ 2°-8°C",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0284C7)
                         )
                     }
                     if (!medicine.expiryDate.isNullOrBlank()) {

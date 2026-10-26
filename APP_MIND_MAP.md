@@ -3518,6 +3518,31 @@ mindmap
 - **Patient Clinical Counseling Slip Sharing (`MedicineClinicalDialog.kt`)**:
   - 1-Tap sharing of formatted patient counseling notes via WhatsApp, SMS, or thermal printer with indication, dosage guidelines, food administration, and precautions.
 
+### Release Final-V26-10-2026-Phase6: Patient Chronic Health Vitals, Cold-Chain 2°C-8°C Biologicals Monitor & Emergency OTC Assistant (Version 2.8.08-Final-V26-10-2026, Build Final-V26-10-2026, versionCode 220993)
+- **Patient Chronic Health Vitals Tracker (`PatientVitalRecord`, `PatientVitalDao`, `PatientVitalsDialog.kt`, `PatientVitalsHelper.kt`)**:
+  - Comprehensive clinical vitals recording: Blood Pressure (systolic/diastolic/pulse), Blood Glucose (FBS/RBS/2HABF in mmol/L with mg/dL conversion), Weight (kg), Height (cm), BMI, and Body Temperature (°F).
+  - WHO & Bangladesh Society of Hypertension risk classification: Hypotension, Normal, Elevated, Stage 1 HTN, Stage 2 HTN, and Hypertensive Crisis.
+  - BADAS (Diabetic Association of Bangladesh) glycemic classification: Hypoglycemia (&lt; 4.0 mmol/L warning), Normal, Pre-Diabetes, and Diabetes range.
+  - WHO Asian Pacific Body Mass Index (BMI) evaluation with tailored lifestyle advice.
+  - 1-Tap formatted Thermal Slip copy, Patient History tracking, and WhatsApp/SMS health report sharing.
+- **DGDA &amp; WHO Cold-Chain &amp; Biologicals Storage Monitor 2°C – 8°C (`RefrigeratorTempLog`, `RefrigeratorTempLogDao`, `ColdChainManagementDialog.kt`, `ColdChainHelper.kt`)**:
+  - Continuous 2.0°C – 8.0°C storage temperature monitoring for vaccines, insulins, and biological injectables.
+  - Daily AM/PM temperature logging with instant breach detection: Freeze Risk (&lt; 2.0°C) and Heat Breach (&gt; 8.0°C) prompting for mandatory corrective action logs.
+  - Refrigerator Cold-Chain Stock Audit: Lists all refrigerated inventory items with live stock quantities and shelf locations.
+  - DGDA Good Pharmacy Practice (GPP) compliance report generator.
+  - Cart Advisory Banner: Real-time alert whenever cold-chain medicines are present in the cart, reminding staff to dispense with cool gel packs.
+  - Product Card Visual Badges: "❄️ 2°-8°C" badges displayed across catalog lists and compact views.
+- **Emergency First-Aid &amp; OTC Symptom Counter Assistant (`OtcTriageEngine.kt`, `OtcSymptomAssistantDialog.kt`)**:
+  - 6 Rapid Clinical Triage Categories:
+    1. Acidity, Heartburn &amp; GERD (Esomeprazole, Antacids, Domperidone)
+    2. Fever, Headache &amp; Body Ache (Paracetamol 500mg/665mg XR, Paracetamol+Caffeine)
+    3. Acute Diarrhea &amp; Dehydration (ORS, Zinc 20mg, Probiotics)
+    4. First-Aid, Minor Cuts &amp; Burns (Povidone Iodine, Silver Sulfadiazine, Dressing Kits)
+    5. Allergy, Urticaria &amp; Sneezing (Fexofenadine, Bilastine, Calamine)
+    6. Eye Redness &amp; Ear Discomfort (Carboxymethylcellulose artificial tears, Antazoline+Tetrahydrozoline)
+  - Critical Red Flag Safety Banners: Explicit clinical warnings detailing when patients must be immediately referred to hospital emergency care.
+  - 1-Tap Cart Addition: Real-time inventory matching against in-stock pharmacy brands with quantity increment/decrement controls.
+
 ## Maintenance note
 
 Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS Meds/`.

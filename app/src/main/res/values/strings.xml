@@ -3593,6 +3593,15 @@
     <string name="pharma_stock_inward_subtitle">Supplier invoices, batch number &amp; bonus strip cost calculator</string>
     <string name="clinical_alert_badge">Clinical Alert</string>
     <string name="cart_reason_clinical_ddi_blocked">Blocked: Unacknowledged High-Risk Drug Interaction in cart</string>
+
+    <!-- Phase 6: Patient Vitals, Cold-Chain 2-8C Refrigerator Monitor & Emergency OTC Assistant -->
+    <string name="patient_vitals_hub_title">Patient Vitals &amp; Chronic Health</string>
+    <string name="patient_vitals_hub_subtitle">Blood Pressure (BP), Blood Sugar, Pulse &amp; BMI tracker</string>
+    <string name="cold_chain_hub_title">Cold-Chain 2°C – 8°C Monitor</string>
+    <string name="cold_chain_hub_subtitle">Vaccine &amp; biologicals daily temperature logger &amp; audit</string>
+    <string name="otc_assistant_hub_title">Emergency First-Aid &amp; OTC Assistant</string>
+    <string name="otc_assistant_hub_subtitle">Symptom-based triage, red flag alerts &amp; 1-tap cart</string>
+    <string name="cart_cold_chain_warning_banner">❄️ Contains Cold-Chain Medicines: Maintain continuous 2°C – 8°C refrigeration. Do not freeze.</string>
 </resources>
 
 

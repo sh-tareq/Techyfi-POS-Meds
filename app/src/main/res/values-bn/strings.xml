@@ -3595,4 +3595,13 @@
     <string name="pharma_stock_inward_subtitle">কোম্পানি চালান, ব্যাচ নম্বর ও ফ্রি বোনাস পাতা হিসাব</string>
     <string name="clinical_alert_badge">ড্রাগ মিথস্ক্রিয়া</string>
     <string name="cart_reason_clinical_ddi_blocked">নিষেধাজ্ঞা: কার্টে মারাত্মক ড্রাগ মিথস্ক্রিয়া রয়েছে, পরামর্শ পর্যালোচনা করুন</string>
+
+    <!-- Phase 6: Patient Vitals, Cold-Chain 2-8C Refrigerator Monitor & Emergency OTC Assistant -->
+    <string name="patient_vitals_hub_title">রোগীর ভাইটালস ও স্বাস্থ্য মনিটর</string>
+    <string name="patient_vitals_hub_subtitle">রক্তচাপ (BP), সুগার (Sugar), পালস ও বিএমআই (BMI) ট্র্যাকার</string>
+    <string name="cold_chain_hub_title">কোল্ড-চেইন ফ্রিজ মনিটর (২°-৮° সে.)</string>
+    <string name="cold_chain_hub_subtitle">ভ্যাকসিন ও ইনসুলিনের দৈনিক তাপমাত্রা লগ, লঙ্ঘন সতর্কতা ও অডিট</string>
+    <string name="otc_assistant_hub_title">জরুরি প্রাথমিক চিকিৎসা ও ওটিসি সহকারী</string>
+    <string name="otc_assistant_hub_subtitle">উপসর্গভিত্তিক ক্লিনিক্যাল সমাধান, রেড ফ্ল্যাগ ও ১-ট্যাপ কার্ট</string>
+    <string name="cart_cold_chain_warning_banner">❄️ কার্টে কোল্ড-চেইন ওষুধ রয়েছে: সার্বক্ষণিক ২°-৮° সে. ফ্রিজে সংরক্ষণ নিশ্চিত করুন।</string>
 </resources>

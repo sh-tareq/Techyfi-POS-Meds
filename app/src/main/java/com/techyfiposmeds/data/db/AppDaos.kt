@@ -969,3 +969,39 @@ interface PrescribingDoctorDao {
     }
 }
 
+@Dao
+interface PatientVitalDao {
+    @Query("SELECT * FROM patient_vitals ORDER BY recordedAt DESC")
+    fun getAllVitals(): Flow<List<PatientVitalRecord>>
+
+    @Query("SELECT * FROM patient_vitals WHERE customerPhone = :phone ORDER BY recordedAt DESC")
+    fun getVitalsForCustomer(phone: String): Flow<List<PatientVitalRecord>>
+
+    @Query("SELECT * FROM patient_vitals WHERE customerPhone = :phone ORDER BY recordedAt DESC LIMIT 1")
+    suspend fun getLatestVitalForCustomer(phone: String): PatientVitalRecord?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVital(record: PatientVitalRecord): Long
+
+    @Delete
+    suspend fun deleteVital(record: PatientVitalRecord)
+}
+
+@Dao
+interface RefrigeratorTempLogDao {
+    @Query("SELECT * FROM refrigerator_temp_logs ORDER BY loggedAt DESC")
+    fun getAllTempLogs(): Flow<List<RefrigeratorTempLog>>
+
+    @Query("SELECT * FROM refrigerator_temp_logs ORDER BY loggedAt DESC LIMIT 1")
+    suspend fun getLatestTempLog(): RefrigeratorTempLog?
+
+    @Query("SELECT * FROM refrigerator_temp_logs WHERE isBreach = 1 ORDER BY loggedAt DESC")
+    fun getBreachLogs(): Flow<List<RefrigeratorTempLog>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTempLog(log: RefrigeratorTempLog): Long
+
+    @Delete
+    suspend fun deleteTempLog(log: RefrigeratorTempLog)
+}
+

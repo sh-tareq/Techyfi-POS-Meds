@@ -1337,6 +1337,64 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
+    /**
+     * Phase 6: Patient Chronic Health Vitals Tracker
+     */
+    val allPatientVitals: StateFlow<List<PatientVitalRecord>> = repository.allPatientVitals
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun getCustomerVitals(phone: String): Flow<List<PatientVitalRecord>> = repository.getCustomerVitals(phone)
+
+    fun savePatientVital(record: PatientVitalRecord, onSaved: ((Long) -> Unit)? = null) {
+        viewModelScope.launch {
+            val id = repository.savePatientVital(record)
+            onSaved?.invoke(id)
+        }
+    }
+
+    fun deletePatientVital(record: PatientVitalRecord) {
+        viewModelScope.launch {
+            repository.deletePatientVital(record)
+        }
+    }
+
+    /**
+     * Phase 6: Cold-Chain 2°C – 8°C Biologicals Refrigerator Monitor
+     */
+    val allRefrigeratorTempLogs: StateFlow<List<RefrigeratorTempLog>> = repository.allRefrigeratorTempLogs
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val breachRefrigeratorTempLogs: StateFlow<List<RefrigeratorTempLog>> = repository.breachRefrigeratorTempLogs
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun saveRefrigeratorTempLog(log: RefrigeratorTempLog, onSaved: ((Long) -> Unit)? = null) {
+        viewModelScope.launch {
+            val id = repository.saveRefrigeratorTempLog(log)
+            onSaved?.invoke(id)
+        }
+    }
+
+    fun deleteRefrigeratorTempLog(log: RefrigeratorTempLog) {
+        viewModelScope.launch {
+            repository.deleteRefrigeratorTempLog(log)
+        }
+    }
+
+    /** Detects if any item currently in the cart requires 2°C - 8°C cold-chain refrigeration. */
+    val hasColdChainItemsInCart: StateFlow<Boolean> = _cartItems.map { items ->
+        items.any { item ->
+            com.techyfiposmeds.data.clinical.ColdChainHelper.isColdChainMedicine(
+                item.product.name,
+                item.product.genericName,
+                item.product.category,
+                item.product.shelfLocation
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val allProducts: StateFlow<List<Product>> = repository.allProducts
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     /** Total MRP price of all items currently in cart (using product.mrpPrice if > 0 else sellingPrice). */
     val mrpSubtotal: StateFlow<Double> = _cartItems.map { items ->
         items.sumOf { item ->

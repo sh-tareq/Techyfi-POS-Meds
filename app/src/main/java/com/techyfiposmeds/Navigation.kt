@@ -490,6 +490,9 @@ fun MainNavigation() {
         var showDoctorDirectoryHub by remember { mutableStateOf(false) }
         var showNearExpiryClearance by remember { mutableStateOf(false) }
         var showPharmaStockInward by remember { mutableStateOf(false) }
+        var showPatientVitalsDialog by remember { mutableStateOf(false) }
+        var showColdChainDialog by remember { mutableStateOf(false) }
+        var showOtcAssistantDialog by remember { mutableStateOf(false) }
         var showUserDropdown by remember { mutableStateOf(false) }
         var showLogoutConfirmDialog by remember { mutableStateOf(false) }
         var unacknowledgedOwnerAlert by remember { mutableStateOf<com.techyfiposmeds.data.OwnerAuditEvent?>(null) }
@@ -679,6 +682,18 @@ fun MainNavigation() {
                     onNavigateToPharmaInward = {
                         showMoreHubSheet = false
                         showPharmaStockInward = true
+                    },
+                    onNavigateToPatientVitals = {
+                        showMoreHubSheet = false
+                        showPatientVitalsDialog = true
+                    },
+                    onNavigateToColdChain = {
+                        showMoreHubSheet = false
+                        showColdChainDialog = true
+                    },
+                    onNavigateToOtcAssistant = {
+                        showMoreHubSheet = false
+                        showOtcAssistantDialog = true
                     }
                 )
             }
@@ -739,6 +754,43 @@ fun MainNavigation() {
                         productsViewModel.inwardPharmaStock(
                             product, batchNumber, expiryDate, mfgDate, totalQty, effectiveCost, mrpPrice, supplierName, invoiceNo
                         )
+                    }
+                )
+            }
+
+            if (showPatientVitalsDialog) {
+                val allVitals by cartViewModel.allPatientVitals.collectAsStateWithLifecycle()
+                val currentPhone by cartViewModel.customerPhone.collectAsStateWithLifecycle()
+                val currentName by cartViewModel.customerName.collectAsStateWithLifecycle()
+                PatientVitalsDialog(
+                    allVitals = allVitals,
+                    prefilledPhone = currentPhone.ifBlank { null },
+                    prefilledName = currentName.ifBlank { null },
+                    onDismiss = { showPatientVitalsDialog = false },
+                    onSaveVital = { cartViewModel.savePatientVital(it) },
+                    onDeleteVital = { cartViewModel.deletePatientVital(it) }
+                )
+            }
+
+            if (showColdChainDialog) {
+                val allTempLogs by cartViewModel.allRefrigeratorTempLogs.collectAsStateWithLifecycle()
+                val allProds by productsViewModel.allProducts.collectAsStateWithLifecycle(emptyList())
+                ColdChainManagementDialog(
+                    tempLogs = allTempLogs,
+                    allProducts = allProds,
+                    onDismiss = { showColdChainDialog = false },
+                    onSaveLog = { cartViewModel.saveRefrigeratorTempLog(it) },
+                    onDeleteLog = { cartViewModel.deleteRefrigeratorTempLog(it) }
+                )
+            }
+
+            if (showOtcAssistantDialog) {
+                val allProds by productsViewModel.allProducts.collectAsStateWithLifecycle(emptyList())
+                OtcSymptomAssistantDialog(
+                    allProducts = allProds,
+                    onDismiss = { showOtcAssistantDialog = false },
+                    onAddToCart = { product, qty ->
+                        cartViewModel.addToCart(product, qty)
                     }
                 )
             }
@@ -1748,6 +1800,9 @@ fun MoreOperationsHubSheet(
     onNavigateToDoctors: () -> Unit = {},
     onNavigateToNearExpiry: () -> Unit = {},
     onNavigateToPharmaInward: () -> Unit = {},
+    onNavigateToPatientVitals: () -> Unit = {},
+    onNavigateToColdChain: () -> Unit = {},
+    onNavigateToOtcAssistant: () -> Unit = {},
     onLockOrLogout: () -> Unit = {},
     isOwner: Boolean,
     isSupervisor: Boolean = false,
@@ -1803,6 +1858,9 @@ fun MoreOperationsHubSheet(
                             onNavigateToDoctors = onNavigateToDoctors,
                             onNavigateToNearExpiry = onNavigateToNearExpiry,
                             onNavigateToPharmaInward = onNavigateToPharmaInward,
+                            onNavigateToPatientVitals = onNavigateToPatientVitals,
+                            onNavigateToColdChain = onNavigateToColdChain,
+                            onNavigateToOtcAssistant = onNavigateToOtcAssistant,
                             onLockOrLogout = onLockOrLogout,
                             isOwner = isOwner,
                             isSupervisor = isSupervisor,
@@ -1847,6 +1905,9 @@ fun MoreOperationsHubSheet(
                     onNavigateToDoctors = onNavigateToDoctors,
                     onNavigateToNearExpiry = onNavigateToNearExpiry,
                     onNavigateToPharmaInward = onNavigateToPharmaInward,
+                    onNavigateToPatientVitals = onNavigateToPatientVitals,
+                    onNavigateToColdChain = onNavigateToColdChain,
+                    onNavigateToOtcAssistant = onNavigateToOtcAssistant,
                     onLockOrLogout = onLockOrLogout,
                     isOwner = isOwner,
                     isSupervisor = isSupervisor,
@@ -1878,6 +1939,9 @@ private fun MoreOperationsHubContent(
     onNavigateToDoctors: () -> Unit = {},
     onNavigateToNearExpiry: () -> Unit = {},
     onNavigateToPharmaInward: () -> Unit = {},
+    onNavigateToPatientVitals: () -> Unit = {},
+    onNavigateToColdChain: () -> Unit = {},
+    onNavigateToOtcAssistant: () -> Unit = {},
     onLockOrLogout: () -> Unit = {},
     isOwner: Boolean,
     isSupervisor: Boolean = false,
@@ -2008,6 +2072,45 @@ private fun MoreOperationsHubContent(
                 category = OperationCategory.MANAGEMENT,
                 isLocked = false,
                 onClick = onNavigateToPharmaInward
+            )
+        )
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.patient_vitals_hub_title),
+                subtitle = stringResource(R.string.patient_vitals_hub_subtitle),
+                navType = Nav3DType.CUSTOMERS,
+                badge = "VITALS",
+                badgeColor = Color(0xFFE11D48),
+                isSelected = false,
+                category = OperationCategory.CRM,
+                isLocked = false,
+                onClick = onNavigateToPatientVitals
+            )
+        )
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.cold_chain_hub_title),
+                subtitle = stringResource(R.string.cold_chain_hub_subtitle),
+                navType = Nav3DType.PRODUCTS,
+                badge = "2°-8°C",
+                badgeColor = Color(0xFF0284C7),
+                isSelected = false,
+                category = OperationCategory.MANAGEMENT,
+                isLocked = false,
+                onClick = onNavigateToColdChain
+            )
+        )
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.otc_assistant_hub_title),
+                subtitle = stringResource(R.string.otc_assistant_hub_subtitle),
+                navType = Nav3DType.SELL,
+                badge = "OTC",
+                badgeColor = Color(0xFF059669),
+                isSelected = false,
+                category = OperationCategory.MANAGEMENT,
+                isLocked = false,
+                onClick = onNavigateToOtcAssistant
             )
         )
         add(

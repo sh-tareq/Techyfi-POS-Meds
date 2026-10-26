@@ -674,3 +674,45 @@ data class PrescribingDoctor(
     val isActive: Boolean = true,
     val createdAt: Long = System.currentTimeMillis()
 )
+
+@Entity(
+    tableName = "patient_vitals",
+    indices = [
+        Index(value = ["customerPhone"]),
+        Index(value = ["recordedAt"]),
+        Index(value = ["customerName"])
+    ]
+)
+data class PatientVitalRecord(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val customerPhone: String? = null,
+    val customerName: String? = null,
+    val systolicBp: Int? = null,        // mmHg e.g. 120
+    val diastolicBp: Int? = null,       // mmHg e.g. 80
+    val pulseBpm: Int? = null,          // BPM e.g. 72
+    val bloodSugarMmol: Double? = null, // mmol/L e.g. 6.4
+    val sugarTestType: String = "RBS",  // "RBS", "FBS", "2HABF"
+    val weightKg: Double? = null,       // kg e.g. 68.5
+    val temperatureF: Double? = null,   // °F e.g. 98.4
+    val clinicalNotes: String? = null,
+    val recordedBy: String = "Pharmacist",
+    val recordedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(
+    tableName = "refrigerator_temp_logs",
+    indices = [
+        Index(value = ["loggedAt"]),
+        Index(value = ["unitName"]),
+        Index(value = ["isBreach"])
+    ]
+)
+data class RefrigeratorTempLog(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val unitName: String = "Main Pharma Vaccine Fridge",
+    val temperatureC: Double, // °C e.g. 4.2
+    val isBreach: Boolean = false, // true if < 2.0°C or > 8.0°C
+    val breachActionTaken: String? = null,
+    val recordedBy: String = "Pharmacist",
+    val loggedAt: Long = System.currentTimeMillis()
+)

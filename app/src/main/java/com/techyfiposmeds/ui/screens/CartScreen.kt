@@ -367,6 +367,13 @@ fun CartScreen(
     var isRefillReminderEnabled by remember { mutableStateOf(false) }
     var refillDays by remember { mutableIntStateOf(30) }
     var showRxViewerDialog by remember { mutableStateOf(false) }
+    var showPatientVitalsDialog by remember { mutableStateOf(false) }
+    var showColdChainDialog by remember { mutableStateOf(false) }
+    var showOtcAssistantDialog by remember { mutableStateOf(false) }
+    val allPatientVitals by cartViewModel.allPatientVitals.collectAsStateWithLifecycle()
+    val allTempLogs by cartViewModel.allRefrigeratorTempLogs.collectAsStateWithLifecycle()
+    val hasColdChainInCart by cartViewModel.hasColdChainItemsInCart.collectAsStateWithLifecycle()
+    val allProducts by cartViewModel.allProducts.collectAsStateWithLifecycle()
     val defaultCashier = invoiceSettingsData.cashierName.ifBlank { cashierName.ifBlank { stringResource(R.string.default_cashier_admin) } }
     val currentDisplayCashier = checkoutCashierName.ifBlank { defaultCashier }
 
@@ -1175,24 +1182,71 @@ fun CartScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF9F1239)
                                 )
-                                Surface(
-                                    onClick = { showDoctorDirectoryDialog = true },
-                                    color = Color(0xFFE11D48).copy(alpha = 0.1f),
-                                    shape = RoundedCornerShape(6.dp),
-                                    border = BorderStroke(0.6.dp, Color(0xFFFDA4AF))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    Surface(
+                                        onClick = { showPatientVitalsDialog = true },
+                                        color = Color(0xFFE11D48).copy(alpha = 0.1f),
+                                        shape = RoundedCornerShape(6.dp),
+                                        border = BorderStroke(0.6.dp, Color(0xFFFDA4AF))
                                     ) {
-                                        Text("📖", fontSize = 10.sp)
-                                        Text(
-                                            text = stringResource(R.string.doctor_directory_hub_title),
-                                            fontSize = 9.5.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFFE11D48)
-                                        )
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                        ) {
+                                            Text("❤️", fontSize = 10.sp)
+                                            Text(
+                                                text = "ভাইটালস",
+                                                fontSize = 9.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFE11D48)
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        onClick = { showOtcAssistantDialog = true },
+                                        color = Color(0xFF059669).copy(alpha = 0.1f),
+                                        shape = RoundedCornerShape(6.dp),
+                                        border = BorderStroke(0.6.dp, Color(0xFFA7F3D0))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                        ) {
+                                            Text("💊", fontSize = 10.sp)
+                                            Text(
+                                                text = "ওটিসি",
+                                                fontSize = 9.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF059669)
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        onClick = { showDoctorDirectoryDialog = true },
+                                        color = Color(0xFFE11D48).copy(alpha = 0.1f),
+                                        shape = RoundedCornerShape(6.dp),
+                                        border = BorderStroke(0.6.dp, Color(0xFFFDA4AF))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                        ) {
+                                            Text("📖", fontSize = 10.sp)
+                                            Text(
+                                                text = stringResource(R.string.doctor_directory_hub_title),
+                                                fontSize = 9.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFE11D48)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -3148,6 +3202,52 @@ fun CartScreen(
                             }
                         }
 
+                        if (hasColdChainInCart) {
+                            Surface(
+                                color = Color(0xFFE0F2FE),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, Color(0xFF0284C7)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp)
+                                    .clickable { showColdChainDialog = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text("❄️", fontSize = 18.sp)
+                                        Column {
+                                            Text(
+                                                text = "কোল্ড-চেইন ওষুধ সতর্কতা (2°C – 8°C Storage)",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF0369A1)
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.cart_cold_chain_warning_banner),
+                                                fontSize = 10.5.sp,
+                                                color = Color(0xFF075985)
+                                            )
+                                        }
+                                    }
+                                    TextButton(
+                                        onClick = { showColdChainDialog = true },
+                                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF0284C7)),
+                                        modifier = Modifier.minimumInteractiveComponentSize()
+                                    ) {
+                                        Text("ফ্রিজ মনিটর", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
                         if (!canSell) {
                             Text(stringResource(R.string.perm_checkout_required, stringResource(R.string.perm_sales_sell_title)), color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
                         } else if (!isCheckoutEnabled) {
@@ -3325,6 +3425,37 @@ fun CartScreen(
             expiryDate = dosageLabelItem!!.product.expiryDate,
             settings = invoiceSettingsData,
             onDismiss = { dosageLabelItem = null }
+        )
+    }
+
+    if (showPatientVitalsDialog) {
+        PatientVitalsDialog(
+            allVitals = allPatientVitals,
+            prefilledPhone = customerPhone.ifBlank { null },
+            prefilledName = customerName.ifBlank { null },
+            onDismiss = { showPatientVitalsDialog = false },
+            onSaveVital = { cartViewModel.savePatientVital(it) },
+            onDeleteVital = { cartViewModel.deletePatientVital(it) }
+        )
+    }
+
+    if (showColdChainDialog) {
+        ColdChainManagementDialog(
+            tempLogs = allTempLogs,
+            allProducts = allProducts,
+            onDismiss = { showColdChainDialog = false },
+            onSaveLog = { cartViewModel.saveRefrigeratorTempLog(it) },
+            onDeleteLog = { cartViewModel.deleteRefrigeratorTempLog(it) }
+        )
+    }
+
+    if (showOtcAssistantDialog) {
+        OtcSymptomAssistantDialog(
+            allProducts = allProducts,
+            onDismiss = { showOtcAssistantDialog = false },
+            onAddToCart = { product, qty ->
+                cartViewModel.addToCart(product, qty)
+            }
         )
     }
     val snapshot = billSnapshot
