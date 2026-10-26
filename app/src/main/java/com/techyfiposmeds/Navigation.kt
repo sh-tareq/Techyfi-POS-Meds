@@ -488,6 +488,8 @@ fun MainNavigation() {
         var showMoreHubSheet by remember { mutableStateOf(false) }
         var showQuarantineManager by remember { mutableStateOf(false) }
         var showDoctorDirectoryHub by remember { mutableStateOf(false) }
+        var showNearExpiryClearance by remember { mutableStateOf(false) }
+        var showPharmaStockInward by remember { mutableStateOf(false) }
         var showUserDropdown by remember { mutableStateOf(false) }
         var showLogoutConfirmDialog by remember { mutableStateOf(false) }
         var unacknowledgedOwnerAlert by remember { mutableStateOf<com.techyfiposmeds.data.OwnerAuditEvent?>(null) }
@@ -669,6 +671,14 @@ fun MainNavigation() {
                     onNavigateToDoctors = {
                         showMoreHubSheet = false
                         showDoctorDirectoryHub = true
+                    },
+                    onNavigateToNearExpiry = {
+                        showMoreHubSheet = false
+                        showNearExpiryClearance = true
+                    },
+                    onNavigateToPharmaInward = {
+                        showMoreHubSheet = false
+                        showPharmaStockInward = true
                     }
                 )
             }
@@ -702,6 +712,34 @@ fun MainNavigation() {
                     onSelectDoctor = null,
                     onSaveDoctor = { cartViewModel.saveDoctorToRegistry(it) },
                     onDeleteDoctor = { cartViewModel.deleteDoctorFromRegistry(it) }
+                )
+            }
+
+            if (showNearExpiryClearance) {
+                val allBatches by productsViewModel.allMedicineBatches.collectAsStateWithLifecycle()
+                val allProds by productsViewModel.allProducts.collectAsStateWithLifecycle(emptyList())
+
+                NearExpiryClearanceDialog(
+                    batches = allBatches,
+                    products = allProds,
+                    onDismiss = { showNearExpiryClearance = false },
+                    onMoveToQuarantine = { id, reason ->
+                        productsViewModel.setBatchQuarantineStatus(id, true, reason)
+                    }
+                )
+            }
+
+            if (showPharmaStockInward) {
+                val allProds by productsViewModel.allProducts.collectAsStateWithLifecycle(emptyList())
+
+                PharmaStockInwardDialog(
+                    products = allProds,
+                    onDismiss = { showPharmaStockInward = false },
+                    onConfirmInward = { product, batchNumber, expiryDate, mfgDate, totalQty, effectiveCost, mrpPrice, supplierName, invoiceNo ->
+                        productsViewModel.inwardPharmaStock(
+                            product, batchNumber, expiryDate, mfgDate, totalQty, effectiveCost, mrpPrice, supplierName, invoiceNo
+                        )
+                    }
                 )
             }
 
@@ -1708,6 +1746,8 @@ fun MoreOperationsHubSheet(
     onNavigateToCustomers: () -> Unit,
     onNavigateToQuarantine: () -> Unit = {},
     onNavigateToDoctors: () -> Unit = {},
+    onNavigateToNearExpiry: () -> Unit = {},
+    onNavigateToPharmaInward: () -> Unit = {},
     onLockOrLogout: () -> Unit = {},
     isOwner: Boolean,
     isSupervisor: Boolean = false,
@@ -1761,6 +1801,8 @@ fun MoreOperationsHubSheet(
                             onNavigateToCustomers = onNavigateToCustomers,
                             onNavigateToQuarantine = onNavigateToQuarantine,
                             onNavigateToDoctors = onNavigateToDoctors,
+                            onNavigateToNearExpiry = onNavigateToNearExpiry,
+                            onNavigateToPharmaInward = onNavigateToPharmaInward,
                             onLockOrLogout = onLockOrLogout,
                             isOwner = isOwner,
                             isSupervisor = isSupervisor,
@@ -1803,6 +1845,8 @@ fun MoreOperationsHubSheet(
                     onNavigateToCustomers = onNavigateToCustomers,
                     onNavigateToQuarantine = onNavigateToQuarantine,
                     onNavigateToDoctors = onNavigateToDoctors,
+                    onNavigateToNearExpiry = onNavigateToNearExpiry,
+                    onNavigateToPharmaInward = onNavigateToPharmaInward,
                     onLockOrLogout = onLockOrLogout,
                     isOwner = isOwner,
                     isSupervisor = isSupervisor,
@@ -1832,6 +1876,8 @@ private fun MoreOperationsHubContent(
     onNavigateToCustomers: () -> Unit,
     onNavigateToQuarantine: () -> Unit = {},
     onNavigateToDoctors: () -> Unit = {},
+    onNavigateToNearExpiry: () -> Unit = {},
+    onNavigateToPharmaInward: () -> Unit = {},
     onLockOrLogout: () -> Unit = {},
     isOwner: Boolean,
     isSupervisor: Boolean = false,
@@ -1936,6 +1982,32 @@ private fun MoreOperationsHubContent(
                 category = OperationCategory.MANAGEMENT,
                 isLocked = false,
                 onClick = onNavigateToDoctors
+            )
+        )
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.near_expiry_clearance_title),
+                subtitle = stringResource(R.string.near_expiry_clearance_subtitle),
+                navType = Nav3DType.PRODUCTS,
+                badge = "FEFO",
+                badgeColor = Color(0xFFD97706),
+                isSelected = false,
+                category = OperationCategory.MANAGEMENT,
+                isLocked = false,
+                onClick = onNavigateToNearExpiry
+            )
+        )
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.pharma_stock_inward_title),
+                subtitle = stringResource(R.string.pharma_stock_inward_subtitle),
+                navType = Nav3DType.SUPPLIERS,
+                badge = "BONUS",
+                badgeColor = Color(0xFF0F766E),
+                isSelected = false,
+                category = OperationCategory.MANAGEMENT,
+                isLocked = false,
+                onClick = onNavigateToPharmaInward
             )
         )
         add(

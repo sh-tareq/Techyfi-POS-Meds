@@ -359,6 +359,9 @@ fun CartScreen(
     val topDoctors by cartViewModel.topPrescribingDoctors.collectAsStateWithLifecycle()
     val allDoctors by cartViewModel.allPrescribingDoctors.collectAsStateWithLifecycle()
     val itemsExceedingMrp by cartViewModel.itemsExceedingMrp.collectAsStateWithLifecycle()
+    val clinicalAlerts by cartViewModel.clinicalInteractionAlerts.collectAsStateWithLifecycle()
+    val isClinicalAlertAcknowledged by cartViewModel.isClinicalAlertAcknowledged.collectAsStateWithLifecycle()
+    var showClinicalAdvisoryDialog by remember { mutableStateOf(false) }
     var showDoctorDirectoryDialog by remember { mutableStateOf(false) }
     var dosageLabelItem by remember { mutableStateOf<CartItem?>(null) }
     var isRefillReminderEnabled by remember { mutableStateOf(false) }
@@ -3026,13 +3029,14 @@ fun CartScreen(
                             expMillis != null && expMillis < System.currentTimeMillis()
                         }
                         val hasItemExceedingMrp = itemsExceedingMrp.isNotEmpty()
+                        val hasUnacknowledgedHighRiskClinicalAlert = clinicalAlerts.any { it.severity == com.techyfiposmeds.data.clinical.AlertSeverity.HIGH_RISK } && !isClinicalAlertAcknowledged
                         val isAntibioticMissingDoctor = hasAntibioticInCart &&
                             invoiceSettingsData.enforceAntibioticDoctor &&
                             doctorName.isBlank() &&
                             prescriptionImageUri.isNullOrBlank() &&
                             !isEmergencyOtcOverride
                         val isTotalValid = grandTotal > 0.0
-                        val isCheckoutEnabled = cartItems.isNotEmpty() && !hasExpiredItem && !hasItemExceedingMrp && !isAntibioticMissingDoctor && isTotalValid && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
+                        val isCheckoutEnabled = cartItems.isNotEmpty() && !hasExpiredItem && !hasItemExceedingMrp && !hasUnacknowledgedHighRiskClinicalAlert && !isAntibioticMissingDoctor && isTotalValid && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
 
                         if (hasExpiredItem) {
                             Surface(
@@ -3097,12 +3101,60 @@ fun CartScreen(
                             }
                         }
 
+                        if (clinicalAlerts.isNotEmpty() && !isClinicalAlertAcknowledged) {
+                            val hasHighRisk = clinicalAlerts.any { it.severity == com.techyfiposmeds.data.clinical.AlertSeverity.HIGH_RISK }
+                            Surface(
+                                color = if (hasHighRisk) Color(0xFFFEE2E2) else Color(0xFFFEF3C7),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, if (hasHighRisk) Color(0xFFDC2626) else Color(0xFFF59E0B)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp)
+                                    .clickable { showClinicalAdvisoryDialog = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(if (hasHighRisk) "🚨" else "⚠️", fontSize = 20.sp)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(
+                                                text = if (hasHighRisk) "মারাত্মক ড্রাগ মিথস্ক্রিয়া সতর্কবার্তা (${clinicalAlerts.size}টি)" else "চিকিৎসা সংক্রান্ত সতর্কতা (${clinicalAlerts.size}টি)",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = if (hasHighRisk) Color(0xFFDC2626) else Color(0xFFB45309)
+                                            )
+                                            Text(
+                                                text = "কার্টের ওষুধের মধ্যে সম্ভাব্য ক্ষতিকর পার্শ্বপ্রতিক্রিয়া বা ডুপ্লিকেট উপাদান সনাক্ত হয়েছে।",
+                                                fontSize = 10.5.sp,
+                                                color = if (hasHighRisk) Color(0xFF991B1B) else Color(0xFF92400E)
+                                            )
+                                        }
+                                    }
+                                    TextButton(
+                                        onClick = { showClinicalAdvisoryDialog = true },
+                                        colors = ButtonDefaults.textButtonColors(contentColor = if (hasHighRisk) Color(0xFFDC2626) else Color(0xFFB45309)),
+                                        modifier = Modifier.minimumInteractiveComponentSize()
+                                    ) {
+                                        Text("পরামর্শ", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
                         if (!canSell) {
                             Text(stringResource(R.string.perm_checkout_required, stringResource(R.string.perm_sales_sell_title)), color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
                         } else if (!isCheckoutEnabled) {
                             val reason = when {
                                 hasExpiredItem -> stringResource(R.string.cart_reason_expired_medicine_blocked)
                                 hasItemExceedingMrp -> stringResource(R.string.cart_reason_mrp_exceeded)
+                                hasUnacknowledgedHighRiskClinicalAlert -> stringResource(R.string.cart_reason_clinical_ddi_blocked)
                                 isAntibioticMissingDoctor -> stringResource(R.string.cart_reason_antibiotic_doctor_required)
                                 !isTotalValid -> stringResource(R.string.cart_reason_total_zero)
                                 !isDueValid -> stringResource(R.string.cart_reason_due_details_required)
@@ -3241,6 +3293,23 @@ fun CartScreen(
             onSelectDoctor = { cartViewModel.selectDoctor(it) },
             onSaveDoctor = { cartViewModel.saveDoctorToRegistry(it) },
             onDeleteDoctor = { cartViewModel.deleteDoctorFromRegistry(it) }
+        )
+    }
+
+    if (showClinicalAdvisoryDialog && clinicalAlerts.isNotEmpty()) {
+        ClinicalInteractionAdvisoryDialog(
+            alerts = clinicalAlerts,
+            onDismiss = { showClinicalAdvisoryDialog = false },
+            onAcknowledge = {
+                cartViewModel.acknowledgeClinicalAlerts()
+                showClinicalAdvisoryDialog = false
+            },
+            onRemoveItem = { medName ->
+                val targetItem = cartItems.find { it.product.name == medName }
+                if (targetItem != null) {
+                    cartViewModel.removeFromCart(targetItem.product)
+                }
+            }
         )
     }
 

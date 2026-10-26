@@ -3587,4 +3587,12 @@
     <string name="shelf_rack_filter_all">সব র্যাক / তাক</string>
     <string name="shelf_rack_filter_chip">📍 %1$s (%2$d)</string>
     <string name="patient_name_label">রোগীর নাম</string>
+
+    <!-- Phase 5: Clinical Decision Support, Drug-Drug Interactions, Near-Expiry Liquidation & Bonus Scheme Inwarding -->
+    <string name="near_expiry_clearance_title">আসন্ন মেয়াদোত্তীর্ণ ক্লিয়ারেন্স</string>
+    <string name="near_expiry_clearance_subtitle">৩০/৬০/৯০ দিনে মেয়াদ শেষ হওয়া ওষুধ ও কোম্পানি ফেরত চালান</string>
+    <string name="pharma_stock_inward_title">ফার্মা স্টক ইনওয়ার্ড ও বোনাস পাতা</string>
+    <string name="pharma_stock_inward_subtitle">কোম্পানি চালান, ব্যাচ নম্বর ও ফ্রি বোনাস পাতা হিসাব</string>
+    <string name="clinical_alert_badge">ড্রাগ মিথস্ক্রিয়া</string>
+    <string name="cart_reason_clinical_ddi_blocked">নিষেধাজ্ঞা: কার্টে মারাত্মক ড্রাগ মিথস্ক্রিয়া রয়েছে, পরামর্শ পর্যালোচনা করুন</string>
 </resources>

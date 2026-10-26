@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,6 +33,7 @@ fun MedicineClinicalDialog(
     clinicalInfo: ClinicalGeneric?,
     onDismiss: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -141,6 +143,45 @@ fun MedicineClinicalDialog(
                         content = clinicalInfo?.precaution ?: "Pregnancy Category B. Safe in recommended therapeutic doses. Avoid prolonged high-dose administration.",
                         accentColor = Color(0xFF8B5CF6)
                     )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        val counselingText = buildString {
+                            appendLine("📋 রোগীর সেবন নির্দেশিকা (PATIENT COUNSELING NOTE)")
+                            appendLine("ওষুধ: ${medicine.brandName} (${medicine.dosageForm ?: ""})")
+                            appendLine("জেনেরিক: ${medicine.genericName ?: ""}")
+                            appendLine("----------------------------------------")
+                            appendLine("🩺 নির্দেশনা: ${clinicalInfo?.indication ?: "চিকিৎসকের পরামর্শ অনুযায়ী সেব্য"}")
+                            appendLine("💊 সেবন মাত্রা: ${clinicalInfo?.adultDose ?: "১টি করে দিনে ২ বার খাওয়ার পর"}")
+                            if (!clinicalInfo?.administration.isNullOrBlank()) {
+                                appendLine("🍽️ নিয়ম: ${clinicalInfo?.administration}")
+                            }
+                            if (!clinicalInfo?.precaution.isNullOrBlank()) {
+                                appendLine("⚠️ সতর্কতা: ${clinicalInfo?.precaution}")
+                            }
+                            appendLine("----------------------------------------")
+                            appendLine("সুস্থ থাকুন - ফার্মেসি পেশাদার সেবা")
+                        }
+                        val sendIntent = android.content.Intent().apply {
+                            action = android.content.Intent.ACTION_SEND
+                            putExtra(android.content.Intent.EXTRA_TEXT, counselingText)
+                            type = "text/plain"
+                        }
+                        context.startActivity(android.content.Intent.createChooser(sendIntent, "রোগীর সেবন নির্দেশিকা শেয়ার করুন"))
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .minimumInteractiveComponentSize(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6))
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("রোগীর সেবন নির্দেশিকা শেয়ার করুন (Counseling Note)", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

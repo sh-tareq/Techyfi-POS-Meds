@@ -3585,6 +3585,14 @@
     <string name="shelf_rack_filter_all">All Shelves</string>
     <string name="shelf_rack_filter_chip">📍 %1$s (%2$d)</string>
     <string name="patient_name_label">Patient Name</string>
+
+    <!-- Phase 5: Clinical Decision Support, Drug-Drug Interactions, Near-Expiry Liquidation & Bonus Scheme Inwarding -->
+    <string name="near_expiry_clearance_title">Near-Expiry Liquidation</string>
+    <string name="near_expiry_clearance_subtitle">30/60/90 days short-dated stock &amp; return challan</string>
+    <string name="pharma_stock_inward_title">Pharma Stock Inward &amp; Schemes</string>
+    <string name="pharma_stock_inward_subtitle">Supplier invoices, batch number &amp; bonus strip cost calculator</string>
+    <string name="clinical_alert_badge">Clinical Alert</string>
+    <string name="cart_reason_clinical_ddi_blocked">Blocked: Unacknowledged High-Risk Drug Interaction in cart</string>
 </resources>
 
 

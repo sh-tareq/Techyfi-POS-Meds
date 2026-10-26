@@ -1287,6 +1287,32 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /**
+     * Clinical Drug-Drug Interaction (DDI) & Duplicate Therapy Screening.
+     */
+    private val _isClinicalAlertAcknowledged = MutableStateFlow(false)
+    val isClinicalAlertAcknowledged: StateFlow<Boolean> = _isClinicalAlertAcknowledged.asStateFlow()
+
+    val clinicalInteractionAlerts: StateFlow<List<com.techyfiposmeds.data.clinical.ClinicalInteractionAlert>> = _cartItems.map { items ->
+        val evaluated = items.map { item ->
+            com.techyfiposmeds.data.clinical.EvaluatedMedicine(
+                id = item.product.barcode,
+                name = item.product.name,
+                genericName = item.product.genericName,
+                category = item.product.category
+            )
+        }
+        com.techyfiposmeds.data.clinical.ClinicalDdiEngine.evaluateCart(evaluated)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun acknowledgeClinicalAlerts() {
+        _isClinicalAlertAcknowledged.value = true
+    }
+
+    fun resetClinicalAlertsAcknowledgment() {
+        _isClinicalAlertAcknowledged.value = false
+    }
+
     fun setEmergencyOtcOverride(override: Boolean) {
         _isEmergencyOtcOverride.value = override
     }
@@ -2242,6 +2268,11 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         return repository.medicineRepository.getClinicalGenericInfo(genericId)
     }
 
+    suspend fun getClinicalInfoByName(genericName: String?): com.techyfiposmeds.data.ClinicalGeneric? {
+        if (genericName.isNullOrBlank()) return null
+        return repository.medicineRepository.getClinicalGenericInfoByName(genericName)
+    }
+
     suspend fun convertAndSaveMedicineToProduct(med: com.techyfiposmeds.data.MedicineItem): Product {
         val canonicalBarcode = med.barcode?.ifBlank { null } ?: med.sku
         val existing = repository.getProductByBarcode(canonicalBarcode)
@@ -2378,6 +2409,45 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
     fun disposeBatch(batchId: Long, disposeQty: Double, reason: String, notes: String? = null, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
             val res = runCatchingNonCancellation { repository.disposeBatch(batchId, disposeQty, reason, notes) }
+            onResult(res)
+        }
+    }
+
+    fun inwardPharmaStock(
+        product: Product,
+        batchNumber: String,
+        expiryDate: String,
+        mfgDate: String?,
+        totalQty: Double,
+        effectiveCost: Double,
+        mrpPrice: Double,
+        supplierName: String,
+        invoiceNo: String,
+        onResult: (Result<Unit>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val res = runCatchingNonCancellation {
+                val updatedProduct = product.copy(
+                    stockQty = product.stockQty + totalQty,
+                    purchasePrice = effectiveCost,
+                    mrpPrice = if (mrpPrice > 0.0) mrpPrice else product.mrpPrice,
+                    batchNumber = batchNumber,
+                    expiryDate = expiryDate
+                )
+                repository.updateProduct(updatedProduct)
+
+                val newBatch = com.techyfiposmeds.data.db.MedicineBatch(
+                    productBarcode = product.barcode,
+                    batchNumber = batchNumber,
+                    expiryDate = expiryDate,
+                    mfgDate = mfgDate,
+                    stockQty = totalQty,
+                    purchasePrice = effectiveCost,
+                    mrpPrice = if (mrpPrice > 0.0) mrpPrice else product.mrpPrice,
+                    isQuarantined = false
+                )
+                repository.upsertMedicineBatch(newBatch)
+            }
             onResult(res)
         }
     }

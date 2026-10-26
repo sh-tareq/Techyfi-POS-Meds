@@ -311,6 +311,38 @@ class MedicineRepository private constructor(private val context: Context) {
         null
     }
 
+    suspend fun getClinicalGenericInfoByName(genericName: String): ClinicalGeneric? = withContext(Dispatchers.IO) {
+        if (genericName.isBlank()) return@withContext null
+        initializeDatabase()
+        val d = getReadableDb()
+        val cleanName = genericName.trim().lowercase()
+        val sql = "SELECT * FROM pos_generics WHERE LOWER(generic_name) = ? OR LOWER(generic_name) LIKE ? LIMIT 1"
+        try {
+            d.rawQuery(sql, arrayOf(cleanName, "%$cleanName%")).use { cursor ->
+                if (cursor.moveToNext()) {
+                    return@withContext ClinicalGeneric(
+                        genericId = cursor.getLong(cursor.getColumnIndexOrThrow("generic_id")),
+                        genericName = cursor.getString(cursor.getColumnIndexOrThrow("generic_name")),
+                        category = cursor.getStringOrNull("category"),
+                        indication = cursor.getStringOrNull("indication"),
+                        adultDose = cursor.getStringOrNull("adult_dose"),
+                        childDose = cursor.getStringOrNull("child_dose"),
+                        renalDose = cursor.getStringOrNull("renal_dose"),
+                        contraIndication = cursor.getStringOrNull("contra_indication"),
+                        sideEffect = cursor.getStringOrNull("side_effect"),
+                        precaution = cursor.getStringOrNull("precaution"),
+                        modeOfAction = cursor.getStringOrNull("mode_of_action"),
+                        interaction = cursor.getStringOrNull("interaction"),
+                        administration = cursor.getStringOrNull("administration")
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading generic info by name: ${e.message}", e)
+        }
+        null
+    }
+
     suspend fun getAllDosageForms(): List<String> = withContext(Dispatchers.IO) {
         initializeDatabase()
         val d = getReadableDb()

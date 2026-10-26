@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-26 (app version 2.8.06-Final-V26-10-2026, build `Techyfi-POS-Meds-Final-V26-10-2026-Phase4.apk`; versionCode 220991; DB schema version 42; package `com.techyfiposmeds`)
+Last updated: 2026-10-26 (app version 2.8.07-Final-V26-10-2026, build `Techyfi-POS-Meds-Final-V26-10-2026-Phase5.apk`; versionCode 220992; DB schema version 42; package `com.techyfiposmeds`)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3489,6 +3489,34 @@ mindmap
 - **Shelf / Rack Physical Location Quick-Filter (`ProductsScreen.kt`, `ProductsViewModel`)**:
   - Dynamic horizontal chip bar showing all unique physical pharmacy shelf/rack locations (`📍 A-01 (14)`, `📍 B-03 (8)`).
   - Enables instant 1-tap filtering for rapid counter retrieval during peak customer traffic.
+
+### Release Final-V26-10-26-Phase5: Clinical Decision Support (DDI), Near-Expiry Liquidation & Bonus Schemes (Version 2.8.07-Final-V26-10-2026, Build Final-V26-10-2026-Phase5, versionCode 220992, DB Schema 42)
+- **Clinical Decision Support (CDS) & Drug-Drug Interaction (DDI) Screening Engine (`ClinicalDdiEngine.kt`, `CartScreen.kt`, `CartViewModel`)**:
+  - Deterministic clinical interaction matrix screening cart items in real time for life-threatening interactions:
+    - Fluoroquinolones (Ciprofloxacin/Levofloxacin) + NSAIDs (CNS excitation & seizure risk)
+    - ACE Inhibitors / ARBs + Potassium-Sparing Diuretics (Fatal hyperkalemia & arrhythmia risk)
+    - Clopidogrel + Omeprazole/Esomeprazole (CYP2C19 competitive inhibition reducing cardiac protection)
+    - Oral Anticoagulants + NSAIDs/Aspirin (Major gastrointestinal hemorrhage risk)
+    - PDE-5 Inhibitors (Sildenafil/Tadalafil) + Nitrates (Fatal precipitous hypotension contraindication)
+    - Statins + Macrolides (Acute rhabdomyolysis & renal failure risk)
+    - SSRIs/SNRIs + Tramadol (Life-threatening Serotonin Syndrome)
+    - Methotrexate + NSAIDs (Severe bone marrow suppression & toxicity)
+  - Duplicate generic ingredient detection identifying multiple brand names containing identical active substances (e.g. Napa + Ace) to prevent accidental patient overdose.
+- **Cart Clinical Caution Banner & Interactive Advisory Modal (`ClinicalInteractionAdvisoryDialog.kt`)**:
+  - Real-time severity banners (`🔴 HIGH RISK`, `🟡 MODERATE`, `🟠 DUPLICATE THERAPY`) displayed directly above checkout summary.
+  - Interactive advisory dialog showing colliding medicine pairs, pharmacological mechanisms, and bilingual pharmacist guidance in English and Bangla.
+  - Checkout lock enforcing acknowledgment of high-risk drug interactions before dispensing.
+- **Near-Expiry Liquidation & Supplier Return Challan Engine (`NearExpiryClearanceDialog.kt`)**:
+  - Interactive operational hub classifying batches into `< 30 Days` (Critical Red), `< 60 Days` (Urgent Amber), and `< 90 Days` (Warning Yellow).
+  - Computes total monetary inventory value at risk (৳) to avoid pharmacy margin losses.
+  - 1-Tap "Share Supplier Return Challan" generating structured return invoices for pharmaceutical company sales representatives (Square, Beximco, Incepta) via Android share sheet.
+- **Pharma Supplier Stock Inwarding with Free Strip Scheme / Bonus Calculator (`PharmaStockInwardDialog.kt`)**:
+  - Purpose-built inwarding workflow capturing company invoice number, batch number, manufacturing date, and expiry date.
+  - Automatically calculates true effective unit landing cost factoring in bonus strips (`effectiveCost = (paidQty * TP) / (paidQty + bonusQty)`).
+  - Live margin preview showing exact savings from free bonus schemes.
+  - Inwards stock into both `Product` inventory and Room `MedicineBatch` records with FEFO sequencing.
+- **Patient Clinical Counseling Slip Sharing (`MedicineClinicalDialog.kt`)**:
+  - 1-Tap sharing of formatted patient counseling notes via WhatsApp, SMS, or thermal printer with indication, dosage guidelines, food administration, and precautions.
 
 ## Maintenance note
 
