@@ -1848,7 +1848,7 @@ fun InwardStockDialog(
                                     Column {
                                         Text(product.name, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                         Text(
-                                            "${product.dosageForm ?: ""} · ${product.strength ?: ""} · ৳${formatTaka(product.purchasePrice)}",
+                                            "${product.dosageForm ?: ""} · ${product.strength ?: ""} · ${formatTaka(product.purchasePrice)}",
                                             fontSize = 10.5.sp,
                                             color = MaterialTheme.colorScheme.outline
                                         )
@@ -1954,7 +1954,7 @@ fun InwardStockDialog(
 
                     Column(Modifier.weight(1f)) {
                         Text("মোট পিস: ${if (basePcs % 1.0 == 0.0) basePcs.toLong().toString() else "%.1f".format(basePcs)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
-                        Text("লাইন মূল্য: ৳${formatTaka(estLineTotal)}", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, color = MaterialTheme.colorScheme.primary)
+                        Text("লাইন মূল্য: ${formatTaka(estLineTotal)}", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, color = MaterialTheme.colorScheme.primary)
                     }
                 }
 
@@ -2017,12 +2017,12 @@ fun InwardStockDialog(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(productName, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(
-                                    "পরিমাণ: ${if (line.quantity % 1.0 == 0.0) line.quantity.toLong().toString() else "%.1f".format(line.quantity)} পিস · টিপি: ৳${formatTaka(line.unitCost)} ${if (line.tradeDiscountPercent > 0) "(-${line.tradeDiscountPercent}%)" else ""}",
+                                    "পরিমাণ: ${if (line.quantity % 1.0 == 0.0) line.quantity.toLong().toString() else "%.1f".format(line.quantity)} পিস · টিপি: ${formatTaka(line.unitCost)} ${if (line.tradeDiscountPercent > 0) "(-${line.tradeDiscountPercent}%)" else ""}",
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    "🏷️ ব্যাচ: ${line.batchNumber ?: "N/A"} · ⏳ মেয়াদ: ${line.expiryDate ?: "N/A"} · মোট: ৳${formatTaka(lineTotal)}",
+                                    "🏷️ ব্যাচ: ${line.batchNumber ?: "N/A"} · ⏳ মেয়াদ: ${line.expiryDate ?: "N/A"} · মোট: ${formatTaka(lineTotal)}",
                                     fontSize = 10.5.sp,
                                     color = MaterialTheme.colorScheme.primary
                                 )

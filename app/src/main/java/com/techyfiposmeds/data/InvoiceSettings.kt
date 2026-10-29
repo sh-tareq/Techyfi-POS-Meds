@@ -52,7 +52,7 @@ data class InvoiceSettingsData(
     val qrCaption: String = "Scan QR for Digital Invoice / Info",
     val thankYouMessage: String = "Thank You For Shopping!",
     val secondaryFooter: String = "Please Visit Again",
-    val poweredByText: String = "Powered by Techyfi POS",
+    val poweredByText: String = "Powered by Techyfi Pharma",
     val cashierName: String = "Admin",
     val cashierPresets: List<String> = listOf("Admin"),
     // Toggles
@@ -332,7 +332,7 @@ data class InvoiceSettingsData(
                     qrCaption = json.optString("qrCaption", "Scan QR for Digital Invoice / Info"),
                     thankYouMessage = json.optString("thankYouMessage", "Thank You For Shopping!"),
                     secondaryFooter = json.optString("secondaryFooter", "Please Visit Again"),
-                    poweredByText = json.optString("poweredByText", "Powered by Techyfi POS"),
+                    poweredByText = json.optString("poweredByText", "Powered by Techyfi Pharma"),
                     cashierName = json.optString("cashierName", "Admin"),
                     cashierPresets = if (presetsList.isNotEmpty()) presetsList else listOf("Admin", "Ahmed", "Fatema", "Karim", "Rahim"),
                     showAddress = json.optBoolean("showAddress", true),

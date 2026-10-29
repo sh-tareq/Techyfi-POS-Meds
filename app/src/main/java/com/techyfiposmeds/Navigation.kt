@@ -248,13 +248,16 @@ private fun Nav3DIconContent(type: Nav3DType, targetSize: androidx.compose.ui.un
 @Composable
 fun LocaleWrapper(language: String, content: @Composable () -> Unit) {
     val context = LocalContext.current
-    val locale = java.util.Locale.forLanguageTag(language)
+    val locale = if (language.equals("bn", ignoreCase = true)) java.util.Locale.forLanguageTag("bn") else java.util.Locale.US
     
     val currentSysConfig = androidx.compose.ui.platform.LocalConfiguration.current
     val config = remember(currentSysConfig.orientation, currentSysConfig.screenWidthDp, currentSysConfig.screenHeightDp, language) {
         android.content.res.Configuration(context.resources.configuration).apply {
             setTo(currentSysConfig)
             setLocale(locale)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                setLocales(android.os.LocaleList(locale))
+            }
         }
     }
     
@@ -1475,6 +1478,7 @@ fun MainNavigation() {
                                 ProductsScreen(
                                     productsViewModel = productsViewModel,
                                     cartViewModel = cartViewModel,
+                                    settingsViewModel = settingsViewModel,
                                     prefilledBarcode = code,
                                     isOwner = isOwner,
                                     canViewCosts = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW_COSTS),
@@ -2024,8 +2028,8 @@ private fun MoreOperationsHubContent(
         )
         add(
             OperationHubItem(
-                title = "কোয়ারেন্টাইন ও মেয়াদোত্তীর্ণ",
-                subtitle = "মেয়াদোত্তীর্ণ ও প্রত্যাহারকৃত ওষুধ ব্যবস্থাপনা ও কোম্পানি ফেরত",
+                title = stringResource(R.string.quarantine_title),
+                subtitle = stringResource(R.string.quarantine_desc),
                 navType = Nav3DType.PRODUCTS,
                 badge = "DGDA",
                 badgeColor = Color(0xFFDC2626),
@@ -2253,13 +2257,13 @@ private fun MoreOperationsHubContent(
 
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.size(34.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = stringResource(R.string.common_close_content_description),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -2308,7 +2312,7 @@ private fun MoreOperationsHubContent(
                         selectedBorderWidth = 1.dp
                     ),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.height(30.dp)
+                    modifier = Modifier.heightIn(min = 34.dp)
                 )
             }
         }
@@ -2513,7 +2517,7 @@ fun OperationHubCard(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (item.isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                     if (item.isLocked) {
@@ -2598,7 +2602,7 @@ fun OperationHubCard(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (item.isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) else MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                         if (item.isLocked) {

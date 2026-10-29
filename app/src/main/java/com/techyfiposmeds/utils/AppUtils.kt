@@ -135,16 +135,24 @@ var currentAppLanguage: String = "en"
 fun setAppLanguage(lang: String) {
     currentAppLanguage = lang
     try {
-        Locale.setDefault(if (lang.equals("bn", ignoreCase = true)) Locale.forLanguageTag("bn") else Locale.US)
+        val targetLocale = if (lang.equals("bn", ignoreCase = true)) Locale.forLanguageTag("bn") else Locale.US
+        Locale.setDefault(targetLocale)
     } catch (_: Throwable) {}
 }
 
 fun isAppBangla(locale: Locale = Locale.getDefault()): Boolean =
-    currentAppLanguage.equals("bn", ignoreCase = true) || locale.language.equals("bn", ignoreCase = true)
+    if (currentAppLanguage.isNotBlank()) {
+        currentAppLanguage.equals("bn", ignoreCase = true)
+    } else {
+        locale.language.equals("bn", ignoreCase = true)
+    }
 
 fun getLocalizedContext(context: Context, locale: Locale = DateFormatters.getAppLocale()): Context {
     val config = android.content.res.Configuration(context.resources.configuration).apply {
         setLocale(locale)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            setLocales(android.os.LocaleList(locale))
+        }
     }
     return context.createConfigurationContext(config)
 }

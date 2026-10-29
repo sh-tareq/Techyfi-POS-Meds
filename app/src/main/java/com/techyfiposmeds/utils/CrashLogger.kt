@@ -44,7 +44,7 @@ object CrashLogger {
         }
 
         val content = buildString {
-            appendLine("Techyfi POS crash report")
+            appendLine("Techyfi Pharma crash report")
             appendLine("Time: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())}")
             appendLine("App version: $versionName")
             appendLine("Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")

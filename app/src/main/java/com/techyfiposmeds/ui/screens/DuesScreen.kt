@@ -630,6 +630,7 @@ fun DuesScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .weight(1f, fill = false)
+                                .padding(end = 8.dp)
                                 .horizontalScroll(rememberScrollState())
                         ) {
                             listOf(
@@ -1651,7 +1652,7 @@ private fun shareCustomerStatement(
         ledger.add(StatementLedgerEntry(p.timestamp, desc, debit = 0.0, credit = p.amountPaid))
     }
     returns.forEach { r ->
-        val desc = "${if (isBangla) "পণ্য ফেরত" else "Return"} #${r.saleId}"
+        val desc = "${if (isBangla) "ওষুধ ফেরত" else "Return"} #${r.saleId}"
         ledger.add(StatementLedgerEntry(r.timestamp, desc, debit = 0.0, credit = r.dueAdjustmentAmount))
     }
     ledger.sortBy { it.timestamp }

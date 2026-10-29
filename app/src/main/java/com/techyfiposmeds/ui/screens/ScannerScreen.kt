@@ -604,6 +604,7 @@ fun ScannerScreen(
                     cartItems = cartItems,
                     total = grandTotal,
                     allowNegativeInventory = allowNegativeInventory,
+                    getItemPrice = { item -> cartViewModel.effectiveItemPrice(item) },
                     onQuantityChanged = { prod, qty ->
                         if (qty <= 0.0) {
                             handleRemoveItemRequest(prod)
@@ -2538,7 +2539,7 @@ private fun SellHeader(
                             letterSpacing = 0.8.sp
                         )
                         Text(
-                            text = "POS",
+                            text = "PHARMA",
                             color = Color(0xFF0072FF),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
@@ -2901,14 +2902,14 @@ private fun SellCheckoutBar(
                 val countInt = kotlin.math.round(itemCount).toInt().coerceAtLeast(0)
                 val itemCountDisp = if (itemCount % 1.0 == 0.0) {
                     if (com.techyfiposmeds.utils.isAppBangla()) {
-                        "${com.techyfiposmeds.utils.toBanglaDigits(countInt.toString())}টি পণ্য"
+                        "${com.techyfiposmeds.utils.toBanglaDigits(countInt.toString())}টি ওষুধ"
                     } else {
-                        pluralStringResource(R.plurals.items_count, countInt, countInt)
+                        pluralStringResource(R.plurals.products_count, countInt, countInt)
                     }
                 } else {
                     val rawFrac = String.format(Locale.US, "%.2f", itemCount).trimEnd('0').trimEnd('.')
                     val fracDisp = if (com.techyfiposmeds.utils.isAppBangla()) com.techyfiposmeds.utils.toBanglaDigits(rawFrac) else rawFrac
-                    if (com.techyfiposmeds.utils.isAppBangla()) "${fracDisp}টি পণ্য" else "$fracDisp items"
+                    if (com.techyfiposmeds.utils.isAppBangla()) "${fracDisp}টি ওষুধ" else "$fracDisp medicines"
                 }
                 Text(itemCountDisp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                 Text(formatTaka(total), fontWeight = FontWeight.Bold, fontSize = 20.sp)
@@ -2963,6 +2964,7 @@ private fun CartPreviewBottomSheet(
     cartItems: List<com.techyfiposmeds.ui.viewmodel.CartItem>,
     total: Double,
     allowNegativeInventory: Boolean = false,
+    getItemPrice: (com.techyfiposmeds.ui.viewmodel.CartItem) -> Double = { it.product.sellingPrice },
     onQuantityChanged: (Product, Double) -> Unit,
     onRemove: (Product) -> Unit,
     onDismiss: () -> Unit,
@@ -3030,8 +3032,28 @@ private fun CartPreviewBottomSheet(
                             qtyBounceAnim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
                         }
 
-                        val unitPriceStr = formatTaka(item.product.sellingPrice)
-                        val totalAmountStr = formatTaka(item.product.sellingPrice * item.quantity)
+                        val isBn = com.techyfiposmeds.utils.isAppBangla()
+                        val form = item.product.dosageForm?.trim()?.lowercase() ?: ""
+                        val effectivePrice = getItemPrice(item)
+                        val resolvedUnit = if (item.unitType.equals("strip", ignoreCase = true) && !item.product.isStripApplicable) "pc" else item.unitType.lowercase()
+                        val activeUnitName = when (resolvedUnit) {
+                            "strip" -> {
+                                val stripCount = if (item.product.stripSize > 0) item.product.stripSize else 10
+                                if (isBn) "পাতা ($stripCount)" else "Strip ($stripCount)"
+                            }
+                            "box" -> if (isBn) "বক্স" else "Box"
+                            else -> {
+                                if (form.contains("syrup") || form.contains("suspension") || form.contains("drop") || form.contains("liquid")) {
+                                    if (isBn) "বোতল" else "Bottle"
+                                } else if (form.contains("cream") || form.contains("ointment") || form.contains("gel")) {
+                                    if (isBn) "টিউব" else "Tube"
+                                } else {
+                                    if (isBn) "পিস" else "Pc"
+                                }
+                            }
+                        }
+                        val unitPriceStr = formatTaka(effectivePrice)
+                        val totalAmountStr = formatTaka(effectivePrice * item.quantity)
 
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
@@ -3078,17 +3100,19 @@ private fun CartPreviewBottomSheet(
                                             .padding(end = 6.dp),
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
+                                        Text(
+                                            text = "$unitPriceStr / $activeUnitName",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+
                                         FlowRow(
                                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                                             verticalArrangement = Arrangement.spacedBy(3.dp)
                                         ) {
-                                            Text(
-                                                text = "$unitPriceStr/${item.product.unit}",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 1
-                                            )
                                             Surface(
                                                 shape = RoundedCornerShape(6.dp),
                                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
@@ -3105,7 +3129,7 @@ private fun CartPreviewBottomSheet(
                                         }
                                     }
 
-                                    // Right: Stepper controls
+                                    // Right: Stepper controls (48dp touch targets, Material 3 vector icons)
                                     val isFractionalUnit = isFractionalUnit(item.product.unit)
                                     val stepVal = if (isFractionalUnit) 0.25 else 1.0
 
@@ -3123,18 +3147,21 @@ private fun CartPreviewBottomSheet(
                                                 val next = (Math.round((item.quantity - stepVal) * 100.0) / 100.0).coerceAtLeast(0.0)
                                                 onQuantityChanged(item.product, next)
                                             },
-                                            shape = RoundedCornerShape(9.dp),
-                                            color = Color(0xFFFEE2E2),
-                                            modifier = Modifier.size(32.dp)
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                            modifier = Modifier.size(48.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
-                                                Text(
-                                                    text = "➖",
-                                                    fontSize = 12.sp,
-                                                    modifier = Modifier.graphicsLayer {
-                                                        scaleX = minusAnim.value
-                                                        scaleY = minusAnim.value
-                                                    }
+                                                Icon(
+                                                    Icons.Default.Remove,
+                                                    contentDescription = stringResource(R.string.cd_decrease),
+                                                    modifier = Modifier
+                                                        .size(18.dp)
+                                                        .graphicsLayer {
+                                                            scaleX = minusAnim.value
+                                                            scaleY = minusAnim.value
+                                                        },
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
                                         }
@@ -3142,16 +3169,16 @@ private fun CartPreviewBottomSheet(
                                         // Quantity counter badge (tap to enter manual quantity)
                                         Surface(
                                             onClick = { itemToSetQuantity = item },
-                                            shape = RoundedCornerShape(9.dp),
+                                            shape = RoundedCornerShape(10.dp),
                                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                                             modifier = Modifier
-                                                .height(48.dp)
-                                                .defaultMinSize(minWidth = 36.dp)
+                                                .heightIn(min = 48.dp)
+                                                .defaultMinSize(minWidth = 40.dp)
                                                 .padding(horizontal = 1.dp)
                                         ) {
                                             Box(
                                                 contentAlignment = Alignment.Center,
-                                                modifier = Modifier.padding(horizontal = 7.dp)
+                                                modifier = Modifier.padding(horizontal = 8.dp)
                                             ) {
                                                 Text(
                                                     text = itemQtyStr,
@@ -3177,24 +3204,27 @@ private fun CartPreviewBottomSheet(
                                                     onQuantityChanged(item.product, next)
                                                 }
                                             },
-                                            shape = RoundedCornerShape(9.dp),
-                                            color = Color(0xFF10B981),
-                                            contentColor = Color.White,
-                                            modifier = Modifier.size(32.dp)
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.size(48.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
-                                                Text(
-                                                    text = "➕",
-                                                    fontSize = 12.sp,
-                                                    modifier = Modifier.graphicsLayer {
-                                                        scaleX = plusAnim.value
-                                                        scaleY = plusAnim.value
-                                                    }
+                                                Icon(
+                                                    Icons.Default.Add,
+                                                    contentDescription = stringResource(R.string.cd_increase),
+                                                    modifier = Modifier
+                                                        .size(18.dp)
+                                                        .graphicsLayer {
+                                                            scaleX = plusAnim.value
+                                                            scaleY = plusAnim.value
+                                                        },
+                                                    tint = MaterialTheme.colorScheme.onPrimary
                                                 )
                                             }
                                         }
 
-                                        Spacer(Modifier.width(1.dp))
+                                        Spacer(Modifier.width(2.dp))
 
                                         // Remove Single Item Button
                                         Surface(
@@ -3206,15 +3236,18 @@ private fun CartPreviewBottomSheet(
                                                 }
                                                 onRemove(item.product)
                                             },
-                                            shape = RoundedCornerShape(9.dp),
-                                            color = Color(0xFFFEE2E2),
-                                            modifier = Modifier.size(32.dp)
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                                            modifier = Modifier.size(48.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
-                                                Text(
-                                                    text = "🗑️",
-                                                    fontSize = 13.sp,
-                                                    modifier = Modifier.graphicsLayer { rotationZ = removeAnim.value }
+                                                Icon(
+                                                    Icons.Default.Delete,
+                                                    contentDescription = stringResource(R.string.cd_remove),
+                                                    modifier = Modifier
+                                                        .size(18.dp)
+                                                        .graphicsLayer { rotationZ = removeAnim.value },
+                                                    tint = MaterialTheme.colorScheme.error
                                                 )
                                             }
                                         }
@@ -3253,7 +3286,7 @@ private fun CartPreviewBottomSheet(
                     shape = RoundedCornerShape(14.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B))
                 ) {
-                    Text("⏸️", fontSize = 16.sp)
+                    Icon(Icons.Default.Pause, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFFD97706))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.scanner_hold_cart), fontWeight = FontWeight.Bold, color = Color(0xFFD97706), fontSize = 13.5.sp)
                 }
@@ -3266,15 +3299,15 @@ private fun CartPreviewBottomSheet(
                         .height(52.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF10B981),
-                        contentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text("🛍️", fontSize = 16.sp)
+                    Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.checkout), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     Spacer(Modifier.width(4.dp))
-                    Text("➔", fontSize = 14.sp)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
                 }
             }
             Spacer(Modifier.height(20.dp))

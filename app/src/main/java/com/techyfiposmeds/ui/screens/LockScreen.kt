@@ -727,7 +727,7 @@ private fun TechyfiLockBrandingHeader(isCompact: Boolean = false) {
                 withStyle(SpanStyle(color = Color(0xFF0082FF))) {
                     append("FI")
                 }
-                append(" POS")
+                append(" PHARMA")
             },
             color = Color.White,
             fontSize = if (isCompact) 18.sp else 21.sp,

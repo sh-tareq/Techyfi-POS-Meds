@@ -287,7 +287,7 @@ private fun buildTestLabelBitmap(
         textSize = (targetHeightDots * 0.12f).coerceIn(14f, 32f)
         isFakeBoldText = true
     }
-    canvas.drawText(storeName.ifBlank { "Techyfi POS" }, centerX, targetHeightDots * 0.25f, paint)
+    canvas.drawText(storeName.ifBlank { "Techyfi Pharma" }, centerX, targetHeightDots * 0.25f, paint)
     paint.textSize = (targetHeightDots * 0.10f).coerceIn(12f, 26f)
     paint.isFakeBoldText = false
     canvas.drawText(if (com.techyfiposmeds.utils.isAppBangla()) "টেস্ট লেবেল" else "TEST LABEL", centerX, targetHeightDots * 0.48f, paint)

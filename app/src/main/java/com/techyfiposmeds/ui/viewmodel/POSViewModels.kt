@@ -1197,7 +1197,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun effectiveItemPrice(item: CartItem, mode: PriceMode = priceMode.value): Double {
-        return when (item.unitType.lowercase()) {
+        val actualUnitType = if (item.unitType.equals("strip", ignoreCase = true) && !item.product.isStripApplicable) "pc" else item.unitType.lowercase()
+        return when (actualUnitType) {
             "strip" -> {
                 if (item.product.stripPrice > 0.0) item.product.stripPrice
                 else {
@@ -1273,12 +1274,13 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
      */
     val itemsExceedingMrp: StateFlow<List<CartItem>> = combine(_cartItems, priceMode) { items, mode ->
         items.filter { item ->
-            val charged = when (item.unitType.lowercase()) {
+            val actualUnitType = if (item.unitType.equals("strip", ignoreCase = true) && !item.product.isStripApplicable) "pc" else item.unitType.lowercase()
+            val charged = when (actualUnitType) {
                 "strip" -> if (item.product.stripPrice > 0.0) item.product.stripPrice else effectivePrice(item.product, mode) * (if (item.product.stripSize > 0) item.product.stripSize else 10)
                 "box" -> if (item.product.packPrice > 0.0) item.product.packPrice else effectivePrice(item.product, mode) * 100.0
                 else -> effectivePrice(item.product, mode)
             }
-            val legalMrp = when (item.unitType.lowercase()) {
+            val legalMrp = when (actualUnitType) {
                 "strip" -> if (item.product.stripPrice > 0.0) item.product.stripPrice else (if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice) * (if (item.product.stripSize > 0) item.product.stripSize else 10)
                 "box" -> if (item.product.packPrice > 0.0) item.product.packPrice else (if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice) * 100.0
                 else -> if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice
@@ -2507,6 +2509,294 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
                 repository.upsertMedicineBatch(newBatch)
             }
             onResult(res)
+        }
+    }
+
+    fun updateMedicineComprehensive(
+        medicine: com.techyfiposmeds.data.MedicineItem,
+        stockQty: Double,
+        purchasePrice: Double,
+        mrpPrice: Double,
+        stripPrice: Double,
+        packPrice: Double,
+        stripSize: Int,
+        shelfLocation: String?,
+        expiryDate: String?,
+        batchNumber: String?,
+        isAntibiotic: Boolean = medicine.isAntibiotic,
+        indication: String? = null,
+        adultDose: String? = null,
+        childDose: String? = null,
+        contraIndication: String? = null,
+        sideEffect: String? = null,
+        precaution: String? = null,
+        onResult: ((Result<Unit>) -> Unit)? = null
+    ) {
+        viewModelScope.launch {
+            try {
+                // Upsert clinical generic details if provided
+                val cleanGeneric = medicine.genericName?.trim()?.ifBlank { null }
+                if (!cleanGeneric.isNullOrBlank() && (indication != null || adultDose != null || childDose != null || contraIndication != null || sideEffect != null || precaution != null)) {
+                    repository.medicineRepository.upsertClinicalGeneric(
+                        genericName = cleanGeneric,
+                        indication = indication?.trim()?.ifBlank { null },
+                        adultDose = adultDose?.trim()?.ifBlank { null },
+                        childDose = childDose?.trim()?.ifBlank { null },
+                        contraIndication = contraIndication?.trim()?.ifBlank { null },
+                        sideEffect = sideEffect?.trim()?.ifBlank { null },
+                        precaution = precaution?.trim()?.ifBlank { null }
+                    )
+                }
+
+                // 1. Update SQLite MedicineRepository
+                repository.medicineRepository.updateMedicineDetails(
+                    id = medicine.id,
+                    unitPrice = mrpPrice,
+                    stripSize = stripSize,
+                    stripPrice = stripPrice,
+                    packPrice = packPrice,
+                    shelfLocation = shelfLocation?.trim()?.ifBlank { null },
+                    batchNumber = batchNumber?.trim()?.ifBlank { null },
+                    expiryDate = expiryDate?.trim()?.ifBlank { null },
+                    stockQty = stockQty
+                )
+
+                // 2. Sync to Room Product entity
+                val canonicalBarcode = medicine.barcode?.ifBlank { null } ?: medicine.sku
+                val existingProduct = repository.getProductByBarcode(canonicalBarcode)
+                val baseProduct = existingProduct ?: convertAndSaveMedicineToProduct(medicine)
+                val updatedProduct = baseProduct.copy(
+                    stockQty = stockQty,
+                    purchasePrice = purchasePrice,
+                    sellingPrice = mrpPrice,
+                    mrpPrice = mrpPrice,
+                    stripPrice = stripPrice,
+                    packPrice = packPrice,
+                    stripSize = stripSize,
+                    shelfLocation = shelfLocation?.trim()?.ifBlank { null },
+                    expiryDate = expiryDate?.trim()?.ifBlank { null },
+                    batchNumber = batchNumber?.trim()?.ifBlank { null },
+                    isAntibiotic = isAntibiotic
+                )
+                repository.updateProduct(updatedProduct)
+
+                // 3. If batch number and expiry date are provided, update/insert batch in medicine_batches
+                if (!batchNumber.isNullOrBlank() && !expiryDate.isNullOrBlank()) {
+                    val existingBatches = repository.getBatchesForProductSync(canonicalBarcode)
+                    val existingBatch = existingBatches.find { it.batchNumber.equals(batchNumber.trim(), ignoreCase = true) }
+                    val batchToUpsert = if (existingBatch != null) {
+                        existingBatch.copy(
+                            expiryDate = expiryDate.trim(),
+                            stockQty = stockQty,
+                            purchasePrice = purchasePrice,
+                            mrpPrice = mrpPrice
+                        )
+                    } else {
+                        com.techyfiposmeds.data.db.MedicineBatch(
+                            productBarcode = canonicalBarcode,
+                            batchNumber = batchNumber.trim(),
+                            expiryDate = expiryDate.trim(),
+                            stockQty = stockQty,
+                            purchasePrice = purchasePrice,
+                            mrpPrice = mrpPrice
+                        )
+                    }
+                    repository.upsertMedicineBatch(batchToUpsert)
+                }
+
+                // 4. Trigger reload of medicines search
+                searchMedicines()
+                onResult?.invoke(Result.success(Unit))
+            } catch (e: Exception) {
+                onResult?.invoke(Result.failure(e))
+            }
+        }
+    }
+
+    suspend fun searchGenerics(query: String): List<String> = repository.medicineRepository.searchGenerics(query)
+    suspend fun searchCompanies(query: String = ""): List<String> = repository.medicineRepository.searchCompanies(query)
+    suspend fun getDistinctShelfLocations(): List<String> = repository.medicineRepository.getDistinctShelfLocations()
+
+    fun addMedicineComprehensive(
+        brandName: String,
+        strength: String?,
+        dosageForm: String,
+        genericName: String?,
+        companyName: String?,
+        mrpPrice: Double,
+        purchasePrice: Double,
+        stripSize: Int,
+        stripPrice: Double,
+        packSize: String?,
+        unitsPerPack: Int,
+        packPrice: Double,
+        shelfLocation: String?,
+        batchNumber: String?,
+        expiryDate: String?,
+        stockQty: Double,
+        reorderLevel: Int = 20,
+        isAntibiotic: Boolean = false,
+        barcode: String? = null,
+        sku: String? = null,
+        indication: String? = null,
+        adultDose: String? = null,
+        childDose: String? = null,
+        contraIndication: String? = null,
+        sideEffect: String? = null,
+        precaution: String? = null,
+        onResult: ((Result<com.techyfiposmeds.data.MedicineItem>) -> Unit)? = null
+    ) {
+        viewModelScope.launch {
+            try {
+                val cleanBrand = brandName.trim()
+                val cleanStrength = strength?.trim()?.ifBlank { null }
+                val cleanForm = dosageForm.trim().ifBlank { "Tablet" }
+                val cleanGeneric = genericName?.trim()?.ifBlank { null }
+                val cleanCompany = companyName?.trim()?.ifBlank { null }
+                val timestampSuffix = System.currentTimeMillis() % 1000000
+                val rawSku = sku?.trim()?.ifBlank { null } ?: "med-$timestampSuffix"
+                val finalSku = toEnglishDigits(rawSku.trim()).lowercase()
+                val rawBarcode = barcode?.trim()?.ifBlank { null } ?: finalSku
+                val finalBarcode = toEnglishDigits(rawBarcode.trim()).lowercase()
+
+                val displayName = if (!cleanStrength.isNullOrBlank()) {
+                    "$cleanBrand $cleanStrength $cleanForm"
+                } else {
+                    "$cleanBrand $cleanForm"
+                }
+
+                val effectiveStripSize = if (stripSize > 0) stripSize else (if (cleanForm in listOf("Syrup", "Suspension", "Eye Drops", "Oral Solution", "Cream", "Ointment", "Gel")) 1 else 10)
+                val effectiveStripPrice = if (stripPrice > 0.0) stripPrice else (mrpPrice * effectiveStripSize)
+                val effectiveUnitsPerPack = if (unitsPerPack > 0) unitsPerPack else (if (effectiveStripSize == 1) 1 else 100)
+                val effectivePackPrice = if (packPrice > 0.0) packPrice else (mrpPrice * effectiveUnitsPerPack)
+                val effectivePackSize = packSize?.trim()?.ifBlank { null } ?: (if (effectiveStripSize == 1) "1 Unit" else "${effectiveUnitsPerPack / effectiveStripSize} x ${effectiveStripSize}'s")
+
+                // 1. Upsert clinical generic details if generic name is provided
+                val resolvedGenericId = if (!cleanGeneric.isNullOrBlank()) {
+                    repository.medicineRepository.upsertClinicalGeneric(
+                        genericName = cleanGeneric,
+                        indication = indication?.trim()?.ifBlank { null },
+                        adultDose = adultDose?.trim()?.ifBlank { null },
+                        childDose = childDose?.trim()?.ifBlank { null },
+                        contraIndication = contraIndication?.trim()?.ifBlank { null },
+                        sideEffect = sideEffect?.trim()?.ifBlank { null },
+                        precaution = precaution?.trim()?.ifBlank { null }
+                    ).takeIf { it > 0 }
+                } else null
+
+                // 2. Resolve or create company ID
+                val resolvedCompanyId = if (!cleanCompany.isNullOrBlank()) {
+                    repository.medicineRepository.getOrCreateCompanyId(cleanCompany)
+                } else null
+
+                val medItem = com.techyfiposmeds.data.MedicineItem(
+                    id = 0L,
+                    sku = finalSku,
+                    barcode = finalBarcode,
+                    brandName = cleanBrand,
+                    displayName = displayName,
+                    dosageForm = cleanForm,
+                    strength = cleanStrength,
+                    genericId = resolvedGenericId,
+                    genericName = cleanGeneric,
+                    companyId = resolvedCompanyId,
+                    companyName = cleanCompany,
+                    unitPrice = mrpPrice,
+                    stripSize = effectiveStripSize,
+                    stripPrice = effectiveStripPrice,
+                    packSize = effectivePackSize,
+                    unitsPerPack = effectiveUnitsPerPack,
+                    packPrice = effectivePackPrice,
+                    category = "Allopathic",
+                    isAntibiotic = isAntibiotic,
+                    shelfLocation = shelfLocation?.trim()?.ifBlank { null },
+                    batchNumber = batchNumber?.trim()?.ifBlank { null },
+                    expiryDate = expiryDate?.trim()?.ifBlank { null },
+                    stockQty = stockQty,
+                    reorderLevel = reorderLevel
+                )
+
+                // 3. Insert into SQLite pos_medicines
+                val newId = repository.medicineRepository.insertCustomMedicine(medItem)
+                val savedMed = medItem.copy(id = newId)
+
+                // 4. Insert into Room Product
+                val product = Product(
+                    barcode = finalBarcode,
+                    name = displayName,
+                    category = cleanForm,
+                    purchasePrice = purchasePrice,
+                    sellingPrice = mrpPrice,
+                    stockQty = stockQty,
+                    reorderLevel = reorderLevel,
+                    mrpPrice = mrpPrice,
+                    genericName = savedMed.genericName,
+                    dosageForm = cleanForm,
+                    strength = cleanStrength,
+                    companyName = savedMed.companyName,
+                    stripSize = effectiveStripSize,
+                    stripPrice = effectiveStripPrice,
+                    packPrice = effectivePackPrice,
+                    isAntibiotic = isAntibiotic,
+                    shelfLocation = savedMed.shelfLocation,
+                    batchNumber = savedMed.batchNumber,
+                    expiryDate = savedMed.expiryDate,
+                    unit = "Pcs",
+                    createdAt = System.currentTimeMillis()
+                )
+                repository.insertProduct(product)
+
+                // 3. Insert into Room MedicineBatch if batch & expiry provided
+                if (!batchNumber.isNullOrBlank() && !expiryDate.isNullOrBlank()) {
+                    repository.upsertMedicineBatch(
+                        com.techyfiposmeds.data.db.MedicineBatch(
+                            productBarcode = finalBarcode,
+                            batchNumber = batchNumber.trim(),
+                            expiryDate = expiryDate.trim(),
+                            stockQty = stockQty,
+                            purchasePrice = purchasePrice,
+                            mrpPrice = mrpPrice
+                        )
+                    )
+                }
+
+                // 4. Log Inventory Adjustment for initial stock
+                if (stockQty > 0.0) {
+                    recordInventoryAdjustment(
+                        productBarcode = finalBarcode,
+                        productName = displayName,
+                        previousStock = 0.0,
+                        newStock = stockQty,
+                        difference = stockQty,
+                        reason = "Initial Stock",
+                        note = "New medicine added to inventory"
+                    )
+                }
+
+                // 5. Refresh medicines search
+                searchMedicines(query = cleanBrand)
+                onResult?.invoke(Result.success(savedMed))
+            } catch (e: Exception) {
+                android.util.Log.e("ProductsViewModel", "Error adding medicine comprehensive", e)
+                onResult?.invoke(Result.failure(e))
+            }
+        }
+    }
+
+    fun updateProductShelfLocation(barcode: String, shelfLocation: String?, onResult: ((Result<Unit>) -> Unit)? = null) {
+        viewModelScope.launch {
+            try {
+                val prod = repository.getProductByBarcode(barcode)
+                if (prod != null) {
+                    val updated = prod.copy(shelfLocation = shelfLocation?.trim()?.ifBlank { null })
+                    repository.updateProduct(updated)
+                }
+                repository.medicineRepository.adjustStockByBarcodeOrSku(barcode, 0.0)
+                searchMedicines()
+                onResult?.invoke(Result.success(Unit))
+            } catch (e: Exception) {
+                onResult?.invoke(Result.failure(e))
+            }
         }
     }
 
@@ -6105,7 +6395,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     // Sales and Dues
                     sales.forEach { saleWithItems ->
                         val s = saleWithItems.sale
-                        val itemsCountStr = if (isBn) "${toBanglaDigits(saleWithItems.items.size.toString())}টি পণ্য" else "${saleWithItems.items.size} items"
+                        val itemsCountStr = if (isBn) "${toBanglaDigits(saleWithItems.items.size.toString())}টি ওষুধ" else "${saleWithItems.items.size} medicines"
                         events.add(
                             CustomerTimelineEvent(
                                 id = "sale_${s.id}",

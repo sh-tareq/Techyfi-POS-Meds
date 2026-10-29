@@ -2412,7 +2412,7 @@ fun BatchProductCodePrintDialog(
                         value = storeNameInput,
                         onValueChange = { storeNameInput = it.take(80) },
                         label = { Text(stringResource(R.string.products_store_name_label)) },
-                        placeholder = { Text(configuredStoreName.ifBlank { "Techyfi POS" }) },
+                        placeholder = { Text(configuredStoreName.ifBlank { "Techyfi Pharma" }) },
                         supportingText = { Text(stringResource(R.string.products_store_name_supporting_text)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -4708,7 +4708,7 @@ fun ProductCodeImageDialog(
                                             value = storeNameInput,
                                             onValueChange = { storeNameInput = it.take(80) },
                                             label = { Text(stringResource(R.string.products_store_name_label)) },
-                                            placeholder = { Text(configuredStoreName.ifBlank { "Techyfi POS" }) },
+                                            placeholder = { Text(configuredStoreName.ifBlank { "Techyfi Pharma" }) },
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth()
                                         )

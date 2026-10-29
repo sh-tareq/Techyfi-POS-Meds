@@ -218,6 +218,7 @@ private fun TechyfiSplashLogo(
                 withStyle(SpanStyle(color = Color(0xFF0082FF))) {
                     append("FI")
                 }
+                append(" PHARMA")
             },
             color = Color.White,
             fontSize = if (isTablet) 28.sp else 22.sp,

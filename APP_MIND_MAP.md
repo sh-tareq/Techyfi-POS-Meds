@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-26 (app version 2.8.07-Final-V26-10-2026, build `Techyfi-POS-Meds-Final-V26-10-2026-Phase5.apk`; versionCode 220992; DB schema version 42; package `com.techyfiposmeds`)
+Last updated: 2026-10-29 (app version 2.8.13-Final-V29-10-2026, build `Techyfi-Pharma-Final-V29-10-2026.apk`; versionCode 220998; DB schema version 42; package `com.techyfiposmeds`)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -175,7 +175,12 @@ mindmap
       Cart review
         Cart badge shows total units
         Dedicated Cart Screen (CartScreen.kt)
-          Full itemized cart list with +/-/delete steppers and note editing
+          Specialized pharmacy item card with dosage schedule chips (১+০+১ খাওয়ার পর, ১+১+১, ইত্যাদি)
+          Liquid & topical packaging resolution (isLiquidOrTopicalDosageForm omits Strip; dynamic Bottle/Tube/Vial/Pc)
+          Single-line compact unit rate (৳150 / Strip 10, ৳400 / Bottle)
+          Full-width clinical alerts (expired batches DGDA block banner, patient instructions, antibiotic stewardship, cold-chain reminder)
+          Material 3 vector icons (Icons.Rounded.Add, Icons.Rounded.Remove, Icons.Rounded.DeleteOutline) with >= 48dp touch targets
+          Pinned Complete Sale checkout bar with real-time DGDA regulatory compliance & validation error messaging
           Pinned Total Cart Value Summary Card (Subtotal, conditional Discount, and Estimated Total in radiant #00C48C emerald)
           Hold Cart and Checkout (grand total formatted) action buttons
         Review Cart modal bottom sheet (`CartPreviewBottomSheet`)
@@ -3542,6 +3547,31 @@ mindmap
     6. Eye Redness &amp; Ear Discomfort (Carboxymethylcellulose artificial tears, Antazoline+Tetrahydrozoline)
   - Critical Red Flag Safety Banners: Explicit clinical warnings detailing when patients must be immediately referred to hospital emergency care.
   - 1-Tap Cart Addition: Real-time inventory matching against in-stock pharmacy brands with quantity increment/decrement controls.
+
+### Release Final-V29-10-2026-Phase7: Cart Item Redesign, Liquid & Topical Unit Packaging Resolution, Dosage Schedule Presets, Pinned Real-time Checkout Alerts & R8 Minification (Version 2.8.13-Final-V29-10-2026, Build Techyfi-Pharma-Final-V29-10-2026.apk, versionCode 220998)
+- **Ergonomic Cart Item Card Redesign (`CartScreen.kt`)**:
+  - Purpose-built pharmacy cart item card with clean visual hierarchy, generous touch targets (>= 48dp), and clinical clarity.
+  - Interactive fast dosage schedule chips directly on cart items: `১+০+১ (খাওয়ার পর)`, `১+১+১ (খাওয়ার পর)`, `১+০+০ (খাওয়ার আগে)`, `০+০+১ (রাতে)`, `০+১+০`, and `প্রয়োজনে (SOS)`. Tapping updates instructions instantly for printed thermal labels and receipts.
+  - Clinical patient instruction badges and alert banners (e.g. antibiotic course warning, refrigeration reminders, expired batch block).
+  - Material 3 vector iconography (`Icons.Rounded.Add`, `Icons.Rounded.Remove`, `Icons.Rounded.DeleteOutline`) replacing raw text/emojis.
+- **Liquid & Topical Clinical Packaging Unit Resolution (`CartScreen.kt`, `POSViewModels.kt`)**:
+  - Implemented `isLiquidOrTopicalDosageForm` detection across 20+ dosage forms: Syrup, Suspension, Oral Drops, Eye Drops, Ear Drops, Nasal Spray, Ointment, Cream, Gel, Lotion, Shampoo, Mouthwash, Spray, Inhalation, Solution, Injection, Vial, Ampoule, Inhaler, Sachet, Suppository, Enema, Patch.
+  - Automatically suppresses inappropriate "Strip" unit selector for syrups, drops, ointments, lotions, and vials.
+  - Dynamically resolves primary packaging unit based on dosage form (Bottle, Tube, Vial, Piece, Box) preventing user confusion and dispensing errors.
+  - Single-line compact unit rate pricing display (`৳150 / Strip (10)` or `৳400 / Bottle`) maintaining clear unit economics.
+- **Pinned Complete Sale Checkout Bar with Real-Time DGDA Validation (`CartScreen.kt`)**:
+  - Bottom-docked checkout bar with sticky visibility across phone and tablet layouts.
+  - Real-time DGDA regulatory compliance & validation error messaging:
+    - Displays active validation blocker badges (e.g., "⚠️ Prescription required: Prescribing Doctor or BMDC Reg missing", "🚫 Sale Blocked: Cart contains expired batch", "⚠️ Empty cart or invalid customer due").
+    - Disables checkout button when compliance checks fail, preventing unlawful dispensing.
+  - Direct 1-tap navigation to Doctor Registry, Customer Due Khata, or Batch Selector to resolve validation issues.
+- **Dedicated Add/Edit Pharma Product Dialogs (`AddMedicineDialog.kt`, `EditMedicineDialog.kt`)**:
+  - Modularized and extracted specialized pharmaceutical product dialogs.
+  - Full support for generic composition autocomplete, dosage form selector, strength, pack size, DGDA MRP, Trade Price (TP), manufacturer, physical rack/shelf location, cold-chain 2°C-8°C flag, and prescription requirement.
+- **R8 Code & Resource Minification Pipeline**:
+  - Enabled full R8 optimization (`isMinifyEnabled = true`, `isShrinkResources = true`).
+  - Proguard/R8 shrinking rules tuned for Room entities, Apache POI, XMLBeans, Google Drive API, ML Kit Barcode scanning, and Jetpack Compose runtime.
+  - In-place debug-keystore signing preserves seamless upgrade compatibility over existing installed versions without `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
 
 ## Maintenance note
 

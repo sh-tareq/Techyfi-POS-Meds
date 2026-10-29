@@ -4444,7 +4444,7 @@ class DataRepository(
             val fileBytes = inputFile.readBytes()
             require(fileBytes.size > 35) { "Invalid backup file size" }
             val magic = String(fileBytes.copyOfRange(0, 7), Charsets.UTF_8)
-            require(magic == "POSENC1") { "Not a valid encrypted Techyfi POS backup file" }
+            require(magic == "POSENC1") { "Not a valid encrypted Techyfi Pharma backup file" }
 
             val salt = fileBytes.copyOfRange(7, 23)
             val iv = fileBytes.copyOfRange(23, 35)
@@ -6418,13 +6418,14 @@ class DataRepository(
         medicineBatchDao.getBatchesForProductSync(barcode)
 
     suspend fun upsertMedicineBatch(batch: MedicineBatch) = withContext(Dispatchers.IO) {
+        val normalized = batch.copy(productBarcode = toEnglishDigits(batch.productBarcode.trim()).lowercase())
         database.withDriverTransaction {
-            if (batch.id > 0) {
-                medicineBatchDao.updateBatch(batch)
+            if (normalized.id > 0) {
+                medicineBatchDao.updateBatch(normalized)
             } else {
-                medicineBatchDao.insertBatch(batch)
+                medicineBatchDao.insertBatch(normalized)
             }
-            updateProductFefoBatch(batch.productBarcode)
+            updateProductFefoBatch(normalized.productBarcode)
         }
     }
 

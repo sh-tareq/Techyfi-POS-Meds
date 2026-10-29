@@ -30,6 +30,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.techyfiposmeds.R
 import com.techyfiposmeds.data.db.MedicineBatch
 import com.techyfiposmeds.data.db.Product
+import com.techyfiposmeds.utils.isAppBangla
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -143,13 +144,13 @@ fun NearExpiryClearanceDialog(
                         }
                         Column {
                             Text(
-                                text = "Near-Expiry Liquidation & Clearance",
+                                text = stringResource(R.string.near_expiry_clearance_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "আসন্ন মেয়াদোত্তীর্ণ ওষুধ ব্যবস্থাপনা ও কোম্পানি ফেরত তালিকা",
+                                text = stringResource(R.string.near_expiry_clearance_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFFD97706),
                                 fontWeight = FontWeight.Bold
@@ -175,6 +176,8 @@ fun NearExpiryClearanceDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                val isBn = isAppBangla()
+
                 // Financial Risk Summary Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -191,7 +194,7 @@ fun NearExpiryClearanceDialog(
                     ) {
                         Column {
                             Text(
-                                text = "মোট ঝুঁকিপূর্ণ স্টকের মূল্য:",
+                                text = if (isBn) "মোট ঝুঁকিপূর্ণ স্টকের মূল্য:" else "Total Value at Risk:",
                                 fontSize = 11.5.sp,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -208,7 +211,7 @@ fun NearExpiryClearanceDialog(
                             color = Color(0xFFD97706).copy(alpha = 0.15f)
                         ) {
                             Text(
-                                text = "${filteredItems.size}টি ব্যাচ তালিকাভুক্ত",
+                                text = if (isBn) "${filteredItems.size}টি ব্যাচ তালিকাভুক্ত" else "${filteredItems.size} Batches Listed",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFB45309),
@@ -228,13 +231,13 @@ fun NearExpiryClearanceDialog(
                     FilterChip(
                         selected = selectedBucket == ExpiryBucket.ALL,
                         onClick = { selectedBucket = ExpiryBucket.ALL },
-                        label = { Text("সব (< ৯০ দিন)", fontSize = 11.sp) },
+                        label = { Text(if (isBn) "সব (< ৯০ দিন)" else "All (< 90d)", fontSize = 11.sp) },
                         modifier = Modifier.minimumInteractiveComponentSize()
                     )
                     FilterChip(
                         selected = selectedBucket == ExpiryBucket.CRITICAL_30,
                         onClick = { selectedBucket = ExpiryBucket.CRITICAL_30 },
-                        label = { Text("🚨 < ৩০ দিন", fontSize = 11.sp, color = if (selectedBucket == ExpiryBucket.CRITICAL_30) Color.White else Color(0xFFDC2626)) },
+                        label = { Text(if (isBn) "🚨 < ৩০ দিন" else "🚨 < 30 Days", fontSize = 11.sp, color = if (selectedBucket == ExpiryBucket.CRITICAL_30) Color.White else Color(0xFFDC2626)) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = Color(0xFFDC2626)
                         ),
@@ -243,13 +246,13 @@ fun NearExpiryClearanceDialog(
                     FilterChip(
                         selected = selectedBucket == ExpiryBucket.URGENT_60,
                         onClick = { selectedBucket = ExpiryBucket.URGENT_60 },
-                        label = { Text("⚠️ ৩১-৬০ দিন", fontSize = 11.sp) },
+                        label = { Text(if (isBn) "⚠️ ৩১-৬০ দিন" else "⚠️ 31-60 Days", fontSize = 11.sp) },
                         modifier = Modifier.minimumInteractiveComponentSize()
                     )
                     FilterChip(
                         selected = selectedBucket == ExpiryBucket.WARNING_90,
                         onClick = { selectedBucket = ExpiryBucket.WARNING_90 },
-                        label = { Text("⏳ ৬১-৯০ দিন", fontSize = 11.sp) },
+                        label = { Text(if (isBn) "⏳ ৬১-৯০ দিন" else "⏳ 61-90 Days", fontSize = 11.sp) },
                         modifier = Modifier.minimumInteractiveComponentSize()
                     )
                 }
@@ -268,7 +271,7 @@ fun NearExpiryClearanceDialog(
                             Text("🎉", fontSize = 36.sp)
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "এই ক্যাটাগরিতে কোনো মেয়াদোত্তীর্ণ বা ঝুঁকিপূর্ণ ব্যাচ নেই!",
+                                text = if (isBn) "এই ক্যাটাগরিতে কোনো মেয়াদোত্তীর্ণ বা ঝুঁকিপূর্ণ ব্যাচ নেই!" else "No near-expiry or critical batches in this category!",
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -282,6 +285,7 @@ fun NearExpiryClearanceDialog(
                         items(filteredItems, key = { it.batch.id }) { item ->
                             NearExpiryCard(
                                 item = item,
+                                isBn = isBn,
                                 onMoveToQuarantine = onMoveToQuarantine
                             )
                         }
@@ -308,7 +312,11 @@ fun NearExpiryClearanceDialog(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("কোম্পানি ফেরত তালিকা তৈরি করুন (Share Challan)", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isBn) "কোম্পানি ফেরত তালিকা তৈরি করুন (Share Challan)" else "Generate Return Challan (Share)",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -319,13 +327,14 @@ fun NearExpiryClearanceDialog(
 @Composable
 private fun NearExpiryCard(
     item: NearExpiryItem,
+    isBn: Boolean = isAppBangla(),
     onMoveToQuarantine: ((Long, String) -> Unit)?
 ) {
     val (statusBg, statusText, statusBadge) = when {
-        item.daysRemaining <= 0 -> Triple(Color(0xFFFEE2E2), Color(0xFFDC2626), "মেয়াদোত্তীর্ণ (Expired)")
-        item.daysRemaining <= 30 -> Triple(Color(0xFFFEE2E2), Color(0xFFDC2626), "🚨 ${item.daysRemaining} দিন বাকি")
-        item.daysRemaining <= 60 -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), "⚠️ ${item.daysRemaining} দিন বাকি")
-        else -> Triple(Color(0xFFFFEDD5), Color(0xFFEA580C), "⏳ ${item.daysRemaining} দিন বাকি")
+        item.daysRemaining <= 0 -> Triple(Color(0xFFFEE2E2), Color(0xFFDC2626), if (isBn) "মেয়াদোত্তীর্ণ (Expired)" else "Expired")
+        item.daysRemaining <= 30 -> Triple(Color(0xFFFEE2E2), Color(0xFFDC2626), if (isBn) "🚨 ${item.daysRemaining} দিন বাকি" else "🚨 ${item.daysRemaining}d left")
+        item.daysRemaining <= 60 -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), if (isBn) "⚠️ ${item.daysRemaining} দিন বাকি" else "⚠️ ${item.daysRemaining}d left")
+        else -> Triple(Color(0xFFFFEDD5), Color(0xFFEA580C), if (isBn) "⏳ ${item.daysRemaining} দিন বাকি" else "⏳ ${item.daysRemaining}d left")
     }
 
     val prodName = item.product?.name ?: item.batch.productBarcode
@@ -389,13 +398,13 @@ private fun NearExpiryCard(
             ) {
                 Column {
                     Text(
-                        text = "ব্যাচ: ${item.batch.batchNumber} • মেয়াদ: ${item.batch.expiryDate}",
+                        text = if (isBn) "ব্যাচ: ${item.batch.batchNumber} • মেয়াদ: ${item.batch.expiryDate}" else "Batch: ${item.batch.batchNumber} • Exp: ${item.batch.expiryDate}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "মজুদ: ${item.batch.stockQty.toInt()} pcs • ইউনিট MRP: ৳$mrp",
+                        text = if (isBn) "মজুদ: ${item.batch.stockQty.toInt()} pcs • ইউনিট MRP: ৳$mrp" else "Stock: ${item.batch.stockQty.toInt()} pcs • Unit MRP: ৳$mrp",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -403,7 +412,7 @@ private fun NearExpiryCard(
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "মোট মূল্য:",
+                        text = if (isBn) "মোট মূল্য:" else "Total Value:",
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -418,12 +427,12 @@ private fun NearExpiryCard(
 
             if (onMoveToQuarantine != null && item.daysRemaining <= 0) {
                 OutlinedButton(
-                    onClick = { onMoveToQuarantine(item.batch.id, "মেয়াদ উত্তীর্ণ") },
+                    onClick = { onMoveToQuarantine(item.batch.id, if (isBn) "মেয়াদ উত্তীর্ণ" else "Expired") },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
                     modifier = Modifier.fillMaxWidth().height(36.dp).minimumInteractiveComponentSize(),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("কোয়ারেন্টাইনে স্থানান্তর করুন", fontSize = 11.sp)
+                    Text(if (isBn) "কোয়ারেন্টাইনে স্থানান্তর করুন" else "Move to Quarantine", fontSize = 11.sp)
                 }
             }
         }
@@ -431,17 +440,18 @@ private fun NearExpiryCard(
 }
 
 private fun shareSupplierReturnChallan(context: Context, items: List<NearExpiryItem>) {
+    val isBn = com.techyfiposmeds.utils.isAppBangla()
     if (items.isEmpty()) {
-        Toast.makeText(context, "তালিকায় কোনো ওষুধ নেই", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, if (isBn) "তালিকায় কোনো ওষুধ নেই" else "No medicines in list", Toast.LENGTH_SHORT).show()
         return
     }
 
     val sb = StringBuilder()
     sb.appendLine("========================================")
-    sb.appendLine("    ওষুধ কোম্পানি ফেরত চালান (RETURN CHALLAN)")
+    sb.appendLine(if (isBn) "    ওষুধ কোম্পানি ফেরত চালান (RETURN CHALLAN)" else "    PHARMACY RETURN CHALLAN (TO SUPPLIER)")
     sb.appendLine("========================================")
-    sb.appendLine("তারিখ: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())}")
-    sb.appendLine("মোট আইটেম: ${items.size}টি ব্যাচ")
+    sb.appendLine(if (isBn) "তারিখ: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())}" else "Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())}")
+    sb.appendLine(if (isBn) "মোট আইটেম: ${items.size}টি ব্যাচ" else "Total Items: ${items.size} Batches")
     sb.appendLine("----------------------------------------")
 
     var totalReturnVal = 0.0
@@ -452,19 +462,19 @@ private fun shareSupplierReturnChallan(context: Context, items: List<NearExpiryI
         totalReturnVal += valAtRisk
 
         sb.appendLine("${idx + 1}. $name")
-        sb.appendLine("   ব্যাচ: ${it.batch.batchNumber} | মেয়াদ: ${it.batch.expiryDate}")
-        sb.appendLine("   পরিমাণ: ${it.batch.stockQty.toInt()} pcs | ইউনিট: ৳$mrp | মোট: ৳${String.format(Locale.US, "%.1f", valAtRisk)}")
+        sb.appendLine(if (isBn) "   ব্যাচ: ${it.batch.batchNumber} | মেয়াদ: ${it.batch.expiryDate}" else "   Batch: ${it.batch.batchNumber} | Exp: ${it.batch.expiryDate}")
+        sb.appendLine(if (isBn) "   পরিমাণ: ${it.batch.stockQty.toInt()} pcs | ইউনিট: ৳$mrp | মোট: ৳${String.format(Locale.US, "%.1f", valAtRisk)}" else "   Qty: ${it.batch.stockQty.toInt()} pcs | Unit: ৳$mrp | Total: ৳${String.format(Locale.US, "%.1f", valAtRisk)}")
     }
 
     sb.appendLine("----------------------------------------")
-    sb.appendLine("সর্বমোট দাবিকৃত মূল্য: ৳${String.format(Locale.US, "%,.2f", totalReturnVal)}")
+    sb.appendLine(if (isBn) "সর্বমোট দাবিকৃত মূল্য: ৳${String.format(Locale.US, "%,.2f", totalReturnVal)}" else "Total Claim Value: ৳${String.format(Locale.US, "%,.2f", totalReturnVal)}")
     sb.appendLine("========================================")
-    sb.appendLine("ফার্মেসি সিল ও স্বাক্ষর: _________________")
+    sb.appendLine(if (isBn) "ফার্মেসি সিল ও স্বাক্ষর: _________________" else "Pharmacy Seal & Signature: _________________")
 
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_SUBJECT, "Medicine Return Challan - ${SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())}")
         putExtra(Intent.EXTRA_TEXT, sb.toString())
     }
-    context.startActivity(Intent.createChooser(intent, "কোম্পানি ফেরত চালান শেয়ার করুন"))
+    context.startActivity(Intent.createChooser(intent, if (isBn) "কোম্পানি ফেরত চালান শেয়ার করুন" else "Share Supplier Return Challan"))
 }

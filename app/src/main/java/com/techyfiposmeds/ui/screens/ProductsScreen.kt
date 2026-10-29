@@ -201,6 +201,7 @@ fun ProductsScreen(
     productsViewModel: ProductsViewModel,
     cartViewModel: com.techyfiposmeds.ui.viewmodel.CartViewModel,
     prefilledBarcode: String?,
+    settingsViewModel: com.techyfiposmeds.ui.viewmodel.SettingsViewModel? = null,
     isOwner: Boolean = true,
     canViewCosts: Boolean = isOwner,
     canEdit: Boolean = isOwner,
@@ -217,6 +218,12 @@ fun ProductsScreen(
     val configuration = LocalConfiguration.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val invoiceSettingsData by if (settingsViewModel != null) {
+        settingsViewModel.invoiceSettingsData.collectAsStateWithLifecycle()
+    } else {
+        remember(context) { SettingsDataStore(context).invoiceSettingsDataFlow }.collectAsStateWithLifecycle(initialValue = com.techyfiposmeds.data.InvoiceSettingsData())
+    }
 
     val searchQuery by productsViewModel.searchQuery.collectAsStateWithLifecycle()
     val productsList by productsViewModel.products.collectAsStateWithLifecycle()
@@ -327,11 +334,15 @@ fun ProductsScreen(
     var batchTargetProduct by remember { mutableStateOf<Product?>(null) }
     var showQuarantineDialogFromProducts by remember { mutableStateOf(false) }
 
-    fun addMedicineToCart(med: MedicineItem, unitType: String = "strip") {
+    var selectedMedicineForEdit by remember { mutableStateOf<MedicineItem?>(null) }
+    var doseStickerTargetMedicine by remember { mutableStateOf<MedicineItem?>(null) }
+
+    fun addMedicineToCart(med: MedicineItem, unitType: String? = null) {
         scope.launch {
             val prod = productsViewModel.convertAndSaveMedicineToProduct(med)
+            val effectiveUnit = unitType ?: if (med.isStripApplicable) "strip" else "pc"
             cartViewModel.addToCart(prod, 1.0)
-            cartViewModel.setItemUnitType(prod, unitType)
+            cartViewModel.setItemUnitType(prod, effectiveUnit)
             addedConfirmation = ProductAddedConfirmation(med.brandName, cartUnitCount + 1.0)
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         }
@@ -532,6 +543,63 @@ fun ProductsScreen(
                 }
             )
             .toList()
+    }
+
+    val displayedMedicines = remember(medicineSearchResults, visibleProducts, searchQuery, sortOption) {
+        val rawList = if (medicineSearchResults.isNotEmpty()) {
+            medicineSearchResults
+        } else if (searchQuery.isBlank() && visibleProducts.isNotEmpty()) {
+            visibleProducts.map { p ->
+                MedicineItem(
+                    id = p.barcode.hashCode().toLong(),
+                    sku = p.barcode,
+                    barcode = p.barcode,
+                    brandName = p.name.split(" ").firstOrNull() ?: p.name,
+                    displayName = p.name,
+                    dosageForm = p.dosageForm.orEmpty().ifBlank { p.category.ifBlank { "Tablet" } },
+                    strength = p.strength,
+                    genericId = null,
+                    genericName = p.genericName,
+                    companyId = null,
+                    companyName = p.companyName,
+                    unitPrice = p.sellingPrice,
+                    stripSize = if (p.stripSize > 0) p.stripSize else 10,
+                    stripPrice = p.stripPrice,
+                    packSize = null,
+                    unitsPerPack = if (p.stripSize > 0) p.stripSize * 10 else 100,
+                    packPrice = p.packPrice,
+                    category = "Allopathic",
+                    isAntibiotic = p.isAntibiotic,
+                    shelfLocation = p.shelfLocation,
+                    batchNumber = p.batchNumber,
+                    expiryDate = p.expiryDate,
+                    stockQty = p.stockQty,
+                    reorderLevel = p.reorderLevel
+                )
+            }
+        } else {
+            emptyList()
+        }
+
+        if (rawList.isEmpty()) {
+            emptyList()
+        } else {
+            rawList.sortedWith(
+                when (sortOption) {
+                    ProductSortOption.NAME_ASC -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.brandName.ifBlank { it.displayName } }
+                    ProductSortOption.NAME_DESC -> compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.brandName.ifBlank { it.displayName } }
+                    ProductSortOption.STOCK_LOW -> compareBy<MedicineItem> { it.stockQty }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.brandName }
+                    ProductSortOption.STOCK_HIGH -> compareByDescending<MedicineItem> { it.stockQty }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.brandName }
+                    ProductSortOption.PRICE_LOW -> compareBy<MedicineItem> { it.unitPrice }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.brandName }
+                    ProductSortOption.PRICE_HIGH -> compareByDescending<MedicineItem> { it.unitPrice }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.brandName }
+                    ProductSortOption.EXPIRY_SOONEST -> compareBy<MedicineItem> {
+                        if (!it.expiryDate.isNullOrBlank()) {
+                            parseExpiryDateToMillis(it.expiryDate) ?: Long.MAX_VALUE
+                        } else Long.MAX_VALUE
+                    }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.brandName }
+                }
+            )
+        }
     }
 
     LaunchedEffect(cartUnitCount, cartAnimKey) {
@@ -1492,7 +1560,7 @@ fun ProductsScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Search Box with Embedded Viewfinder Barcode Scanner Button (Matching Preview .search-input-field)
+                // Search Box for Pharmacy Medicines & Inventory
                 PosSearchBox(
                     query = searchQuery,
                     onQueryChange = { productsViewModel.setSearchQuery(it) },
@@ -1500,30 +1568,7 @@ fun ProductsScreen(
                     accentColor = PosSectionColors.Products,
                     height = 40.dp,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f),
-                    trailingContent = {
-                        // Camera Barcode Scanner Viewfinder Button (Matching Preview .scan-btn-right)
-                        Surface(
-                            onClick = {
-                                stockScannerEnabled = !stockScannerEnabled
-                                if (stockScannerEnabled) {
-                                    Toast.makeText(context, context.getString(R.string.products_barcode_scanner_activated), Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (stockScannerEnabled) Color(0xFF4F46E5) else Color(0xFF4F46E5).copy(alpha = 0.12f),
-                            border = BorderStroke(1.dp, Color(0xFF6366F1).copy(alpha = if (stockScannerEnabled) 0.8f else 0.35f)),
-                            modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                PreviewScannerViewfinderIcon(
-                                    size = 15.dp,
-                                    bracketColor = if (stockScannerEnabled) Color.White else Color(0xFF6366F1),
-                                    laserColor = Color(0xFFEF4444)
-                                )
-                            }
-                        }
-                    }
+                    modifier = Modifier.weight(1f)
                 )
 
                 // Native Funnel Filter Button (Matching Preview .hub-action-btn #btnHubFilter)
@@ -1541,7 +1586,7 @@ fun ProductsScreen(
                     color = if (hasActiveFilters) Color(0xFF4F46E5).copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, if (hasActiveFilters) Color(0xFF6366F1).copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                     shadowElevation = 0.5.dp,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.minimumInteractiveComponentSize().size(42.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         PreviewFunnelFilterIcon(
@@ -1570,7 +1615,7 @@ fun ProductsScreen(
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                     shadowElevation = 0.5.dp,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.minimumInteractiveComponentSize().size(42.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (viewMode == ProductViewMode.GRID) {
@@ -2021,13 +2066,13 @@ fun ProductsScreen(
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = if (isSearchingMedicines) "মেডিসিন ডেটাবেজে অনুসন্ধান করা হচ্ছে..." else stringResource(R.string.loading),
+                            text = if (isSearchingMedicines) (if (com.techyfiposmeds.utils.isAppBangla()) "মেডিসিন ডেটাবেজে অনুসন্ধান করা হচ্ছে..." else "Searching medicine database...") else stringResource(R.string.loading),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-            } else if (medicineSearchResults.isNotEmpty()) {
+            } else if (displayedMedicines.isNotEmpty()) {
                 if (viewMode == ProductViewMode.LIST) {
                     LazyColumn(
                         state = listState,
@@ -2035,7 +2080,7 @@ fun ProductsScreen(
                         contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = if (isTablet) 16.dp else 72.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(medicineSearchResults, key = { it.id }) { med ->
+                        items(displayedMedicines, key = { it.id }) { med ->
                             MedicineItemRow(
                                 medicine = med,
                                 isTablet = isTablet,
@@ -2051,7 +2096,7 @@ fun ProductsScreen(
                                 },
                                 onViewClinical = {
                                     scope.launch {
-                                        val info = productsViewModel.getClinicalInfo(med.genericId)
+                                        val info = productsViewModel.getClinicalInfo(med.genericId) ?: productsViewModel.getClinicalInfoByName(med.genericName)
                                         clinicalInfo = info
                                         clinicalTargetMedicine = med
                                     }
@@ -2061,6 +2106,12 @@ fun ProductsScreen(
                                         val prod = productsViewModel.convertAndSaveMedicineToProduct(med)
                                         batchTargetProduct = prod
                                     }
+                                },
+                                onEditMedicine = {
+                                    selectedMedicineForEdit = med
+                                },
+                                onPrintDoseSticker = {
+                                    doseStickerTargetMedicine = med
                                 }
                             )
                         }
@@ -2074,7 +2125,7 @@ fun ProductsScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        gridItems(medicineSearchResults, key = { it.id }) { med ->
+                        gridItems(displayedMedicines, key = { it.id }) { med ->
                             MedicineGridCard(
                                 medicine = med,
                                 onAddToCart = { unitType ->
@@ -2089,7 +2140,7 @@ fun ProductsScreen(
                                 },
                                 onViewClinical = {
                                     scope.launch {
-                                        val info = productsViewModel.getClinicalInfo(med.genericId)
+                                        val info = productsViewModel.getClinicalInfo(med.genericId) ?: productsViewModel.getClinicalInfoByName(med.genericName)
                                         clinicalInfo = info
                                         clinicalTargetMedicine = med
                                     }
@@ -2099,12 +2150,18 @@ fun ProductsScreen(
                                         val prod = productsViewModel.convertAndSaveMedicineToProduct(med)
                                         batchTargetProduct = prod
                                     }
+                                },
+                                onEditMedicine = {
+                                    selectedMedicineForEdit = med
+                                },
+                                onPrintDoseSticker = {
+                                    doseStickerTargetMedicine = med
                                 }
                             )
                         }
                     }
                 }
-            } else if (visibleProducts.isNotEmpty()) {
+            } else if (batchSelectMode && visibleProducts.isNotEmpty()) {
                 key(selectedCategory) {
                     if (viewMode == ProductViewMode.LIST) {
                         LazyColumn(
@@ -2256,13 +2313,13 @@ fun ProductsScreen(
                         Realistic3DConsoleDialsIcon(size = 56.dp)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "কোন ওষুধ বা পণ্য পাওয়া যায়নি",
+                            text = if (com.techyfiposmeds.utils.isAppBangla()) "কোন ওষুধ পাওয়া যায়নি" else "No medicines found",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "অন্য নাম, জেনেরিক বা ফিল্টার দিয়ে পুনরায় চেষ্টা করুন",
+                            text = if (com.techyfiposmeds.utils.isAppBangla()) "অন্য নাম, জেনেরিক বা ফিল্টার দিয়ে পুনরায় চেষ্টা করুন" else "Try searching with a different name, generic, or reset filters",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2276,7 +2333,7 @@ fun ProductsScreen(
                                 stockFilterName = ProductStockFilter.ALL.name
                             }
                         ) {
-                            Text("ফিল্টার রিসেট করুন")
+                            Text(if (com.techyfiposmeds.utils.isAppBangla()) "ফিল্টার রিসেট করুন" else "Reset Filters")
                         }
                     }
                 }
@@ -2692,7 +2749,7 @@ fun ProductsScreen(
                         ) {
                             Text("🔒", fontSize = 11.sp)
                             Text(
-                                text = "কোয়ারেন্টাইন (${quarantinedBatches.size})",
+                                text = if (com.techyfiposmeds.utils.isAppBangla()) "কোয়ারেন্টাইন (${quarantinedBatches.size})" else "Quarantine (${quarantinedBatches.size})",
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (quarantinedBatches.isNotEmpty()) Color(0xFFB91C1C) else MaterialTheme.colorScheme.onSurface
@@ -2942,73 +2999,71 @@ fun ProductsScreen(
         )
     }
 
-    // Add Product Dialog
+    // Add Medicine Dialog (Pharmaceutical Architecture)
     if (showAddDialog) {
-        AddEditProductDialog(
-            existingBarcodes = allProductsList.map { it.barcode }.toSet(),
-            initialBarcode = toEnglishDigits(scannedNewBarcodeForDialog ?: prefilledBarcode ?: ""),
-            canAdjustStock = canAdjustStock,
+        val shelves by productsViewModel.allRacksAndShelves.collectAsStateWithLifecycle()
+        AddMedicineDialog(
+            availableShelfLocations = shelves,
             onDismiss = {
                 showAddDialog = false
                 scannedNewBarcodeForDialog = null
             },
-            onSave = { name, barcode, cat, pPrice, sPrice, mrp, disc, qty, reorder, imageUri, mfgType, mfgDate, expDate, unit, wPrice, reason, note, onResult ->
-                scope.launch {
-                    val p = Product(
-                        barcode = barcode,
-                        name = name,
-                        category = cat,
-                        purchasePrice = pPrice,
-                        sellingPrice = sPrice,
-                        stockQty = if (canAdjustStock) qty else 0.0,
-                        reorderLevel = reorder,
-                        imageUri = imageUri,
-                        mfgOrPkgType = mfgType,
-                        mfgOrPkgDate = mfgDate,
-                        expiryDate = expDate,
-                        unit = unit,
-                        wholesalePrice = wPrice,
-                        mrpPrice = mrp,
-                        discountedPrice = disc,
-                        createdAt = System.currentTimeMillis()
-                    )
-                    val success = productsViewModel.addProduct(p)
-                    if (success) {
-                        if (canAdjustStock && qty > 0.0) {
-                            productsViewModel.recordInventoryAdjustment(
-                                productBarcode = p.barcode,
-                                productName = p.name,
-                                previousStock = 0.0,
-                                newStock = qty,
-                                difference = qty,
-                                reason = reason ?: "Restock",
-                                note = note ?: context.getString(R.string.products_initial_stock_note)
-                            )
+            onSearchGenerics = { query -> productsViewModel.searchGenerics(query) },
+            onSearchCompanies = { query -> productsViewModel.searchCompanies(query) },
+            onGetClinicalInfoByName = { generic -> productsViewModel.getClinicalInfoByName(generic) },
+            onSave = { brandName, strength, dosageForm, genericName, companyName, mrpPrice, purchasePrice, stripSize, stripPrice, packSize, unitsPerPack, packPrice, shelfLocation, batchNumber, expiryDate, stockQty, reorderLevel, isAntibiotic, indication, adultDose, childDose, contraIndication, sideEffect, precaution ->
+                productsViewModel.addMedicineComprehensive(
+                    brandName = brandName,
+                    strength = strength,
+                    dosageForm = dosageForm,
+                    genericName = genericName,
+                    companyName = companyName,
+                    mrpPrice = mrpPrice,
+                    purchasePrice = purchasePrice,
+                    stripSize = stripSize,
+                    stripPrice = stripPrice,
+                    packSize = packSize,
+                    unitsPerPack = unitsPerPack,
+                    packPrice = packPrice,
+                    shelfLocation = shelfLocation,
+                    batchNumber = batchNumber,
+                    expiryDate = expiryDate,
+                    stockQty = stockQty,
+                    reorderLevel = reorderLevel,
+                    isAntibiotic = isAntibiotic,
+                    indication = indication,
+                    adultDose = adultDose,
+                    childDose = childDose,
+                    contraIndication = contraIndication,
+                    sideEffect = sideEffect,
+                    precaution = precaution,
+                    onResult = { res ->
+                        res.onSuccess { newMed ->
+                            showAddDialog = false
+                            scannedNewBarcodeForDialog = null
+                            val successMsg = if (isAppBangla()) {
+                                "ওষুধ '${newMed.displayName}' সফলভাবে যুক্ত হয়েছে"
+                            } else {
+                                "Medicine '${newMed.displayName}' added successfully"
+                            }
+                            Toast.makeText(context, successMsg, Toast.LENGTH_SHORT).show()
+                            scope.launch {
+                                snackbarHostState.showSnackbar(successMsg)
+                            }
+                        }.onFailure { err ->
+                            val errMsg = if (isAppBangla()) {
+                                "ওষুধ যোগ করতে সমস্যা হয়েছে: ${err.message}"
+                            } else {
+                                "Failed to add medicine: ${err.message}"
+                            }
+                            Toast.makeText(context, errMsg, Toast.LENGTH_LONG).show()
+                            scope.launch {
+                                snackbarHostState.showSnackbar(errMsg)
+                            }
                         }
-                        showAddDialog = false
-                        scannedNewBarcodeForDialog = null
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.products_added_successfully, p.name),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        snackbarHostState.showSnackbar(
-                            message = context.getString(R.string.products_added_successfully, p.name),
-                            duration = SnackbarDuration.Short
-                        )
-                    } else {
-                        onResult?.invoke(false)
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.products_barcode_already_exists),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        snackbarHostState.showSnackbar(context.getString(R.string.products_barcode_already_exists))
                     }
-                }
-            },
-            onCategoryRenamed = { old, new -> productsViewModel.renameCategory(old, new) },
-            checkBarcodeExists = { code -> productsViewModel.productExistsByBarcode(code) }
+                )
+            }
         )
     }
 
@@ -3049,7 +3104,7 @@ fun ProductsScreen(
                 scope.launch {
                     val currentDb = productsViewModel.getProductByBarcode(prod.barcode)
                     val liveStock = if (!canAdjustStock) (currentDb?.stockQty ?: prod.stockQty) else qty
-                    val p = Product(
+                    val p = prod.copy(
                         barcode = barcode,
                         name = name,
                         category = cat,
@@ -3064,8 +3119,7 @@ fun ProductsScreen(
                         unit = unit,
                         wholesalePrice = wPrice,
                         mrpPrice = mrp,
-                        discountedPrice = disc,
-                        createdAt = prod.createdAt
+                        discountedPrice = disc
                     )
                     val adjustment = if (canAdjustStock && kotlin.math.abs(diff) > 0.0001) {
                         InventoryAdjustment(
@@ -3375,6 +3429,60 @@ fun ProductsScreen(
         )
     }
 
+    if (selectedMedicineForEdit != null) {
+        val med = selectedMedicineForEdit!!
+        EditMedicineDialog(
+            medicine = med,
+            availableShelfLocations = allRacksAndShelves,
+            onDismiss = { selectedMedicineForEdit = null },
+            onGetClinicalInfoByName = { generic -> productsViewModel.getClinicalInfoByName(generic) },
+            onSave = { stockQty, purchasePrice, mrpPrice, stripPrice, packPrice, stripSize, shelfLocation, expiryDate, batchNumber, isAntibiotic, indication, adultDose, childDose, contraIndication, sideEffect, precaution ->
+                productsViewModel.updateMedicineComprehensive(
+                    medicine = med,
+                    stockQty = stockQty,
+                    purchasePrice = purchasePrice,
+                    mrpPrice = mrpPrice,
+                    stripPrice = stripPrice,
+                    packPrice = packPrice,
+                    stripSize = stripSize,
+                    shelfLocation = shelfLocation,
+                    expiryDate = expiryDate,
+                    batchNumber = batchNumber,
+                    isAntibiotic = isAntibiotic,
+                    indication = indication,
+                    adultDose = adultDose,
+                    childDose = childDose,
+                    contraIndication = contraIndication,
+                    sideEffect = sideEffect,
+                    precaution = precaution
+                ) { result ->
+                    result.onSuccess {
+                        selectedMedicineForEdit = null
+                        Toast.makeText(context, if (com.techyfiposmeds.utils.isAppBangla()) "ওষুধের স্টক, মূল্য ও তথ্য সফলভাবে আপডেট হয়েছে" else "Medicine stock, price & details updated successfully", Toast.LENGTH_SHORT).show()
+                    }.onFailure { err ->
+                        Toast.makeText(context, err.localizedMessage ?: "Failed to update", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        )
+    }
+
+    if (doseStickerTargetMedicine != null) {
+        val med = doseStickerTargetMedicine!!
+        DosageLabelDialog(
+            storeName = invoiceSettingsData.storeName,
+            storePhone = invoiceSettingsData.phonePrimary,
+            initialPatientName = "",
+            medicineName = "${med.brandName} ${med.strength.orEmpty()}".trim(),
+            genericName = med.genericName,
+            initialDosageSchedule = if (com.techyfiposmeds.utils.isAppBangla()) "১ + ০ + ১" else "1 + 0 + 1",
+            batchNumber = med.batchNumber,
+            expiryDate = med.expiryDate,
+            settings = invoiceSettingsData,
+            onDismiss = { doseStickerTargetMedicine = null }
+        )
+    }
+
     if (batchTargetProduct != null) {
         val target = batchTargetProduct!!
         val productBatches by productsViewModel.getBatchesForProduct(target.barcode).collectAsStateWithLifecycle(emptyList())
@@ -3384,9 +3492,12 @@ fun ProductsScreen(
             barcode = target.barcode,
             stripSize = target.stripSize,
             mrpPrice = target.mrpPrice,
+            shelfLocation = target.shelfLocation,
             batches = productBatches,
             onDismiss = { batchTargetProduct = null },
             onAddBatch = { batch -> productsViewModel.upsertBatch(batch) },
+            onUpdateBatch = { batch -> productsViewModel.upsertBatch(batch) },
+            onUpdateShelfLocation = { loc -> productsViewModel.updateProductShelfLocation(target.barcode, loc) },
             onQuarantineBatch = { id, reason -> productsViewModel.setBatchQuarantineStatus(id, true, reason) },
             onReleaseBatch = { id -> productsViewModel.setBatchQuarantineStatus(id, false, null) },
             onDeleteBatch = { id -> productsViewModel.deleteBatch(id) }
@@ -4697,7 +4808,7 @@ private fun ProductOverflowMenu(
                 }
             )
             DropdownMenuItem(
-                text = { Text("ব্যাচ ও FEFO ব্যবস্থাপনা") },
+                text = { Text(if (com.techyfiposmeds.utils.isAppBangla()) "ব্যাচ ও FEFO ব্যবস্থাপনা" else "Batches & FEFO") },
                 leadingIcon = { Text("🏷️", fontSize = 16.sp) },
                 onClick = {
                     expanded = false
@@ -5501,11 +5612,13 @@ fun MedicineItemRow(
     onAddToCart: (unitType: String) -> Unit,
     onFindSubstitute: () -> Unit,
     onViewClinical: () -> Unit,
-    onManageBatches: () -> Unit = {}
+    onManageBatches: () -> Unit = {},
+    onEditMedicine: () -> Unit = {},
+    onPrintDoseSticker: () -> Unit = {}
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val (formBg, formText) = getDosageFormStyle(medicine.dosageForm, isDark)
-    val hasStrip = medicine.stripPrice > 0 || medicine.stripSize > 1
+    val hasStrip = medicine.isStripApplicable
     val isOutOfStock = medicine.stockQty <= 0
     val isLowStock = medicine.stockQty > 0 && medicine.stockQty <= medicine.reorderLevel
 
@@ -5573,7 +5686,7 @@ fun MedicineItemRow(
                             ) {
                                 Text("🚨", fontSize = 10.sp)
                                 Text(
-                                    text = "অ্যান্টিবায়োটিক (Rx)",
+                                    text = if (com.techyfiposmeds.utils.isAppBangla()) "অ্যান্টিবায়োটিক (Rx)" else "Antibiotic (Rx)",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     maxLines = 1,
@@ -5622,10 +5735,11 @@ fun MedicineItemRow(
                 Spacer(Modifier.width(6.dp))
 
                 // Stock Badge
+                val isBn = com.techyfiposmeds.utils.isAppBangla()
                 val stockText = when {
-                    isOutOfStock -> "🚫 স্টক নেই"
-                    isLowStock -> "⚠️ কম স্টক (${toBanglaDigits(medicine.stockQty.toInt().toString())})"
-                    else -> "✅ স্টক: ${toBanglaDigits(medicine.stockQty.toInt().toString())}"
+                    isOutOfStock -> if (isBn) "🚫 স্টক নেই" else "🚫 Out of stock"
+                    isLowStock -> if (isBn) "⚠️ কম স্টক (${toBanglaDigits(medicine.stockQty.toInt().toString())})" else "⚠️ Low Stock (${medicine.stockQty.toInt()})"
+                    else -> if (isBn) "✅ স্টক: ${toBanglaDigits(medicine.stockQty.toInt().toString())}" else "✅ Stock: ${medicine.stockQty.toInt()}"
                 }
                 val stockColor = when {
                     isOutOfStock -> Color(0xFFDC2626)
@@ -5720,90 +5834,97 @@ fun MedicineItemRow(
                 }
             }
 
-            // Bottom Multi-Unit Pricing Pill & Action Buttons Row
-            Row(
+            // Bottom Section: Row 1 = Pricing + Utility Tools, Row 2 = Quick Add Buttons
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Multi-unit pricing summary
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "৳${formatTaka(medicine.unitPrice)}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "/পিস",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (hasStrip) {
-                            val effStripPrice = if (medicine.stripPrice > 0) medicine.stripPrice else (medicine.unitPrice * medicine.stripSize)
+                val isBnRow = com.techyfiposmeds.utils.isAppBangla()
+
+                // Line 1: Pricing (Left) & Utility Actions (Right: Subs, Info, Batch)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Multi-unit pricing summary
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             Text(
-                                text = "• ৳${formatTaka(effStripPrice)}/পাতা (${toBanglaDigits(medicine.stripSize.toString())})",
+                                text = formatTaka(medicine.unitPrice),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = if (isBnRow) "/পিস" else "/pc",
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (hasStrip) {
+                                val effStripPrice = if (medicine.stripPrice > 0) medicine.stripPrice else (medicine.unitPrice * medicine.stripSize)
+                                Text(
+                                    text = if (isBnRow) "• ${formatTaka(effStripPrice)}/পাতা (${toBanglaDigits(medicine.stripSize.toString())})" else "• ${formatTaka(effStripPrice)}/strip (${medicine.stripSize})",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (medicine.packPrice > 0) {
+                            Text(
+                                text = if (isBnRow) "বক্স: ${formatTaka(medicine.packPrice)}" else "Box: ${formatTaka(medicine.packPrice)}",
+                                fontSize = 10.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
                             )
                         }
                     }
-                    if (medicine.packPrice > 0) {
-                        Text(
-                            text = "বক্স: ৳${formatTaka(medicine.packPrice)}",
-                            fontSize = 10.5.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
-                        )
+
+                    // Edit Medicine Button (Stock, Price, Rack, Expiry)
+                    Surface(
+                        onClick = onEditMedicine,
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF0D9488).copy(alpha = 0.14f),
+                        border = BorderStroke(0.8.dp, Color(0xFF0D9488).copy(alpha = 0.5f)),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = if (isBnRow) "সম্পাদনা" else "Edit", tint = Color(0xFF0F766E), modifier = Modifier.size(13.dp))
+                            Text(if (isBnRow) "সম্পাদনা" else "Edit", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F766E))
+                        }
                     }
                 }
 
-                // Action Buttons: Substitutes + Clinical + Batches + Quick Add
+                // Line 2: Horizontal Scrollable Action Chips (Sticker, Batches, Subs, Clinical)
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Substitute Finder Button
+                    // Dosage Sticker Button
                     Surface(
-                        onClick = onFindSubstitute,
+                        onClick = onPrintDoseSticker,
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF3B82F6).copy(alpha = 0.12f),
-                        border = BorderStroke(0.8.dp, Color(0xFF3B82F6).copy(alpha = 0.4f)),
-                        modifier = Modifier.minimumInteractiveComponentSize().height(34.dp)
+                        color = Color(0xFF6366F1).copy(alpha = 0.12f),
+                        border = BorderStroke(0.8.dp, Color(0xFF6366F1).copy(alpha = 0.4f)),
+                        modifier = Modifier.height(30.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            modifier = Modifier.padding(horizontal = if (isTablet) 8.dp else 6.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
-                            Icon(Icons.Default.Repeat, contentDescription = "বিকল্প", tint = Color(0xFF2563EB), modifier = Modifier.size(13.dp))
-                            if (isTablet) {
-                                Text("বিকল্প", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-                            }
-                        }
-                    }
-
-                    // Clinical Reference Info Button
-                    Surface(
-                        onClick = onViewClinical,
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF8B5CF6).copy(alpha = 0.12f),
-                        border = BorderStroke(0.8.dp, Color(0xFF8B5CF6).copy(alpha = 0.4f)),
-                        modifier = Modifier.minimumInteractiveComponentSize().height(34.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            modifier = Modifier.padding(horizontal = if (isTablet) 8.dp else 6.dp)
-                        ) {
-                            Icon(Icons.Default.Info, contentDescription = "তথ্য", tint = Color(0xFF7C3AED), modifier = Modifier.size(13.dp))
-                            if (isTablet) {
-                                Text("তথ্য", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7C3AED))
-                            }
+                            Text("🏷️", fontSize = 11.sp)
+                            Text(if (isBnRow) "ডোজ স্টিকার" else "Dose Sticker", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4338CA))
                         }
                     }
 
@@ -5813,49 +5934,100 @@ fun MedicineItemRow(
                         shape = RoundedCornerShape(8.dp),
                         color = Color(0xFFF59E0B).copy(alpha = 0.12f),
                         border = BorderStroke(0.8.dp, Color(0xFFF59E0B).copy(alpha = 0.4f)),
-                        modifier = Modifier.height(34.dp)
+                        modifier = Modifier.height(30.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            modifier = Modifier.padding(horizontal = if (isTablet) 8.dp else 6.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
-                            Text("🏷️", fontSize = 11.sp)
-                            if (isTablet) {
-                                Text("ব্যাচ", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
-                            }
+                            Text("📦", fontSize = 11.sp)
+                            Text(if (isBnRow) "ব্যাচ ও মেয়াদ" else "Batches & Expiry", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
                         }
                     }
 
-                    // Quick Add Buttons
-                    if (hasStrip) {
+                    // Substitute Finder Button
+                    Surface(
+                        onClick = onFindSubstitute,
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF3B82F6).copy(alpha = 0.12f),
+                        border = BorderStroke(0.8.dp, Color(0xFF3B82F6).copy(alpha = 0.4f)),
+                        modifier = Modifier.height(30.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Repeat, contentDescription = if (isBnRow) "বিকল্প" else "Substitutes", tint = Color(0xFF2563EB), modifier = Modifier.size(13.dp))
+                            Text(if (isBnRow) "বিকল্প ওষুধ" else "Substitutes", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                        }
+                    }
+
+                    // Clinical Reference Info Button
+                    Surface(
+                        onClick = onViewClinical,
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF8B5CF6).copy(alpha = 0.12f),
+                        border = BorderStroke(0.8.dp, Color(0xFF8B5CF6).copy(alpha = 0.4f)),
+                        modifier = Modifier.height(30.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Info, contentDescription = if (isBnRow) "তথ্য" else "Info", tint = Color(0xFF7C3AED), modifier = Modifier.size(13.dp))
+                            Text(if (isBnRow) "ক্লিনিক্যাল তথ্য" else "Clinical Info", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7C3AED))
+                        }
+                    }
+                }
+
+                // Line 2: Prominent Quick Add Buttons Row
+                if (hasStrip) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Button(
                             onClick = { onAddToCart("strip") },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            modifier = Modifier.height(34.dp)
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                            modifier = Modifier
+                                .weight(1.3f)
+                                .height(38.dp)
                         ) {
-                            Text("+ পাতা", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(15.dp), tint = Color.White)
+                            Spacer(Modifier.width(4.dp))
+                            Text(if (isBnRow) "পাতা কার্ট (${medicine.stripSize} পিস)" else "Add Strip (${medicine.stripSize} pcs)", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
                         }
                         FilledTonalButton(
                             onClick = { onAddToCart("pc") },
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 7.dp, vertical = 0.dp),
-                            modifier = Modifier.height(34.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
                         ) {
-                            Text("+ পিস", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(if (isBnRow) "১ পিস" else "1 Pc", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
-                    } else {
-                        Button(
-                            onClick = { onAddToCart("pc") },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                            modifier = Modifier.height(34.dp)
-                        ) {
-                            Text("+ কার্টে নিন", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
+                    }
+                } else {
+                    Button(
+                        onClick = { onAddToCart("pc") },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(15.dp), tint = Color.White)
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isBnRow) "+ কার্টে যুক্ত করুন" else "+ Add to Cart", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
                     }
                 }
             }
@@ -5869,11 +6041,13 @@ fun MedicineGridCard(
     onAddToCart: (unitType: String) -> Unit,
     onFindSubstitute: () -> Unit,
     onViewClinical: () -> Unit,
-    onManageBatches: () -> Unit = {}
+    onManageBatches: () -> Unit = {},
+    onEditMedicine: () -> Unit = {},
+    onPrintDoseSticker: () -> Unit = {}
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val (formBg, formText) = getDosageFormStyle(medicine.dosageForm, isDark)
-    val hasStrip = medicine.stripPrice > 0 || medicine.stripSize > 1
+    val hasStrip = medicine.isStripApplicable
     val isOutOfStock = medicine.stockQty <= 0
     val isLowStock = medicine.stockQty > 0 && medicine.stockQty <= medicine.reorderLevel
 
@@ -5923,13 +6097,14 @@ fun MedicineGridCard(
                     isLowStock -> Color(0xFFD97706)
                     else -> Color(0xFF059669)
                 }
+                val isBnGrid = com.techyfiposmeds.utils.isAppBangla()
                 Surface(
                     shape = RoundedCornerShape(999.dp),
                     color = stockColor.copy(alpha = 0.12f),
                     border = BorderStroke(0.5.dp, stockColor.copy(alpha = 0.35f))
                 ) {
                     Text(
-                        text = if (isOutOfStock) "স্টক নেই" else "${toBanglaDigits(medicine.stockQty.toInt().toString())} পিস",
+                        text = if (isOutOfStock) (if (isBnGrid) "স্টক নেই" else "Out of stock") else (if (isBnGrid) "${toBanglaDigits(medicine.stockQty.toInt().toString())} পিস" else "${medicine.stockQty.toInt()} pcs"),
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = stockColor,
@@ -5940,6 +6115,7 @@ fun MedicineGridCard(
 
             // Antibiotic Strip if applicable
             if (medicine.isAntibiotic) {
+                val isBnGrid = com.techyfiposmeds.utils.isAppBangla()
                 Surface(
                     shape = RoundedCornerShape(5.dp),
                     color = if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.7f) else Color(0xFFFEE2E2),
@@ -5947,7 +6123,7 @@ fun MedicineGridCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "🚨 অ্যান্টিবায়োটিক (Rx)",
+                        text = if (isBnGrid) "🚨 অ্যান্টিবায়োটিক (Rx)" else "🚨 Antibiotic (Rx)",
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626),
@@ -6030,21 +6206,22 @@ fun MedicineGridCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
+                val isBnGrid = com.techyfiposmeds.utils.isAppBangla()
                 Text(
-                    text = "৳${formatTaka(medicine.unitPrice)}",
+                    text = formatTaka(medicine.unitPrice),
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "/পিস",
+                    text = if (isBnGrid) "/পিস" else "/pc",
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (hasStrip) {
                     val effStripPrice = if (medicine.stripPrice > 0) medicine.stripPrice else (medicine.unitPrice * medicine.stripSize)
                     Text(
-                        text = "(${toBanglaDigits(medicine.stripSize.toString())}'s: ৳${formatTaka(effStripPrice)})",
+                        text = if (isBnGrid) "(${toBanglaDigits(medicine.stripSize.toString())}'s: ${formatTaka(effStripPrice)})" else "(${medicine.stripSize}'s: ${formatTaka(effStripPrice)})",
                         fontSize = 9.5.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
                         maxLines = 1
@@ -6052,7 +6229,47 @@ fun MedicineGridCard(
                 }
             }
 
-            // Action Buttons: Substitutes + Clinical + Add
+            // Row 1: Primary Actions (Edit + Dose Sticker)
+            val isBnGrid = com.techyfiposmeds.utils.isAppBangla()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Edit Medicine (Stock, Price, Rack, Expiry)
+                Surface(
+                    onClick = onEditMedicine,
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFF0D9488).copy(alpha = 0.14f),
+                    border = BorderStroke(0.6.dp, Color(0xFF0D9488).copy(alpha = 0.45f)),
+                    modifier = Modifier.weight(1f).height(28.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Icon(Icons.Default.Edit, contentDescription = if (isBnGrid) "সম্পাদনা" else "Edit", tint = Color(0xFF0F766E), modifier = Modifier.size(11.dp))
+                            Text(if (isBnGrid) "সম্পাদনা" else "Edit", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F766E))
+                        }
+                    }
+                }
+
+                // Dosage Sticker
+                Surface(
+                    onClick = onPrintDoseSticker,
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFF6366F1).copy(alpha = 0.12f),
+                    border = BorderStroke(0.6.dp, Color(0xFF6366F1).copy(alpha = 0.4f)),
+                    modifier = Modifier.weight(1f).height(28.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("🏷️", fontSize = 9.sp)
+                            Text(if (isBnGrid) "স্টিকার" else "Sticker", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4338CA))
+                        }
+                    }
+                }
+            }
+
+            // Row 2: Compact Utility Actions (Subs, Info, Batch)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -6063,10 +6280,13 @@ fun MedicineGridCard(
                     shape = RoundedCornerShape(6.dp),
                     color = Color(0xFF3B82F6).copy(alpha = 0.12f),
                     border = BorderStroke(0.6.dp, Color(0xFF3B82F6).copy(alpha = 0.4f)),
-                    modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)
+                    modifier = Modifier.weight(1f).height(28.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Repeat, contentDescription = "বিকল্প", tint = Color(0xFF2563EB), modifier = Modifier.size(14.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Icon(Icons.Default.Repeat, contentDescription = if (isBnGrid) "বিকল্প" else "Substitutes", tint = Color(0xFF2563EB), modifier = Modifier.size(11.dp))
+                            Text(if (isBnGrid) "বিকল্প" else "Subs", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                        }
                     }
                 }
 
@@ -6075,10 +6295,13 @@ fun MedicineGridCard(
                     shape = RoundedCornerShape(6.dp),
                     color = Color(0xFF8B5CF6).copy(alpha = 0.12f),
                     border = BorderStroke(0.6.dp, Color(0xFF8B5CF6).copy(alpha = 0.4f)),
-                    modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)
+                    modifier = Modifier.weight(1f).height(28.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Info, contentDescription = "তথ্য", tint = Color(0xFF7C3AED), modifier = Modifier.size(14.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Icon(Icons.Default.Info, contentDescription = if (isBnGrid) "তথ্য" else "Info", tint = Color(0xFF7C3AED), modifier = Modifier.size(11.dp))
+                            Text(if (isBnGrid) "তথ্য" else "Info", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7C3AED))
+                        }
                     }
                 }
 
@@ -6087,37 +6310,79 @@ fun MedicineGridCard(
                     shape = RoundedCornerShape(6.dp),
                     color = Color(0xFFF59E0B).copy(alpha = 0.12f),
                     border = BorderStroke(0.6.dp, Color(0xFFF59E0B).copy(alpha = 0.4f)),
-                    modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)
+                    modifier = Modifier.weight(1f).height(28.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("🏷️", fontSize = 12.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("📦", fontSize = 9.sp)
+                            Text(if (isBnGrid) "ব্যাচ" else "Batch", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                        }
                     }
                 }
+            }
 
-                if (hasStrip) {
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Row 2: Add to Cart Action(s)
+            if (hasStrip) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Button(
                         onClick = { onAddToCart("strip") },
-                        shape = RoundedCornerShape(7.dp),
+                        shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
-                        contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                         modifier = Modifier
-                            .weight(1f)
-                            .height(30.dp)
+                            .weight(1.3f)
+                            .height(32.dp)
                     ) {
-                        Text("+ পাতা", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(
+                            text = if (isBnGrid) "+ পাতা (${toBanglaDigits(medicine.stripSize.toString())})" else "+ Strip (${medicine.stripSize})",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1
+                        )
                     }
-                } else {
-                    Button(
+
+                    Surface(
                         onClick = { onAddToCart("pc") },
-                        shape = RoundedCornerShape(7.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                         modifier = Modifier
-                            .weight(1f)
-                            .height(30.dp)
+                            .weight(0.9f)
+                            .height(32.dp)
                     ) {
-                        Text("+ কার্ট", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = if (isBnGrid) "+ ১ পিস" else "+ 1 Pc",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
+                }
+            } else {
+                Button(
+                    onClick = { onAddToCart("pc") },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp)
+                ) {
+                    Text(
+                        text = if (isBnGrid) "+ কার্টে যোগ করুন" else "+ Add to Cart",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
             }
         }

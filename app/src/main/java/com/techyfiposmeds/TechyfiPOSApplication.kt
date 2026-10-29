@@ -11,6 +11,7 @@ import com.techyfiposmeds.utils.StockAlertScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class TechyfiPOSApplication : Application() {
@@ -25,6 +26,10 @@ class TechyfiPOSApplication : Application() {
         val settingsDataStore = SettingsDataStore(this)
         repository = DataRepository(this, database, settingsDataStore)
         applicationScope.launch {
+            try {
+                val savedLang = settingsDataStore.languageFlow.first()
+                com.techyfiposmeds.utils.setAppLanguage(savedLang)
+            } catch (_: Throwable) {}
             repository.removeLegacyDemoDuesIfUntouched()
             repository.backfillLegacyTaxInclusiveIfConfigured()
             repository.recomputeCustomerLoyaltyTiersWithConfiguredThresholds()

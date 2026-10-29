@@ -328,69 +328,82 @@ fun AddEditProductDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
-        Surface(
-            shape = RoundedCornerShape(22.dp),
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 16.dp,
-            modifier = Modifier
-                .fillMaxWidth(0.96f)
-                .widthIn(max = 680.dp)
-                .fillMaxHeight(0.92f)
-                .padding(vertical = 12.dp)
-                .trackUserActivity()
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+        val isBn = com.techyfiposmeds.utils.isAppBangla()
+        com.techyfiposmeds.LocaleWrapper(language = if (isBn) "bn" else "en") {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp, vertical = 14.dp)
+                    .imePadding(),
+                contentAlignment = Alignment.Center
+            ) {
                 Surface(
-                    color = Color.Transparent,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(Color(0xFF6366F1), Color(0xFF4F46E5), Color(0xFF4338CA))
-                                )
-                            )
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        if (isEdit) {
-                            Text("✏️", fontSize = 24.sp)
-                        } else {
-                            Animated3DIsometricBoxIcon(fontSize = 28.sp)
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (isEdit) stringResource(R.string.edit_product) else stringResource(R.string.add_new_product),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Text(
-                                text = if (isEdit) stringResource(R.string.products_edit_subtitle) else stringResource(R.string.products_add_subtitle),
-                                fontSize = 10.5.sp,
-                                color = Color.White.copy(alpha = 0.85f)
-                            )
-                        }
-                        IconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier
-                                .size(30.dp)
-                                .background(Color.White.copy(alpha = 0.20f), CircleShape)
-                        ) {
-                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.common_close_content_description), tint = Color.White, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-
-                LazyColumn(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 16.dp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    contentPadding = PaddingValues(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .widthIn(max = 640.dp)
+                        .fillMaxHeight()
+                        .trackUserActivity()
                 ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Surface(
+                            color = Color.Transparent,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(Color(0xFF6366F1), Color(0xFF4F46E5), Color(0xFF4338CA))
+                                        )
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                if (isEdit) {
+                                    Text("✏️", fontSize = 24.sp)
+                                } else {
+                                    Animated3DIsometricBoxIcon(fontSize = 28.sp)
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (isEdit) stringResource(R.string.edit_product) else stringResource(R.string.add_new_product),
+                                        fontSize = 16.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = if (isEdit) stringResource(R.string.products_edit_subtitle) else stringResource(R.string.products_add_subtitle),
+                                        fontSize = 11.sp,
+                                        color = Color.White.copy(alpha = 0.85f)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = onDismiss,
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(Color.White.copy(alpha = 0.20f), CircleShape)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.common_close_content_description),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 28.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
                     item {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
@@ -1406,7 +1419,7 @@ fun AddEditProductDialog(
 
                                     // 3. Unit Selector
                                     Column(
-                                        modifier = Modifier.weight(1.05f),
+                                        modifier = Modifier.weight(1f),
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
@@ -1697,55 +1710,71 @@ fun AddEditProductDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedButton(
                             onClick = onDismiss,
-                            shape = RoundedCornerShape(9.dp),
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(44.dp)
+                                .height(48.dp)
                         ) {
-                            Text(stringResource(R.string.products_cancel_action), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.5.sp)
+                            Text(
+                                stringResource(R.string.products_cancel_action),
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp
+                            )
                         }
 
                         if (isEdit && onDelete != null) {
                             OutlinedButton(
                                 onClick = { onDelete() },
-                                shape = RoundedCornerShape(9.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, Color(0xFFFCA5A5)),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
-                                modifier = Modifier.height(44.dp)
+                                modifier = Modifier.height(48.dp)
                             ) {
-                                Text(stringResource(R.string.products_delete_action), fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                                Text(
+                                    stringResource(R.string.products_delete_action),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
                             }
                         }
 
                         Button(
                             onClick = submitProduct,
                             enabled = !isSaving,
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                             contentPadding = PaddingValues(0.dp),
                             modifier = Modifier
                                 .weight(1.5f)
-                                .height(46.dp)
+                                .height(48.dp)
                                 .background(
                                     Brush.linearGradient(listOf(Color(0xFF4F46E5), Color(0xFF7C3AED))),
-                                    RoundedCornerShape(10.dp)
+                                    RoundedCornerShape(12.dp)
                                 )
                         ) {
                             Animated3DSaveIcon()
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.products_save_product_button), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                            Text(
+                                stringResource(R.string.products_save_product_button),
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontSize = 13.5.sp
+                            )
                         }
                     }
                 }
             }
         }
-
+    }
 
         if (showEnlargedView) {
             EnlargedImageDialog(
@@ -1755,6 +1784,7 @@ fun AddEditProductDialog(
             )
         }
     }
+}
 
     if (showBarcodeScanModal) {
         ProductBarcodeScanDialog(

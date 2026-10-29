@@ -175,7 +175,7 @@ data class BillData(
     }
 }
 
-private const val APP_BRAND = "Techyfi POS"
+private const val APP_BRAND = "Techyfi Pharma"
 
 /** Converted monochrome thresholding bitmap helper for sharp 1-bit thermal print output */
 fun convertToMonochromeThresholdBitmap(src: Bitmap, targetWidthDots: Int = 380): Bitmap {
@@ -276,7 +276,7 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
     val date = if (isBn) DateFormatters.formatDateTime(bill.timestampMillis, Locale.forLanguageTag("bn")) else SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.US).format(Date(bill.timestampMillis))
     val settings = bill.settingsData
     val sb = StringBuilder()
-    val defaultShopName = "Techyfi POS"
+    val defaultShopName = "Techyfi Pharma"
     val storeName = bill.shopName.takeIf { it.isNotBlank() && it != defaultShopName }
         ?: settings.storeName.takeIf { it.isNotBlank() && it != "My Shop" }
         ?: bill.shopName.ifBlank { settings.storeName.ifBlank { defaultShopName } }
@@ -1215,10 +1215,10 @@ fun getBillImageUri(context: Context, file: File): Uri =
 fun getBillPdfUri(context: Context, file: File): Uri = getBillImageUri(context, file)
 
 fun reportStoreName(settings: InvoiceSettingsData): String =
-    settings.storeName.ifBlank { "TECHYFI POS" }
+    settings.storeName.ifBlank { "TECHYFI PHARMA" }
 
 fun reportPoweredByText(settings: InvoiceSettingsData): String =
-    settings.poweredByText.ifBlank { "Powered by Techyfi POS" }
+    settings.poweredByText.ifBlank { "Powered by Techyfi Pharma" }
 
 fun reportCanvasWidth(settings: InvoiceSettingsData): Int =
     if (settings.paperRollWidthMm == 58) 384 else 576
@@ -2196,7 +2196,7 @@ fun generateDueRepaymentJpeg(
 
     paint.textAlign = Paint.Align.CENTER
     paint.textSize = if (is58) 12f else 15f
-    canvas.drawText("Techyfi POS • Smart Store System", width / 2f, y, paint)
+    canvas.drawText("Techyfi Pharma • Pharmacy POS & Inventory", width / 2f, y, paint)
     y += if (is58) 16f else 20f
 
     // 10. Barcode Simulation
@@ -2389,7 +2389,7 @@ fun generateStoreCreditVoucherJpeg(
         textSize = if (is58) 24f else 32f
         textAlign = Paint.Align.CENTER
     }
-    val effectiveStoreName = storeName.ifBlank { "Techyfi POS" }
+    val effectiveStoreName = storeName.ifBlank { "Techyfi Pharma" }
     canvas.drawText(effectiveStoreName, width / 2f, currentY + paintStoreName.textSize, paintStoreName)
     currentY += (if (is58) 30f else 38f)
 
@@ -2579,7 +2579,7 @@ fun generateStoreCreditVoucherJpeg(
         textAlign = Paint.Align.CENTER
         color = Color.DKGRAY
     }
-    canvas.drawText("Techyfi POS • Smart Store System", width / 2f, currentY + paintFoot2.textSize, paintFoot2)
+    canvas.drawText("Techyfi Pharma • Pharmacy POS & Inventory", width / 2f, currentY + paintFoot2.textSize, paintFoot2)
     currentY += 20f
 
     val dir = File(context.cacheDir, "receipts").apply { mkdirs() }

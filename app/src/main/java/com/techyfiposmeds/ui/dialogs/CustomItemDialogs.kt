@@ -87,7 +87,7 @@ fun AddCustomItemDialog(
     var showManagePresets by remember { mutableStateOf(false) }
     var showManageNotePresets by remember { mutableStateOf(false) }
 
-    val standardUnits = remember { listOf("Pcs", "Kg", "Gm", "Ltr", "Mtr", "Box", "Service", "Trip", "Other") }
+    val standardUnits = remember { listOf("Pcs", "Strip", "Box", "Bottle", "Vial", "Ampoule", "Tube", "Sachet", "Service", "Other") }
 
     val rawPrice = toEnglishDigits(priceText).toDoubleOrNull()
     val isPriceNegative = rawPrice != null && rawPrice < 0.0
@@ -286,7 +286,8 @@ fun AddCustomItemDialog(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         val categories = listOf(
-                            Triple("Product", stringResource(R.string.cart_category_product), "Pcs"),
+                            Triple("Product", if (com.techyfiposmeds.utils.isAppBangla()) "ওষুধ" else stringResource(R.string.cart_category_product), "Pcs"),
+                            Triple("Surgical", if (com.techyfiposmeds.utils.isAppBangla()) "সার্জিক্যাল" else "Surgical", "Pcs"),
                             Triple("Service", stringResource(R.string.cart_category_service), "Service"),
                             Triple("Fee", stringResource(R.string.cart_category_fee), "Trip"),
                             Triple("Freebie", stringResource(R.string.cart_category_freebie), "Pcs")

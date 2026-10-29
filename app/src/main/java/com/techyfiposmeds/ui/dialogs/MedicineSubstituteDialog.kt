@@ -144,15 +144,19 @@ fun MedicineSubstituteDialog(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        val isBn = com.techyfiposmeds.utils.isAppBangla()
+                        val genPrefix = if (isBn) "জেনেরিক:" else "Generic:"
+                        val pricePrefix = if (isBn) "মূল্য:" else "Price:"
+                        val pcLabel = if (isBn) "পিস" else "pc"
+                        val stripLabel = if (isBn) "পাতা" else "strip"
                         Text(
-                            text = "Generic: ${targetMedicine.genericName ?: "N/A"} • ${targetMedicine.companyName ?: ""}",
+                            text = "$genPrefix ${targetMedicine.genericName ?: "N/A"} • ${targetMedicine.companyName ?: ""}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Price: ${formatTaka(targetMedicine.unitPrice)}/pc • ${formatTaka(targetMedicine.stripPrice)}/strip",
+                            text = "$pricePrefix ${formatTaka(targetMedicine.unitPrice)}/$pcLabel • ${formatTaka(targetMedicine.stripPrice)}/$stripLabel",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -237,9 +241,10 @@ private fun SubstituteItemRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
+                val isBnRow = com.techyfiposmeds.utils.isAppBangla()
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "${formatTaka(item.unitPrice)} / pc",
+                        text = "${formatTaka(item.unitPrice)} / ${if (isBnRow) "পিস" else "pc"}",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -250,7 +255,7 @@ private fun SubstituteItemRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${formatTaka(item.stripPrice)} / strip",
+                        text = "${formatTaka(item.stripPrice)} / ${if (isBnRow) "পাতা" else "strip"}",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary

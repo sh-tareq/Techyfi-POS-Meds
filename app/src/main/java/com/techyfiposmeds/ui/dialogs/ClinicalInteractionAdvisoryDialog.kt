@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.techyfiposmeds.R
+import com.techyfiposmeds.utils.isAppBangla
+import com.techyfiposmeds.utils.toBanglaDigits
 import com.techyfiposmeds.data.clinical.AlertSeverity
 import com.techyfiposmeds.data.clinical.ClinicalInteractionAlert
 
@@ -34,6 +36,8 @@ fun ClinicalInteractionAdvisoryDialog(
     onAcknowledge: () -> Unit,
     onRemoveItem: ((String) -> Unit)? = null
 ) {
+    val isBn = isAppBangla()
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -77,13 +81,14 @@ fun ClinicalInteractionAdvisoryDialog(
                         }
                         Column {
                             Text(
-                                text = "Clinical Drug Interaction Advisory",
+                                text = if (isBn) "ক্লিনিক্যাল ড্রাগ মিথস্ক্রিয়া সতর্কতা" else "Clinical Drug Interaction Advisory",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
+                            val countStr = if (isBn) "${toBanglaDigits(alerts.size.toString())}টি" else "${alerts.size}"
                             Text(
-                                text = "ওষুধের নিরাপত্তা ও সম্ভাব্য ড্রাগ মিথস্ক্রিয়া সতর্কবার্তা (${alerts.size}টি সনাক্ত)",
+                                text = if (isBn) "ওষুধের নিরাপত্তা ও ড্রাগ মিথস্ক্রিয়া সতর্কবার্তা ($countStr সনাক্ত)" else "Drug safety & clinical interaction alerts ($countStr detected)",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFFDC2626),
                                 fontWeight = FontWeight.Bold
@@ -117,6 +122,7 @@ fun ClinicalInteractionAdvisoryDialog(
                     items(alerts, key = { it.id }) { alert ->
                         AlertCard(
                             alert = alert,
+                            isBn = isBn,
                             onRemoveItem = onRemoveItem
                         )
                     }
@@ -137,7 +143,7 @@ fun ClinicalInteractionAdvisoryDialog(
                             .minimumInteractiveComponentSize(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("কার্ট পরিবর্তন / Modify", fontSize = 12.5.sp)
+                        Text(if (isBn) "কার্ট পরিবর্তন" else "Modify Cart", fontSize = 12.5.sp)
                     }
 
                     Button(
@@ -149,7 +155,7 @@ fun ClinicalInteractionAdvisoryDialog(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B))
                     ) {
-                        Text("বোঝা গেছে / Acknowledge", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                        Text(if (isBn) "বোঝা গেছে" else "Acknowledge", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -160,12 +166,13 @@ fun ClinicalInteractionAdvisoryDialog(
 @Composable
 private fun AlertCard(
     alert: ClinicalInteractionAlert,
+    isBn: Boolean = isAppBangla(),
     onRemoveItem: ((String) -> Unit)?
 ) {
     val (badgeBg, badgeText, badgeLabel) = when (alert.severity) {
-        AlertSeverity.HIGH_RISK -> Triple(Color(0xFFFEE2E2), Color(0xFFDC2626), "🔴 HIGH RISK / মারাত্মক ঝুঁকি")
-        AlertSeverity.MODERATE -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), "🟡 MODERATE / মাঝারি ঝুঁকি")
-        AlertSeverity.DUPLICATE_THERAPY -> Triple(Color(0xFFFFEDD5), Color(0xFFEA580C), "🟠 DUPLICATE / দ্বৈত উপাদান")
+        AlertSeverity.HIGH_RISK -> Triple(Color(0xFFFEE2E2), Color(0xFFDC2626), if (isBn) "🔴 মারাত্মক ঝুঁকি (HIGH RISK)" else "🔴 HIGH RISK")
+        AlertSeverity.MODERATE -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), if (isBn) "🟡 মাঝারি ঝুঁকি (MODERATE)" else "🟡 MODERATE RISK")
+        AlertSeverity.DUPLICATE_THERAPY -> Triple(Color(0xFFFFEDD5), Color(0xFFEA580C), if (isBn) "🟠 দ্বৈত উপাদান (DUPLICATE)" else "🟠 DUPLICATE THERAPY")
     }
 
     Card(
@@ -202,7 +209,7 @@ private fun AlertCard(
                 }
 
                 Text(
-                    text = alert.titleEn,
+                    text = if (isBn) alert.titleBn.ifBlank { alert.titleEn } else alert.titleEn,
                     fontSize = 11.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.outline
@@ -264,17 +271,19 @@ private fun AlertCard(
 
             // Clinical Mechanism
             Text(
-                text = alert.mechanismBn,
+                text = if (isBn) alert.mechanismBn.ifBlank { alert.mechanismEn } else alert.mechanismEn.ifBlank { alert.mechanismBn },
                 fontSize = 12.sp,
                 lineHeight = 17.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Text(
-                text = alert.mechanismEn,
-                fontSize = 11.sp,
-                lineHeight = 15.sp,
-                color = MaterialTheme.colorScheme.outline
-            )
+            if (isBn && alert.mechanismEn.isNotBlank() && alert.mechanismEn != alert.mechanismBn) {
+                Text(
+                    text = alert.mechanismEn,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
 
             // Recommendation Box
             Surface(
@@ -291,13 +300,13 @@ private fun AlertCard(
                     Text("💡", fontSize = 14.sp)
                     Column {
                         Text(
-                            text = "ফার্মাসিস্টের পরামর্শ:",
+                            text = if (isBn) "ফার্মাসিস্টের পরামর্শ:" else "Pharmacist Advisory:",
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp,
                             color = Color(0xFF047857)
                         )
                         Text(
-                            text = alert.recommendationBn,
+                            text = if (isBn) alert.recommendationBn.ifBlank { alert.recommendationEn } else alert.recommendationEn.ifBlank { alert.recommendationBn },
                             fontSize = 11.5.sp,
                             lineHeight = 16.sp,
                             color = MaterialTheme.colorScheme.onSurface

@@ -29,6 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -37,6 +39,7 @@ import com.techyfiposmeds.R
 import com.techyfiposmeds.data.clinical.PatientVitalsHelper
 import com.techyfiposmeds.data.db.PatientVitalRecord
 import com.techyfiposmeds.utils.DateFormatters
+import com.techyfiposmeds.utils.isAppBangla
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -123,6 +126,7 @@ fun PatientVitalsDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -140,27 +144,40 @@ fun PatientVitalsDialog(
                                 modifier = Modifier.size(24.dp)
                             )
                         }
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "রোগীর স্বাস্থ্য ভাইটালস ট্র্যাকার",
-                                fontSize = 17.sp,
+                                text = stringResource(R.string.patient_vitals_hub_title),
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "রক্তচাপ (BP), সুগার (Sugar), পালস ও বিএমআই (BMI)",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = stringResource(R.string.patient_vitals_hub_subtitle),
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
 
                 // Tab Selector
+                val isBn = isAppBangla()
                 TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -171,7 +188,7 @@ fun PatientVitalsDialog(
                         onClick = { selectedTab = 0 },
                         text = {
                             Text(
-                                "নতুন পরিমাপ রেকর্ড (New)",
+                                if (isBn) "নতুন পরিমাপ রেকর্ড (New)" else "Record New Vitals",
                                 fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium
                             )
                         },
@@ -182,7 +199,7 @@ fun PatientVitalsDialog(
                         onClick = { selectedTab = 1 },
                         text = {
                             Text(
-                                "ইতিহাস ও ট্রেন্ড (${allVitals.size})",
+                                if (isBn) "ইতিহাস ও ট্রেন্ড (${allVitals.size})" else "History & Trends (${allVitals.size})",
                                 fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium
                             )
                         },
@@ -210,7 +227,7 @@ fun PatientVitalsDialog(
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Text(
-                                    text = "রোগীর তথ্য (Patient Profile)",
+                                    text = if (isBn) "রোগীর প্রোফাইল (Patient Profile)" else "Patient Profile",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -222,7 +239,7 @@ fun PatientVitalsDialog(
                                     OutlinedTextField(
                                         value = phoneInput,
                                         onValueChange = { phoneInput = it },
-                                        label = { Text("মোবাইল নম্বর (Phone)") },
+                                        label = { Text(if (isBn) "মোবাইল নম্বর" else "Mobile Number") },
                                         placeholder = { Text("017XXXXXXXX") },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                         modifier = Modifier.weight(1f),
@@ -231,8 +248,8 @@ fun PatientVitalsDialog(
                                     OutlinedTextField(
                                         value = nameInput,
                                         onValueChange = { nameInput = it },
-                                        label = { Text("রোগীর নাম (Name)") },
-                                        placeholder = { Text("ঐচ্ছিক / Optional") },
+                                        label = { Text(if (isBn) "রোগীর নাম" else "Patient Name") },
+                                        placeholder = { Text(if (isBn) "ঐচ্ছিক" else "Optional") },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true
                                     )
@@ -270,7 +287,7 @@ fun PatientVitalsDialog(
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Text(
-                                            text = "রক্তচাপ ও পালস (Blood Pressure & Pulse)",
+                                            text = if (isBn) "রক্তচাপ ও পালস (Blood Pressure & Pulse)" else "Blood Pressure & Pulse",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -283,7 +300,7 @@ fun PatientVitalsDialog(
                                             border = BorderStroke(1.dp, Color(bpClass.colorHex))
                                         ) {
                                             Text(
-                                                text = bpClass.labelBn,
+                                                text = if (isAppBangla()) bpClass.labelBn else bpClass.labelEn,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(bpClass.colorHex),
@@ -293,45 +310,40 @@ fun PatientVitalsDialog(
                                     }
                                 }
 
+                                val isBn = isAppBangla()
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    OutlinedTextField(
+                                    CompactVitalInputField(
+                                        label = if (isBn) "সিস্টোলিক" else "Systolic",
                                         value = systolicInput,
                                         onValueChange = { systolicInput = it },
-                                        label = { Text("সিস্টোলিক (Sys)") },
-                                        placeholder = { Text("120") },
-                                        trailingIcon = { Text("mmHg", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(end = 4.dp)) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true
+                                        placeholder = "120",
+                                        unit = "mmHg",
+                                        modifier = Modifier.weight(1f)
                                     )
-                                    OutlinedTextField(
+                                    CompactVitalInputField(
+                                        label = if (isBn) "ডায়াস্টোলিক" else "Diastolic",
                                         value = diastolicInput,
                                         onValueChange = { diastolicInput = it },
-                                        label = { Text("ডায়াস্টোলিক (Dia)") },
-                                        placeholder = { Text("80") },
-                                        trailingIcon = { Text("mmHg", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(end = 4.dp)) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true
+                                        placeholder = "80",
+                                        unit = "mmHg",
+                                        modifier = Modifier.weight(1f)
                                     )
-                                    OutlinedTextField(
+                                    CompactVitalInputField(
+                                        label = if (isBn) "পালস" else "Pulse",
                                         value = pulseInput,
                                         onValueChange = { pulseInput = it },
-                                        label = { Text("পালস (Pulse)") },
-                                        placeholder = { Text("72") },
-                                        trailingIcon = { Text("BPM", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(end = 4.dp)) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true
+                                        placeholder = "72",
+                                        unit = "BPM",
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
 
                                 if (bpClass != null) {
                                     Text(
-                                        text = "💡 পরামর্শ: ${bpClass.adviceBn}",
+                                        text = if (isBn) "💡 পরামর্শ: ${bpClass.adviceBn}" else "💡 Advice: ${bpClass.adviceEn}",
                                         fontSize = 11.sp,
                                         color = Color(bpClass.colorHex),
                                         lineHeight = 15.sp,
@@ -371,7 +383,7 @@ fun PatientVitalsDialog(
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Text(
-                                            text = "ব্লাড গ্লুকোজ / সুগার (Blood Sugar)",
+                                            text = if (isBn) "ব্লাড গ্লুকোজ / সুগার (Blood Sugar)" else "Blood Glucose / Sugar",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -384,7 +396,7 @@ fun PatientVitalsDialog(
                                             border = BorderStroke(1.dp, Color(sugarClass.colorHex))
                                         ) {
                                             Text(
-                                                text = sugarClass.labelBn,
+                                                text = if (isBn) sugarClass.labelBn else sugarClass.labelEn,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(sugarClass.colorHex),
@@ -399,7 +411,11 @@ fun PatientVitalsDialog(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    listOf("RBS" to "র‍্যান্ডম (RBS)", "FBS" to "খালি পেটে (FBS)", "2HABF" to "নাস্তার ২ ঘণ্টা পর").forEach { (type, label) ->
+                                    listOf(
+                                        "RBS" to (if (isBn) "র‍্যান্ডম (RBS)" else "Random (RBS)"),
+                                        "FBS" to (if (isBn) "খালি পেটে (FBS)" else "Fasting (FBS)"),
+                                        "2HABF" to (if (isBn) "নাস্তার ২ ঘণ্টা পর" else "2h Post-Meal")
+                                    ).forEach { (type, label) ->
                                         FilterChip(
                                             selected = sugarType == type,
                                             onClick = { sugarType = type },
@@ -417,7 +433,7 @@ fun PatientVitalsDialog(
                                     OutlinedTextField(
                                         value = sugarInput,
                                         onValueChange = { sugarInput = it },
-                                        label = { Text("সুগার মান (Blood Sugar)") },
+                                        label = { Text(if (isBn) "সুগার মান (Blood Sugar)" else "Blood Sugar") },
                                         placeholder = { Text("e.g. 6.4") },
                                         trailingIcon = { Text("mmol/L", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(end = 4.dp)) },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -436,7 +452,7 @@ fun PatientVitalsDialog(
                                                 )
                                                 .padding(horizontal = 10.dp, vertical = 8.dp)
                                         ) {
-                                            Text("সমপরিমাণ (Equivalent):", fontSize = 10.sp, color = Color.Gray)
+                                            Text(if (isBn) "সমপরিমাণ (Equivalent):" else "Equivalent:", fontSize = 10.sp, color = Color.Gray)
                                             Text(
                                                 text = "$mgDl mg/dL",
                                                 fontSize = 13.sp,
@@ -449,7 +465,7 @@ fun PatientVitalsDialog(
 
                                 if (sugarClass != null) {
                                     Text(
-                                        text = "💡 পরামর্শ: ${sugarClass.adviceBn}",
+                                        text = if (isBn) "💡 পরামর্শ: ${sugarClass.adviceBn}" else "💡 Advice: ${sugarClass.adviceEn}",
                                         fontSize = 11.sp,
                                         color = Color(sugarClass.colorHex),
                                         lineHeight = 15.sp,
@@ -475,7 +491,7 @@ fun PatientVitalsDialog(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "শারীরিক গঠন ও তাপমাত্রা (Weight, Height & BMI)",
+                                        text = if (isBn) "শারীরিক গঠন ও তাপমাত্রা (Weight, Height & BMI)" else "Body Measurements & Temp",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -486,7 +502,7 @@ fun PatientVitalsDialog(
                                             border = BorderStroke(1.dp, Color(bmiClass.colorHex))
                                         ) {
                                             Text(
-                                                text = "BMI $calculatedBmi: ${bmiClass.labelBn}",
+                                                text = "BMI $calculatedBmi: ${if (isBn) bmiClass.labelBn else bmiClass.labelEn}",
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(bmiClass.colorHex),
@@ -500,35 +516,32 @@ fun PatientVitalsDialog(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    OutlinedTextField(
+                                    CompactVitalInputField(
+                                        label = if (isBn) "ওজন" else "Weight",
                                         value = weightInput,
                                         onValueChange = { weightInput = it },
-                                        label = { Text("ওজন (Weight)") },
-                                        placeholder = { Text("65") },
-                                        trailingIcon = { Text("kg", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(end = 4.dp)) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true
+                                        placeholder = "65",
+                                        unit = "kg",
+                                        keyboardType = KeyboardType.Decimal,
+                                        modifier = Modifier.weight(1f)
                                     )
-                                    OutlinedTextField(
+                                    CompactVitalInputField(
+                                        label = if (isBn) "উচ্চতা" else "Height",
                                         value = heightInput,
                                         onValueChange = { heightInput = it },
-                                        label = { Text("উচ্চতা (Height)") },
-                                        placeholder = { Text("165") },
-                                        trailingIcon = { Text("cm", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(end = 4.dp)) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true
+                                        placeholder = "165",
+                                        unit = "cm",
+                                        keyboardType = KeyboardType.Decimal,
+                                        modifier = Modifier.weight(1f)
                                     )
-                                    OutlinedTextField(
+                                    CompactVitalInputField(
+                                        label = if (isBn) "তাপমাত্রা" else "Temp",
                                         value = tempInput,
                                         onValueChange = { tempInput = it },
-                                        label = { Text("তাপমাত্রা (Temp)") },
-                                        placeholder = { Text("98.4") },
-                                        trailingIcon = { Text("°F", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(end = 4.dp)) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true
+                                        placeholder = "98.4",
+                                        unit = "°F",
+                                        keyboardType = KeyboardType.Decimal,
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
                             }
@@ -538,8 +551,8 @@ fun PatientVitalsDialog(
                         OutlinedTextField(
                             value = notesInput,
                             onValueChange = { notesInput = it },
-                            label = { Text("ফার্মাসিস্টের বিশেষ মন্তব্য ও উপদেশ (Clinical Advice)") },
-                            placeholder = { Text("যেমন: কাঁচা লবণ বর্জন, দিনে ৩০ মিনিট হাঁটা, ৩ দিন পর পুনঃনিরীক্ষণ...") },
+                            label = { Text(if (isBn) "ফার্মাসিস্টের বিশেষ মন্তব্য ও উপদেশ (Clinical Advice)" else "Clinical Advice / Pharmacist Notes") },
+                            placeholder = { Text(if (isBn) "যেমন: কাঁচা লবণ বর্জন, দিনে ৩০ মিনিট হাঁটা, ৩ দিন পর পুনঃনিরীক্ষণ..." else "e.g. Reduce salt, 30 min daily walk, follow up in 3 days...") },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 2,
                             maxLines = 3
@@ -557,7 +570,7 @@ fun PatientVitalsDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // WhatsApp Share Button
@@ -578,13 +591,15 @@ fun PatientVitalsDialog(
                                     )
                                     shareViaWhatsApp(context, summary)
                                 },
-                                modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF10B981))
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF10B981)),
+                                border = BorderStroke(1.5.dp, Color(0xFF10B981).copy(alpha = 0.45f)),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                                modifier = Modifier.height(48.dp)
                             ) {
-                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("হোয়াটসঅ্যাপ", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.Share, contentDescription = "WhatsApp Share", modifier = Modifier.size(18.dp), tint = Color(0xFF10B981))
+                                Spacer(Modifier.width(4.dp))
+                                Text(if (isBn) "শেয়ার" else "Share", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
                             }
 
                             // Copy Slip Text Button
@@ -604,14 +619,15 @@ fun PatientVitalsDialog(
                                         notes = notesInput
                                     )
                                     clipboardManager.setText(AnnotatedString(summary))
-                                    Toast.makeText(context, "রিপোর্ট কপি হয়েছে (Copied)", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, if (isBn) "রিপোর্ট কপি হয়েছে (Copied)" else "Report Copied", Toast.LENGTH_SHORT).show()
                                 },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                                modifier = Modifier.height(48.dp)
                             ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("কপি স্লিপ", fontSize = 13.sp)
+                                Icon(Icons.Default.ContentCopy, contentDescription = "Copy Slip", modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(if (isBn) "কপি" else "Copy", fontSize = 12.5.sp, fontWeight = FontWeight.Medium)
                             }
 
                             // Save Vital Record
@@ -631,15 +647,18 @@ fun PatientVitalsDialog(
                                         recordedAt = System.currentTimeMillis()
                                     )
                                     onSaveVital(record)
-                                    Toast.makeText(context, "ভাইটালস সফলভাবে সংরক্ষিত হয়েছে!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, if (isBn) "ভাইটালস সফলভাবে সংরক্ষিত হয়েছে!" else "Vitals saved successfully!", Toast.LENGTH_SHORT).show()
                                     selectedTab = 1
                                 },
-                                modifier = Modifier.weight(1.3f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("সংরক্ষণ করুন", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text(if (isBn) "সংরক্ষণ করুন" else "Save Record", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                             }
                         }
                     }
@@ -668,7 +687,7 @@ fun PatientVitalsDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (filterByPhoneOnly) "কেবল $phoneInput এর হিস্ট্রি" else "সকল রোগীর হিস্ট্রি (${allVitals.size})",
+                                    text = if (filterByPhoneOnly) (if (isBn) "কেবল $phoneInput এর হিস্ট্রি" else "Only history for $phoneInput") else (if (isBn) "সকল রোগীর হিস্ট্রি (${allVitals.size})" else "All patient vitals (${allVitals.size})"),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -676,7 +695,7 @@ fun PatientVitalsDialog(
                                 TextButton(
                                     onClick = { filterByPhoneOnly = !filterByPhoneOnly }
                                 ) {
-                                    Text(if (filterByPhoneOnly) "সব দেখুন" else "রোগীর নম্বর ফিল্টার", fontSize = 12.sp)
+                                    Text(if (filterByPhoneOnly) (if (isBn) "সব দেখুন" else "View All") else (if (isBn) "রোগীর নম্বর ফিল্টার" else "Filter by Phone"), fontSize = 12.sp)
                                 }
                             }
                         }
@@ -699,7 +718,7 @@ fun PatientVitalsDialog(
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                     )
                                     Text(
-                                        text = "কোনো পূর্ববর্তী ভাইটাল রেকর্ড পাওয়া যায়নি",
+                                        text = if (isBn) "কোনো পূর্ববর্তী ভাইটাল রেকর্ড পাওয়া যায়নি" else "No previous vital records found",
                                         fontSize = 14.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -747,6 +766,7 @@ private fun VitalRecordHistoryCard(
     onShare: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val isBn = isAppBangla()
     val dateStr = remember(record.recordedAt) {
         SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date(record.recordedAt))
     }
@@ -780,7 +800,7 @@ private fun VitalRecordHistoryCard(
             ) {
                 Column {
                     Text(
-                        text = record.customerName?.ifBlank { null } ?: record.customerPhone ?: "রোগী (Walk-in)",
+                        text = record.customerName?.ifBlank { null } ?: record.customerPhone ?: (if (isBn) "সাধারণ রোগী" else "Walk-in Patient"),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -815,8 +835,9 @@ private fun VitalRecordHistoryCard(
                         border = BorderStroke(1.dp, bpClass?.let { Color(it.colorHex).copy(alpha = 0.4f) } ?: Color.Gray),
                         modifier = Modifier.weight(1f)
                     ) {
+                        val isBn = isAppBangla()
                         Column(modifier = Modifier.padding(6.dp)) {
-                            Text("রক্তচাপ (BP)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (isBn) "রক্তচাপ (BP)" else "Blood Pressure", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 text = "${record.systolicBp}/${record.diastolicBp} mmHg",
                                 fontSize = 13.sp,
@@ -824,7 +845,7 @@ private fun VitalRecordHistoryCard(
                                 color = bpClass?.let { Color(it.colorHex) } ?: MaterialTheme.colorScheme.onSurface
                             )
                             if (bpClass != null) {
-                                Text(bpClass.labelBn, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = Color(bpClass.colorHex))
+                                Text(if (isBn) bpClass.labelBn else bpClass.labelEn, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = Color(bpClass.colorHex))
                             }
                         }
                     }
@@ -838,8 +859,9 @@ private fun VitalRecordHistoryCard(
                         border = BorderStroke(1.dp, sugarClass?.let { Color(it.colorHex).copy(alpha = 0.4f) } ?: Color.Gray),
                         modifier = Modifier.weight(1f)
                     ) {
+                        val isBn = isAppBangla()
                         Column(modifier = Modifier.padding(6.dp)) {
-                            Text("সুগার (${record.sugarTestType})", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (isBn) "সুগার (${record.sugarTestType})" else "Sugar (${record.sugarTestType})", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 text = "${record.bloodSugarMmol} mmol/L",
                                 fontSize = 13.sp,
@@ -847,7 +869,7 @@ private fun VitalRecordHistoryCard(
                                 color = sugarClass?.let { Color(it.colorHex) } ?: MaterialTheme.colorScheme.onSurface
                             )
                             if (sugarClass != null) {
-                                Text(sugarClass.labelBn, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = Color(sugarClass.colorHex))
+                                Text(if (isBn) sugarClass.labelBn else sugarClass.labelEn, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = Color(sugarClass.colorHex))
                             }
                         }
                     }
@@ -861,12 +883,13 @@ private fun VitalRecordHistoryCard(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                         modifier = Modifier.weight(0.9f)
                     ) {
+                        val isBn = isAppBangla()
                         Column(modifier = Modifier.padding(6.dp)) {
                             if (record.weightKg != null) {
-                                Text("ওজন: ${record.weightKg} kg", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                Text(if (isBn) "ওজন: ${record.weightKg} kg" else "Weight: ${record.weightKg} kg", fontSize = 11.sp, fontWeight = FontWeight.Medium)
                             }
                             if (record.pulseBpm != null) {
-                                Text("পালস: ${record.pulseBpm} BPM", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                Text(if (isBn) "পালস: ${record.pulseBpm} BPM" else "Pulse: ${record.pulseBpm} BPM", fontSize = 11.sp, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -874,8 +897,9 @@ private fun VitalRecordHistoryCard(
             }
 
             if (!record.clinicalNotes.isNullOrBlank()) {
+                val isBn = isAppBangla()
                 Text(
-                    text = "উপদেশ: ${record.clinicalNotes}",
+                    text = if (isBn) "উপদেশ: ${record.clinicalNotes}" else "Advice: ${record.clinicalNotes}",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 14.sp
@@ -959,5 +983,53 @@ private fun shareViaWhatsApp(context: Context, text: String) {
             putExtra(Intent.EXTRA_TEXT, text)
         }
         context.startActivity(Intent.createChooser(shareIntent, "রোগীর স্বাস্থ্য রিপোর্ট শেয়ার করুন"))
+    }
+}
+
+@Composable
+private fun CompactVitalInputField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    unit: String,
+    keyboardType: KeyboardType = KeyboardType.Number,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = label,
+            fontSize = 11.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholder, fontSize = 13.sp, color = MaterialTheme.colorScheme.outline) },
+            trailingIcon = {
+                Text(
+                    text = unit,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Start
+            ),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

@@ -1199,7 +1199,7 @@ fun CartScreen(
                                         ) {
                                             Text("❤️", fontSize = 10.sp)
                                             Text(
-                                                text = "ভাইটালস",
+                                                text = if (com.techyfiposmeds.utils.isAppBangla()) "ভাইটালস" else "Vitals",
                                                 fontSize = 9.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFFE11D48)
@@ -1220,7 +1220,7 @@ fun CartScreen(
                                         ) {
                                             Text("💊", fontSize = 10.sp)
                                             Text(
-                                                text = "ওটিসি",
+                                                text = if (com.techyfiposmeds.utils.isAppBangla()) "ওটিসি" else "OTC",
                                                 fontSize = 9.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFF059669)
@@ -1288,13 +1288,17 @@ fun CartScreen(
                                     value = doctorName,
                                     onValueChange = { cartViewModel.setDoctorDetails(it, doctorBmdc) },
                                     label = { Text(stringResource(R.string.doctor_name_label), fontSize = 11.sp) },
-                                    placeholder = { Text("ডা. মোঃ রফিকুল ইসলাম", fontSize = 11.sp) },
+                                    placeholder = { Text(if (com.techyfiposmeds.utils.isAppBangla()) "ডা. মোঃ রফিকুল ইসলাম" else "Dr. Md. Rafiqul Islam", fontSize = 11.sp) },
                                     modifier = Modifier.weight(1.3f),
                                     singleLine = true,
                                     textStyle = TextStyle(fontSize = 12.sp),
+                                    shape = RoundedCornerShape(10.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color(0xFFE11D48),
-                                        unfocusedBorderColor = Color(0xFFFDA4AF)
+                                        unfocusedBorderColor = Color(0xFFFDA4AF),
+                                        focusedContainerColor = Color.White,
+                                        unfocusedContainerColor = Color.White,
+                                        cursorColor = Color(0xFFE11D48)
                                     )
                                 )
                                 OutlinedTextField(
@@ -1305,9 +1309,13 @@ fun CartScreen(
                                     modifier = Modifier.weight(0.9f),
                                     singleLine = true,
                                     textStyle = TextStyle(fontSize = 12.sp),
+                                    shape = RoundedCornerShape(10.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color(0xFFE11D48),
-                                        unfocusedBorderColor = Color(0xFFFDA4AF)
+                                        unfocusedBorderColor = Color(0xFFFDA4AF),
+                                        focusedContainerColor = Color.White,
+                                        unfocusedContainerColor = Color.White,
+                                        cursorColor = Color(0xFFE11D48)
                                     )
                                 )
                             }
@@ -1518,8 +1526,8 @@ fun CartScreen(
                                     disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                                 )
                             ) {
-                                Text("⏸️", fontSize = 15.sp)
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(Icons.Default.Pause, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(stringResource(R.string.held_cart_hold_button), fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
 
@@ -1539,8 +1547,8 @@ fun CartScreen(
                                     disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                                 )
                             ) {
-                                Text("🛍️", fontSize = 15.sp)
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     stringResource(R.string.cart_checkout_button, formatTaka(grandTotal)),
                                     fontWeight = FontWeight.ExtraBold,
@@ -1556,6 +1564,64 @@ fun CartScreen(
             }
         }
         } else {
+            // Checkout validation & state logic accessible to both scrollable content and pinned footer
+            val remainingToPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+            val rawCashReceived = if (paymentMethod == "Cash") (receivedAmountText.toDoubleOrNull() ?: 0.0) else 0.0
+            val isDueValid = (!hasDueInPayment) || (customerName.isNotBlank() && customerPhone.isNotBlank())
+            val isWalletValid = isSplitPayment || paymentMethod !in listOf("bKash", "Nagad", "Rocket") || walletPhone.length == 11
+            val isCardValid = isSplitPayment || paymentMethod != "Card" || cardLastFour.length == 4
+            val isCashValid = isSplitPayment || paymentMethod != "Cash" || remainingToPay == 0.0 || (rawCashReceived >= remainingToPay && rawCashReceived > 0.0)
+            val isStoreCreditValid = isSplitPayment || paymentMethod != "Store Credit" || remainingToPay == 0.0 || (((resolvedCustomer?.storeCredit ?: 0.0) + (redeemedVoucher?.remainingBalance ?: 0.0)) >= grandTotal)
+            val expectedSplitTotal = if (storeCreditApplied > 0.0) remainingToPay else grandTotal
+            val hasCashInSplit = isSplitPayment && splitPayments.any { it.method == "Cash" }
+            val nonCashSplitTotal = if (isSplitPayment) splitPayments.filterNot { it.method == "Cash" }.sumOf { it.amount } else 0.0
+            val splitCollected = splitPayments.sumOf { it.amount }
+            val isNonCashWithinBounds = !isSplitPayment || nonCashSplitTotal <= expectedSplitTotal + 0.001
+            val isSplitValid = !isSplitPayment || (splitPayments.isNotEmpty() && isNonCashWithinBounds && (
+                kotlin.math.abs(splitCollected - expectedSplitTotal) < 0.01 ||
+                (hasCashInSplit && splitCollected >= expectedSplitTotal)
+            ))
+            val isSplitDetailsValid = !isSplitPayment || splitPayments.all { sp ->
+                when (sp.method) {
+                    "bKash", "Nagad", "Rocket" -> sp.walletPhone?.length == 11
+                    "Card" -> sp.cardLastFour?.length == 4
+                    else -> true
+                }
+            }
+            val hasExpiredItem = cartItems.any { item ->
+                val expMillis = parseExpiryDateToMillis(item.product.expiryDate)
+                expMillis != null && expMillis < System.currentTimeMillis()
+            }
+            val hasItemExceedingMrp = itemsExceedingMrp.isNotEmpty()
+            val hasUnacknowledgedHighRiskClinicalAlert = clinicalAlerts.any { it.severity == com.techyfiposmeds.data.clinical.AlertSeverity.HIGH_RISK } && !isClinicalAlertAcknowledged
+            val isAntibioticMissingDoctor = hasAntibioticInCart &&
+                invoiceSettingsData.enforceAntibioticDoctor &&
+                doctorName.isBlank() &&
+                prescriptionImageUri.isNullOrBlank() &&
+                !isEmergencyOtcOverride
+            val isTotalValid = grandTotal > 0.0
+            val isCheckoutEnabled = cartItems.isNotEmpty() && !hasExpiredItem && !hasItemExceedingMrp && !hasUnacknowledgedHighRiskClinicalAlert && !isAntibioticMissingDoctor && isTotalValid && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
+
+            val executeSaleAction = {
+                if (!isCompletingSale && grandTotal > 0.0) {
+                    val currentRawCash = if (paymentMethod == "Cash") (receivedAmountText.toDoubleOrNull() ?: 0.0) else 0.0
+                    val currentRemaining = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+                    if (paymentMethod == "Cash" && !isSplitPayment && currentRemaining > 0.0 && currentRawCash < currentRemaining) {
+                        cartViewModel.setCompletingSale(false)
+                        android.widget.Toast.makeText(context, context.getString(R.string.cart_reason_cash_insufficient), android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        cartViewModel.setCompletingSale(true)
+                        val snapshotAmountPaid = if (paymentMethod == "Cash" && !isSplitPayment) currentRawCash else currentPaymentBreakdown.amountPaidToRecord
+                        val snapshotChange = currentPaymentBreakdown.changeAmount
+                        scope.launch {
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                                doCompleteSale(snapshotAmountPaid, snapshotChange)
+                            }
+                        }
+                    }
+                }
+            }
+
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1568,1798 +1634,1813 @@ fun CartScreen(
                 ) {
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .fillMaxSize()
                             .widthIn(max = 700.dp)
-                            .verticalScroll(rememberScrollState())
                             .imePadding()
-                            .padding(16.dp)
                     ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                        // Scrollable Checkout Form
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                                .padding(16.dp)
                         ) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                        Icon(Icons.Default.ShoppingBag, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(Modifier.width(8.dp))
+                                        val unitCount = cartItems.sumOf { it.quantity }
+                                        val rawUnitStr = if (unitCount % 1.0 == 0.0) unitCount.toLong().toString() else String.format(Locale.US, "%.2f", unitCount).trimEnd('0').trimEnd('.')
+                                        val unitCountStr = if (com.techyfiposmeds.utils.isAppBangla()) com.techyfiposmeds.utils.toBanglaDigits(rawUnitStr) else rawUnitStr
+                                        val productWordStr = if (cartItems.size == 1) stringResource(R.string.cart_product_singular) else stringResource(R.string.cart_product_plural)
+                                        val unitWordStr = if (unitCount == 1.0) stringResource(R.string.cart_unit_singular) else stringResource(R.string.cart_unit_plural)
+                                        Text(
+                                            "${cartItems.size} $productWordStr • $unitCountStr $unitWordStr • ${formatTaka(grandTotal)}",
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                    TextButton(onClick = { showCheckout = false }, modifier = Modifier.heightIn(min = 48.dp)) {
+                                        Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(stringResource(R.string.cart_review_button), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Price mode selector - visible in checkout too
                             Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                    Text("🛍️", fontSize = 18.sp)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.LocalOffer, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                                     Spacer(Modifier.width(6.dp))
-                                    val unitCount = cartItems.sumOf { it.quantity }
-                                    val rawUnitStr = if (unitCount % 1.0 == 0.0) unitCount.toLong().toString() else String.format(Locale.US, "%.2f", unitCount).trimEnd('0').trimEnd('.')
-                                    val unitCountStr = if (com.techyfiposmeds.utils.isAppBangla()) com.techyfiposmeds.utils.toBanglaDigits(rawUnitStr) else rawUnitStr
-                                    val productWordStr = if (cartItems.size == 1) stringResource(R.string.cart_product_singular) else stringResource(R.string.cart_product_plural)
-                                    val unitWordStr = if (unitCount == 1.0) stringResource(R.string.cart_unit_singular) else stringResource(R.string.cart_unit_plural)
                                     Text(
-                                        "${cartItems.size} $productWordStr • $unitCountStr $unitWordStr • ${formatTaka(grandTotal)}",
+                                        stringResource(R.string.cart_price_mode_label),
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 13.sp
+                                        color = Color.Gray
                                     )
                                 }
-                                TextButton(onClick = { showCheckout = false }) {
-                                    Text("👁️", fontSize = 14.sp)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(stringResource(R.string.cart_review_button), fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Price mode selector - visible in checkout too
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("💰", fontSize = 14.sp)
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    stringResource(R.string.cart_price_mode_label),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.Gray
-                                )
-                            }
-                            PriceModeSelector(
-                                currentMode = priceMode,
-                                onModeSelected = {
-                                    if (canChangePriceTier) {
-                                        cartViewModel.setPriceMode(it)
-                                    } else if (authViewModel != null) {
-                                        pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_price_tier, it.name)
-                                        pendingSupervisorAction = { cartViewModel.setPriceMode(it) }
-                                        showSupervisorAuthDialog = true
-                                    } else {
-                                        Toast.makeText(context, context.getString(R.string.permission_required_price_tier), Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            )
-                        }
-
-                        if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
-                            val isBn = com.techyfiposmeds.utils.isAppBangla()
-                            val totalSavings = saleModeMrpSavings + discountVal
-                            val pct = if (mrpSubtotal > 0.0) Math.round((totalSavings / mrpSubtotal) * 100).toInt() else 0
-                            val pctStr = if (isBn) com.techyfiposmeds.utils.toBanglaDigits(pct.toString()) else "$pct"
-                            Surface(
-                                color = MaterialTheme.extendedColors.successContainer,
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        stringResource(R.string.cart_mrp_savings_badge, formatTaka(totalSavings), pctStr),
-                                        color = MaterialTheme.extendedColors.onSuccessContainer,
-                                        fontSize = 12.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Cashier and discount
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            // Cashier with Dropdown Menu from presets
-                            var cashierMenuExpanded by remember { mutableStateOf(false) }
-                            Box(modifier = Modifier.weight(1f)) {
-                                OutlinedTextField(
-                                    value = currentDisplayCashier,
-                                    onValueChange = { cartViewModel.setCashierName(it) },
-                                    label = { Text(stringResource(R.string.cart_cashier_label), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
-                                    leadingIcon = { Text("💼", fontSize = 16.sp) },
-                                    trailingIcon = {
-                                        IconButton(
-                                            onClick = { cashierMenuExpanded = !cashierMenuExpanded },
-                                            modifier = Modifier.size(48.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.ArrowDropDown,
-                                                contentDescription = stringResource(R.string.cd_select_cashier),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
-                                    textStyle = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp)
-                                )
-
-                                DropdownMenu(
-                                    expanded = cashierMenuExpanded,
-                                    onDismissRequest = { cashierMenuExpanded = false }
-                                ) {
-                                    val defaultCashiers = stringArrayResource(R.array.default_cashier_names).toList()
-                                    val rawPresets = invoiceSettingsData.cashierPresets.ifEmpty { defaultCashiers }
-                                    val presets = (listOf(defaultCashier) + rawPresets).distinct()
-                                    presets.forEach { preset ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Text(preset, fontWeight = if (currentDisplayCashier == preset) FontWeight.Bold else FontWeight.Normal)
-                                                }
-                                            },
-                                            onClick = {
-                                                cartViewModel.setCashierName(preset)
-                                                cashierMenuExpanded = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-
-                            OutlinedTextField(
-                                value = discountInput,
-                                onValueChange = { newValue ->
-                                    cartViewModel.setSupervisorApprovedDiscount(false)
-                                    val sanitized = sanitizeDiscountInput(newValue)
-                                    val parsed = sanitized.toDoubleOrNull() ?: 0.0
-                                    val pctEquiv = if (isPercentageDiscount) parsed else if (subtotal > 0.0) (parsed / subtotal) * 100.0 else 0.0
-                                    if (parsed > 0.0 && (!canApplyDiscount || pctEquiv > maxDiscountAllowed)) {
-                                        if (authViewModel != null) {
-                                            val discountFormatted = if (isPercentageDiscount) "$sanitized%" else formatTaka(parsed)
-                                            val maxLimitStr = if (maxDiscountAllowed % 1.0 == 0.0) "${maxDiscountAllowed.toInt()}" else "$maxDiscountAllowed"
-                                            pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_discount, discountFormatted, maxLimitStr)
-                                            pendingSupervisorActionPin = { pin ->
-                                                val maxDiscountTaka = if (isPercentageDiscount) (subtotal * parsed / 100.0) else parsed
-                                                scope.launch {
-                                                    val ok = cartViewModel.authorizeDiscountOverride(pin, maxDiscountTaka, cartViewModel.computeCartHash(), pctEquiv)
-                                                    if (ok) {
-                                                        discountInput = sanitized
-                                                        cartViewModel.setDiscountAmount(parsed)
-                                                    } else {
-                                                        discountInput = editableAmount(discountAmount)
-                                                        Toast.makeText(context, context.getString(R.string.users_supervisor_auth_failed), Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                            }
+                                PriceModeSelector(
+                                    currentMode = priceMode,
+                                    onModeSelected = {
+                                        if (canChangePriceTier) {
+                                            cartViewModel.setPriceMode(it)
+                                        } else if (authViewModel != null) {
+                                            pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_price_tier, it.name)
+                                            pendingSupervisorAction = { cartViewModel.setPriceMode(it) }
                                             showSupervisorAuthDialog = true
                                         } else {
-                                            Toast.makeText(context, context.getString(R.string.permission_required_discount_limit, maxDiscountAllowed.toInt()), Toast.LENGTH_SHORT).show()
-                                        }
-                                    } else {
-                                        discountInput = sanitized
-                                        cartViewModel.setDiscountAmount(parsed)
-                                    }
-                                },
-                                label = { Text(stringResource(R.string.cart_discount_label), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
-                                placeholder = { Text(if (isPercentageDiscount) "%" else formatMoney(0.0).take(1)) },
-                                trailingIcon = {
-                                    Surface(
-                                        onClick = {
-                                            cartViewModel.setSupervisorApprovedDiscount(false)
-                                            discountInput = ""
-                                            cartViewModel.setDiscountAmount(0.0)
-                                            cartViewModel.toggleDiscountUnit()
-                                        },
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier
-                                            .padding(end = 4.dp)
-                                            .size(width = 38.dp, height = 32.dp)
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center,
-                                            modifier = Modifier.fillMaxSize()
-                                        ) {
-                                            Text(
-                                                text = if (isPercentageDiscount) "%" else formatMoney(0.0).take(1),
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                            Icon(
-                                                imageVector = Icons.Default.SwapHoriz,
-                                                contentDescription = stringResource(R.string.cd_switch_discount_unit),
-                                                modifier = Modifier.size(13.dp)
-                                            )
+                                            Toast.makeText(context, context.getString(R.string.permission_required_price_tier), Toast.LENGTH_SHORT).show()
                                         }
                                     }
-                                },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                                textStyle = MaterialTheme.typography.bodyMedium,
-                                singleLine = true,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(56.dp)
-                                    .onFocusChanged { focusState ->
-                                        if (!focusState.isFocused && discountInput.isBlank()) {
-                                            discountInput = "0"
-                                            cartViewModel.setDiscountAmount(0.0)
-                                        }
-                                    }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Payment Mode Switcher (Single Method vs Split Payment)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            FilterChip(
-                                selected = !isSplitPayment,
-                                onClick = { cartViewModel.setSplitPayment(false) },
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("💳", fontSize = 14.sp)
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(stringResource(R.string.cart_single_method), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                    }
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            FilterChip(
-                                selected = isSplitPayment,
-                                onClick = {
-                                    cartViewModel.setSplitPayment(true)
-                                    if (splitPayments.isEmpty()) {
-                                        val remainingToPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
-                                        val firstLeg = if (remainingToPay >= 2.0) (remainingToPay / 2).coerceAtLeast(1.0) else remainingToPay
-                                        val secondLeg = (remainingToPay - firstLeg).coerceAtLeast(0.0)
-                                        cartViewModel.setSplitPayments(
-                                            listOf(
-                                                com.techyfiposmeds.data.db.SplitPaymentEntry("Cash", firstLeg),
-                                                com.techyfiposmeds.data.db.SplitPaymentEntry("bKash", secondLeg)
-                                            )
-                                        )
-                                    }
-                                },
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("💸", fontSize = 14.sp)
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(stringResource(R.string.cart_split_payment), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                    }
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // --- STORE CREDIT & VOUCHER APPLICATION BANNER ---
-                        val availableCustCredit = (resolvedCustomer?.storeCredit ?: 0.0)
-                        val hasAvailableCredit = availableCustCredit > 0.0 || redeemedVoucher != null
-
-                        if (storeCreditApplied > 0.0) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.extendedColors.successContainer,
-                                border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text("🪙", fontSize = 20.sp)
-                                        Column {
-                                            Text(
-                                                text = stringResource(R.string.cart_store_credit_applied_label, formatTaka(storeCreditApplied)),
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = MaterialTheme.extendedColors.onSuccessContainer
-                                            )
-                                            val remainingToPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
-                                            Text(
-                                                text = if (remainingToPay > 0.0) stringResource(R.string.cart_remaining_to_pay, formatTaka(remainingToPay))
-                                                else stringResource(R.string.cart_bill_covered_by_store_credit),
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (remainingToPay > 0.0) MaterialTheme.extendedColors.onSuccessContainer.copy(alpha = 0.85f) else MaterialTheme.extendedColors.onSuccessContainer
-                                            )
-                                        }
-                                    }
-
-                                    OutlinedButton(
-                                        onClick = { cartViewModel.removeStoreCredit() },
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
-                                        modifier = Modifier.heightIn(min = 48.dp)
-                                    ) {
-                                        Text(stringResource(R.string.cart_remove_store_credit), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
+                                )
                             }
-                        } else if (hasAvailableCredit) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFFFFBEB),
-                                border = BorderStroke(1.dp, Color(0xFFFDE68A)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text("🪙", fontSize = 20.sp)
-                                        Column {
-                                            Text(
-                                                text = stringResource(R.string.cart_store_credit_banner_title),
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF92400E)
-                                            )
-                                            val credAmt = (redeemedVoucher?.remainingBalance ?: 0.0) + availableCustCredit
-                                            Text(
-                                                text = stringResource(R.string.cart_store_credit_available, formatTaka(credAmt)),
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = Color(0xFFB45309)
-                                            )
-                                        }
-                                    }
 
-                                    Button(
-                                        onClick = {
-                                            val credAmt = (redeemedVoucher?.remainingBalance ?: 0.0) + availableCustCredit
-                                            val applyAmt = kotlin.math.min(credAmt, grandTotal)
-                                            cartViewModel.setStoreCreditApplied(applyAmt)
-                                        },
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
-                                        modifier = Modifier.heightIn(min = 48.dp)
-                                    ) {
-                                        Text(stringResource(R.string.cart_apply_store_credit), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
-                                    }
-                                }
-                            }
-                        }
-
-                        // Have a Store Credit Voucher Button
-                        if (storeCreditApplied <= 0.0 && redeemedVoucher == null) {
-                            TextButton(
-                                onClick = { showVoucherRedeemDialog = true },
-                                modifier = Modifier.align(Alignment.End).padding(bottom = 2.dp)
-                            ) {
-                                Text("🎟️ " + stringResource(R.string.cart_have_voucher), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-
-                        if (showVoucherRedeemDialog) {
-                            var voucherInput by remember { mutableStateOf("") }
-                            var voucherError by remember { mutableStateOf<String?>(null) }
-                            var isCheckingVoucher by remember { mutableStateOf(false) }
-
-                            AlertDialog(
-                                onDismissRequest = { showVoucherRedeemDialog = false },
-                                properties = DialogProperties(dismissOnClickOutside = false),
-                                title = {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text("🎟️", fontSize = 22.sp)
-                                        Text(stringResource(R.string.cart_redeem_voucher_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    }
-                                },
-                                text = {
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(
-                                            stringResource(R.string.cart_enter_store_credit_voucher_code_desc),
-                                            fontSize = 11.5.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        OutlinedTextField(
-                                            value = voucherInput,
-                                            onValueChange = {
-                                                voucherInput = it.uppercase()
-                                                voucherError = null
-                                            },
-                                            label = { Text(stringResource(R.string.cart_redeem_voucher_hint)) },
-                                            singleLine = true,
-                                            isError = voucherError != null,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                        if (voucherError != null) {
-                                            Text(voucherError!!, color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
-                                        }
-                                    }
-                                },
-                                confirmButton = {
-                                    Button(
-                                        onClick = {
-                                            val code = voucherInput.trim()
-                                            if (code.isBlank()) {
-                                                voucherError = context.getString(R.string.voucher_err_please_enter)
-                                                return@Button
-                                            }
-                                            isCheckingVoucher = true
-                                            cartViewModel.redeemVoucherCode(
-                                                code = code,
-                                                onSuccess = { voucher ->
-                                                    isCheckingVoucher = false
-                                                    val applyAmt = kotlin.math.min(voucher.remainingBalance, grandTotal)
-                                                    cartViewModel.setStoreCreditApplied(applyAmt)
-                                                    showVoucherRedeemDialog = false
-                                                    Toast.makeText(context, context.getString(R.string.voucher_toast_applied, formatTaka(applyAmt)), Toast.LENGTH_SHORT).show()
-                                                },
-                                                onError = { errResId ->
-                                                    isCheckingVoucher = false
-                                                    voucherError = context.getString(errResId)
-                                                }
-                                            )
-                                        },
-                                        enabled = !isCheckingVoucher && voucherInput.isNotBlank()
-                                    ) {
-                                        if (isCheckingVoucher) {
-                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(16.dp),
-                                                    strokeWidth = 2.dp,
-                                                    color = MaterialTheme.colorScheme.onPrimary
-                                                )
-                                                Text(stringResource(R.string.cart_redeem_voucher_button))
-                                            }
-                                        } else {
-                                            Text(stringResource(R.string.cart_redeem_voucher_button))
-                                        }
-                                    }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showVoucherRedeemDialog = false }) {
-                                        Text(stringResource(R.string.cancel))
-                                    }
-                                }
-                            )
-                        }
-
-                        if (isSplitPayment) {
-                            val targetSplitTotal = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
-                            SplitPaymentBuilder(
-                                grandTotal = targetSplitTotal,
-                                splitEntries = splitPayments,
-                                onEntriesChanged = { cartViewModel.setSplitPayments(it) }
-                            )
-
-                            val splitChangeDue = currentPaymentBreakdown.changeAmount
-
-                            if (splitChangeDue > 0.0) {
+                            if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
+                                val isBn = com.techyfiposmeds.utils.isAppBangla()
+                                val totalSavings = saleModeMrpSavings + discountVal
+                                val pct = if (mrpSubtotal > 0.0) Math.round((totalSavings / mrpSubtotal) * 100).toInt() else 0
+                                val pctStr = if (isBn) com.techyfiposmeds.utils.toBanglaDigits(pct.toString()) else "$pct"
                                 Surface(
+                                    color = MaterialTheme.extendedColors.successContainer,
                                     shape = RoundedCornerShape(12.dp),
-                                    color = Color(0xFF059669).copy(alpha = 0.12f),
-                                    border = BorderStroke(1.dp, Color(0xFF059669).copy(alpha = 0.35f)),
+                                    border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 8.dp)
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                        horizontalArrangement = Arrangement.Center
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("💵", fontSize = 16.sp)
-                                            Spacer(Modifier.width(8.dp))
-                                            Column {
-                                                Text(
-                                                    text = stringResource(R.string.change),
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 13.sp,
-                                                    color = Color(0xFF059669)
-                                                )
-                                                Text(
-                                                    text = stringResource(R.string.split_payment_cash_change_desc),
-                                                    fontSize = 11.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
                                         Text(
-                                            text = formatTaka(splitChangeDue),
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 18.sp,
-                                            color = Color(0xFF059669)
+                                            stringResource(R.string.cart_mrp_savings_badge, formatTaka(totalSavings), pctStr),
+                                            color = MaterialTheme.extendedColors.onSuccessContainer,
+                                            fontSize = 12.5.sp,
+                                            fontWeight = FontWeight.Bold
                                         )
                                     }
                                 }
                             }
-                        } else {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("💳", fontSize = 16.sp)
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.cart_payment_method_label), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            val availablePaymentMethods = remember(resolvedCustomer?.storeCredit to (redeemedVoucher != null)) {
-                                if ((resolvedCustomer?.storeCredit ?: 0.0) > 0.0 || redeemedVoucher != null) {
-                                    listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due", "Store Credit")
-                                } else {
-                                    listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due")
-                                }
-                            }
 
-                            val chipAnims = remember(availablePaymentMethods) {
-                                availablePaymentMethods.associateWith { Animatable(1f) }
-                            }
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                            FlowRow(
+                            // Cashier and discount
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                                maxItemsInEachRow = 3
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                availablePaymentMethods.forEach { method ->
-                                    val chipScaleAnim = chipAnims[method] ?: Animatable(1f)
-                                    FilterChip(
-                                        selected = paymentMethod == method,
-                                        onClick = {
-                                            scope.launch {
-                                                chipScaleAnim.animateTo(0.82f, tween(70))
-                                                chipScaleAnim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
-                                            }
-                                            cartViewModel.setPaymentMethod(method)
-                                            if (method != "Cash") {
-                                                receivedAmountText = ""
-                                                cartViewModel.setAmountPaid(0.0)
-                                            }
-                                        },
-                                        modifier = Modifier.graphicsLayer {
-                                            scaleX = chipScaleAnim.value
-                                            scaleY = chipScaleAnim.value
-                                        },
-                                        label = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                when (method) {
-                                                    "Cash" -> Text("💵", fontSize = 16.sp)
-                                                    "Card" -> Text("💳", fontSize = 16.sp)
-                                                    "Store Credit" -> Text("🏷️", fontSize = 16.sp)
-                                                    "bKash", "Nagad", "Rocket" -> Image(
-                                                        painter = painterResource(
-                                                            when (method) {
-                                                                "bKash" -> R.drawable.logo_bkash
-                                                                "Nagad" -> R.drawable.logo_nagad
-                                                                else -> R.drawable.logo_rocket
-                                                            }
-                                                        ),
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(width = 28.dp, height = 18.dp)
-                                                    )
-                                                    else -> Text("⏳", fontSize = 16.sp)
-                                                }
-                                                Spacer(modifier = Modifier.width(5.dp))
-                                                Text(
-                                                    text = when (method) {
-                                                        "Cash" -> stringResource(R.string.cash)
-                                                        "bKash" -> stringResource(R.string.bkash)
-                                                        "Nagad" -> stringResource(R.string.nagad)
-                                                        "Rocket" -> stringResource(R.string.rocket)
-                                                        "Card" -> stringResource(R.string.card)
-                                                        "Bank" -> stringResource(R.string.bank)
-                                                        "Due" -> stringResource(R.string.due)
-                                                        "Store Credit" -> stringResource(R.string.store_credit)
-                                                        "Split" -> stringResource(R.string.cart_split_payment)
-                                                        else -> method.ifBlank { stringResource(R.string.cash) }
-                                                    },
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Bold
+                                // Cashier with Dropdown Menu from presets
+                                var cashierMenuExpanded by remember { mutableStateOf(false) }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    OutlinedTextField(
+                                        value = currentDisplayCashier,
+                                        onValueChange = { cartViewModel.setCashierName(it) },
+                                        label = { Text(stringResource(R.string.cart_cashier_label), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
+                                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) },
+                                        trailingIcon = {
+                                            IconButton(
+                                                onClick = { cashierMenuExpanded = !cashierMenuExpanded },
+                                                modifier = Modifier.size(48.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.ArrowDropDown,
+                                                    contentDescription = stringResource(R.string.cd_select_cashier),
+                                                    modifier = Modifier.size(20.dp)
                                                 )
                                             }
-                                        }
+                                        },
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                                        textStyle = MaterialTheme.typography.bodyMedium,
+                                        colors = compactCartFieldColors(),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(56.dp)
                                     )
-                                }
-                            }
 
-                            AnimatedVisibility(visible = paymentMethod == "Store Credit") {
-                                val availableCredit = (resolvedCustomer?.storeCredit ?: 0.0) + (redeemedVoucher?.remainingBalance ?: 0.0)
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.extendedColors.successContainer,
-                                    border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
-                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                    DropdownMenu(
+                                        expanded = cashierMenuExpanded,
+                                        onDismissRequest = { cashierMenuExpanded = false }
                                     ) {
-                                        Text("🏷️", fontSize = 22.sp)
-                                        Spacer(Modifier.width(10.dp))
-                                        Column {
-                                            Text(
-                                                stringResource(R.string.cart_available_store_credit, formatTaka(availableCredit)),
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 13.sp,
-                                                color = MaterialTheme.extendedColors.onSuccessContainer
-                                            )
-                                            Text(
-                                                stringResource(R.string.cart_store_credit_direct_deduct_desc, formatTaka(grandTotal)),
-                                                fontSize = 11.5.sp,
-                                                color = MaterialTheme.extendedColors.onSuccessContainer.copy(alpha = 0.85f)
+                                        val defaultCashiers = stringArrayResource(R.array.default_cashier_names).toList()
+                                        val rawPresets = invoiceSettingsData.cashierPresets.ifEmpty { defaultCashiers }
+                                        val presets = (listOf(defaultCashier) + rawPresets).distinct()
+                                        presets.forEach { preset ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        Text(preset, fontWeight = if (currentDisplayCashier == preset) FontWeight.Bold else FontWeight.Normal)
+                                                    }
+                                                },
+                                                onClick = {
+                                                    cartViewModel.setCashierName(preset)
+                                                    cashierMenuExpanded = false
+                                                }
                                             )
                                         }
                                     }
                                 }
-                            }
 
-                            AnimatedVisibility(visible = paymentMethod in listOf("bKash", "Nagad", "Rocket")) {
                                 OutlinedTextField(
-                                    value = walletPhone,
-                                    onValueChange = { cartViewModel.setWalletPhone(it.filter(Char::isDigit).take(11)) },
-                                    label = { Text(stringResource(R.string.cart_wallet_mobile_number_label, paymentMethod)) },
-                                    leadingIcon = { Icon(Icons.Default.PhoneAndroid, null) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
+                                    value = discountInput,
+                                    onValueChange = { newValue ->
+                                        cartViewModel.setSupervisorApprovedDiscount(false)
+                                        val sanitized = sanitizeDiscountInput(newValue)
+                                        val parsed = sanitized.toDoubleOrNull() ?: 0.0
+                                        val pctEquiv = if (isPercentageDiscount) parsed else if (subtotal > 0.0) (parsed / subtotal) * 100.0 else 0.0
+                                        if (parsed > 0.0 && (!canApplyDiscount || pctEquiv > maxDiscountAllowed)) {
+                                            if (authViewModel != null) {
+                                                val discountFormatted = if (isPercentageDiscount) "$sanitized%" else formatTaka(parsed)
+                                                val maxLimitStr = if (maxDiscountAllowed % 1.0 == 0.0) "${maxDiscountAllowed.toInt()}" else "$maxDiscountAllowed"
+                                                pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_discount, discountFormatted, maxLimitStr)
+                                                pendingSupervisorActionPin = { pin ->
+                                                    val maxDiscountTaka = if (isPercentageDiscount) (subtotal * parsed / 100.0) else parsed
+                                                    scope.launch {
+                                                        val ok = cartViewModel.authorizeDiscountOverride(pin, maxDiscountTaka, cartViewModel.computeCartHash(), pctEquiv)
+                                                        if (ok) {
+                                                            discountInput = sanitized
+                                                            cartViewModel.setDiscountAmount(parsed)
+                                                        } else {
+                                                            discountInput = editableAmount(discountAmount)
+                                                            Toast.makeText(context, context.getString(R.string.users_supervisor_auth_failed), Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    }
+                                                }
+                                                showSupervisorAuthDialog = true
+                                            } else {
+                                                Toast.makeText(context, context.getString(R.string.permission_required_discount_limit, maxDiscountAllowed.toInt()), Toast.LENGTH_SHORT).show()
+                                            }
+                                        } else {
+                                            discountInput = sanitized
+                                            cartViewModel.setDiscountAmount(parsed)
+                                        }
+                                    },
+                                    label = { Text(stringResource(R.string.cart_discount_label), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
+                                    placeholder = { Text(if (isPercentageDiscount) "%" else formatMoney(0.0).take(1)) },
+                                    trailingIcon = {
+                                        Surface(
+                                            onClick = {
+                                                cartViewModel.setSupervisorApprovedDiscount(false)
+                                                discountInput = ""
+                                                cartViewModel.setDiscountAmount(0.0)
+                                                cartViewModel.toggleDiscountUnit()
+                                            },
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier
+                                                .padding(end = 4.dp)
+                                                .size(width = 38.dp, height = 32.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center,
+                                                modifier = Modifier.fillMaxSize()
+                                            ) {
+                                                Text(
+                                                    text = if (isPercentageDiscount) "%" else formatMoney(0.0).take(1),
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                                Icon(
+                                                    imageVector = Icons.Default.SwapHoriz,
+                                                    contentDescription = stringResource(R.string.cd_switch_discount_unit),
+                                                    modifier = Modifier.size(13.dp)
+                                                )
+                                            }
+                                        }
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                                    textStyle = MaterialTheme.typography.bodyMedium,
                                     singleLine = true,
-                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                    colors = compactCartFieldColors(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp)
+                                        .onFocusChanged { focusState ->
+                                            if (!focusState.isFocused && discountInput.isBlank()) {
+                                                discountInput = "0"
+                                                cartViewModel.setDiscountAmount(0.0)
+                                            }
+                                        }
                                 )
                             }
 
-                            AnimatedVisibility(visible = paymentMethod == "Card") {
-                                Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("💳", fontSize = 15.sp)
-                                        Spacer(Modifier.width(5.dp))
-                                        Text(stringResource(R.string.cart_card_type_label), fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                                    }
-                                    val cardTypes = remember { listOf("Visa", "Mastercard", "Amex", "Other") }
-                                    val cardChipAnims = remember(cardTypes) {
-                                        cardTypes.associateWith { Animatable(1f) }
-                                    }
-                                    FlowRow(
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        cardTypes.forEach { type ->
-                                            val cardChipScaleAnim = cardChipAnims[type] ?: Animatable(1f)
-                                            FilterChip(
-                                                selected = cardType == type,
-                                                onClick = {
-                                                    scope.launch {
-                                                        cardChipScaleAnim.animateTo(0.82f, tween(70))
-                                                        cardChipScaleAnim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
-                                                    }
-                                                    cartViewModel.setCardType(type)
-                                                },
-                                                modifier = Modifier.graphicsLayer {
-                                                    scaleX = cardChipScaleAnim.value
-                                                    scaleY = cardChipScaleAnim.value
-                                                },
-                                                label = {
-                                                    when (type) {
-                                                        "Visa" -> Text("VISA", color = Color(0xFF17357E), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
-                                                        "Mastercard" -> Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            Box(Modifier.size(15.dp).background(Color(0xFFEB001B), androidx.compose.foundation.shape.CircleShape))
-                                                            Box(Modifier.offset(x = (-5).dp).size(15.dp).background(Color(0xFFF79E1B).copy(alpha = .95f), androidx.compose.foundation.shape.CircleShape))
-                                                        }
-                                                        "Amex" -> Surface(color = Color(0xFF1976BA), shape = RoundedCornerShape(4.dp)) {
-                                                            Text("AMEX", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                                                        }
-                                                        else -> Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            Text("💳", fontSize = 14.sp)
-                                                            Spacer(Modifier.width(4.dp))
-                                                            Text(stringResource(R.string.cart_card_other_label), fontWeight = FontWeight.Bold)
-                                                        }
-                                                    }
-                                                }
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Payment Mode Switcher (Single Method vs Split Payment)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                FilterChip(
+                                    selected = !isSplitPayment,
+                                    onClick = { cartViewModel.setSplitPayment(false) },
+                                    leadingIcon = { Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                    label = {
+                                        Text(stringResource(R.string.cart_single_method), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                FilterChip(
+                                    selected = isSplitPayment,
+                                    onClick = {
+                                        cartViewModel.setSplitPayment(true)
+                                        if (splitPayments.isEmpty()) {
+                                            val remainingToPaySpl = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+                                            val firstLeg = if (remainingToPaySpl >= 2.0) (remainingToPaySpl / 2).coerceAtLeast(1.0) else remainingToPaySpl
+                                            val secondLeg = (remainingToPaySpl - firstLeg).coerceAtLeast(0.0)
+                                            cartViewModel.setSplitPayments(
+                                                listOf(
+                                                    com.techyfiposmeds.data.db.SplitPaymentEntry("Cash", firstLeg),
+                                                    com.techyfiposmeds.data.db.SplitPaymentEntry("bKash", secondLeg)
+                                                )
                                             )
                                         }
-                                    }
-                                    OutlinedTextField(
-                                        value = cardLastFour,
-                                        onValueChange = { cartViewModel.setCardLastFour(it.filter(Char::isDigit).take(4)) },
-                                        label = { Text(stringResource(R.string.cart_last_4_digits_label)) },
-                                        leadingIcon = { Text("🔢", fontSize = 16.sp) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Next),
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.CallSplit, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                    label = {
+                                        Text(stringResource(R.string.cart_split_payment), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
-                        }
 
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                        TextButton(
-                            onClick = { if (!hasDueInPayment) showCustomerDetails = !showCustomerDetails },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("👤", fontSize = 16.sp)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                if (hasDueInPayment) stringResource(R.string.cart_customer_details_required_due)
-                                else if (showCustomerDetails) stringResource(R.string.cart_hide_customer_details)
-                                else stringResource(R.string.cart_add_customer_details)
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
-                            Icon(if (showCustomerDetails || hasDueInPayment) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
-                        }
+                            // --- STORE CREDIT & VOUCHER APPLICATION BANNER ---
+                            val availableCustCredit = (resolvedCustomer?.storeCredit ?: 0.0)
+                            val hasAvailableCredit = availableCustCredit > 0.0 || redeemedVoucher != null
 
-                        // Customer details row
-                        AnimatedVisibility(visible = showCustomerDetails || hasDueInPayment) {
-                          Column(
-                              modifier = Modifier.fillMaxWidth(),
-                              verticalArrangement = Arrangement.spacedBy(8.dp)
-                          ) {
-                            OutlinedTextField(
-                                value = customerPhone,
-                                onValueChange = {
-                                    cartViewModel.onCustomerPhoneChanged(it)
-                                },
-                                label = { Text(stringResource(R.string.customer_phone), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
-                                leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
-                                trailingIcon = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (customerPhone.isNotBlank()) {
-                                            IconButton(onClick = { cartViewModel.clearCustomerDetails() }) {
-                                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear), modifier = Modifier.size(16.dp))
-                                            }
-                                        }
-                                        IconButton(onClick = {
-                                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-                                                contactPickerLauncher.launch(null)
-                                            } else {
-                                                contactPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
-                                            }
-                                        }) {
-                                            Icon(
-                                                Icons.Default.ContactPhone,
-                                                contentDescription = stringResource(R.string.cd_pick_from_contacts),
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            // Customer Autocomplete Suggestions Dropdown
-                            if (customerSuggestions.isNotEmpty()) {
+                            if (storeCreditApplied > 0.0) {
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
-                                    modifier = Modifier.fillMaxWidth()
+                                    color = MaterialTheme.extendedColors.successContainer,
+                                    border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(6.dp)) {
-                                        Text(
-                                            text = stringResource(R.string.customer_suggestions_title),
-                                            fontSize = 10.5.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                        customerSuggestions.forEach { suggestion ->
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clickable { cartViewModel.selectCustomerSuggestion(suggestion) }
-                                                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(suggestion.name.ifBlank { stringResource(R.string.customer) }, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.MonetizationOn, contentDescription = null, modifier = Modifier.size(22.dp), tint = Color(0xFFD97706))
+                                            Column {
+                                                Text(
+                                                    text = stringResource(R.string.cart_store_credit_applied_label, formatTaka(storeCreditApplied)),
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = MaterialTheme.extendedColors.onSuccessContainer
+                                                )
+                                                val remPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+                                                Text(
+                                                    text = if (remPay > 0.0) stringResource(R.string.cart_remaining_to_pay, formatTaka(remPay))
+                                                    else stringResource(R.string.cart_bill_covered_by_store_credit),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (remPay > 0.0) MaterialTheme.extendedColors.onSuccessContainer.copy(alpha = 0.85f) else MaterialTheme.extendedColors.onSuccessContainer
+                                                )
+                                            }
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = { cartViewModel.removeStoreCredit() },
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
+                                            modifier = Modifier.heightIn(min = 48.dp)
+                                        ) {
+                                            Text(stringResource(R.string.cart_remove_store_credit), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            } else if (hasAvailableCredit) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFFFFFBEB),
+                                    border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.MonetizationOn, contentDescription = null, modifier = Modifier.size(22.dp), tint = Color(0xFFD97706))
+                                            Column {
+                                                Text(
+                                                    text = stringResource(R.string.cart_store_credit_banner_title),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF92400E)
+                                                )
+                                                val credAmt = (redeemedVoucher?.remainingBalance ?: 0.0) + availableCustCredit
+                                                Text(
+                                                    text = stringResource(R.string.cart_store_credit_available, formatTaka(credAmt)),
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = Color(0xFFB45309)
+                                                )
+                                            }
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                val credAmt = (redeemedVoucher?.remainingBalance ?: 0.0) + availableCustCredit
+                                                val applyAmt = kotlin.math.min(credAmt, grandTotal)
+                                                cartViewModel.setStoreCreditApplied(applyAmt)
+                                            },
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
+                                            modifier = Modifier.heightIn(min = 48.dp)
+                                        ) {
+                                            Text(stringResource(R.string.cart_apply_store_credit), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Have a Store Credit Voucher Button
+                            if (storeCreditApplied <= 0.0 && redeemedVoucher == null) {
+                                TextButton(
+                                    onClick = { showVoucherRedeemDialog = true },
+                                    modifier = Modifier.align(Alignment.End).padding(bottom = 2.dp).heightIn(min = 48.dp)
+                                ) {
+                                    Icon(Icons.Default.ConfirmationNumber, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(stringResource(R.string.cart_have_voucher), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+
+                            if (showVoucherRedeemDialog) {
+                                var voucherInput by remember { mutableStateOf("") }
+                                var voucherError by remember { mutableStateOf<String?>(null) }
+                                var isCheckingVoucher by remember { mutableStateOf(false) }
+
+                                AlertDialog(
+                                    onDismissRequest = { showVoucherRedeemDialog = false },
+                                    properties = DialogProperties(dismissOnClickOutside = false),
+                                    title = {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Icon(Icons.Default.ConfirmationNumber, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.primary)
+                                            Text(stringResource(R.string.cart_redeem_voucher_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                        }
+                                    },
+                                    text = {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(
+                                                stringResource(R.string.cart_enter_store_credit_voucher_code_desc),
+                                                fontSize = 11.5.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            OutlinedTextField(
+                                                value = voucherInput,
+                                                onValueChange = {
+                                                    voucherInput = it.uppercase()
+                                                    voucherError = null
+                                                },
+                                                label = { Text(stringResource(R.string.cart_redeem_voucher_hint)) },
+                                                singleLine = true,
+                                                isError = voucherError != null,
+                                                colors = compactCartFieldColors(),
+                                                shape = RoundedCornerShape(10.dp),
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                            if (voucherError != null) {
+                                                Text(voucherError!!, color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                                            }
+                                        }
+                                    },
+                                    confirmButton = {
+                                        Button(
+                                            onClick = {
+                                                val code = voucherInput.trim()
+                                                if (code.isBlank()) {
+                                                    voucherError = context.getString(R.string.voucher_err_please_enter)
+                                                    return@Button
+                                                }
+                                                isCheckingVoucher = true
+                                                cartViewModel.redeemVoucherCode(
+                                                    code = code,
+                                                    onSuccess = { voucher ->
+                                                        isCheckingVoucher = false
+                                                        val applyAmt = kotlin.math.min(voucher.remainingBalance, grandTotal)
+                                                        cartViewModel.setStoreCreditApplied(applyAmt)
+                                                        showVoucherRedeemDialog = false
+                                                        Toast.makeText(context, context.getString(R.string.voucher_toast_applied, formatTaka(applyAmt)), Toast.LENGTH_SHORT).show()
+                                                    },
+                                                    onError = { errResId ->
+                                                        isCheckingVoucher = false
+                                                        voucherError = context.getString(errResId)
+                                                    }
+                                                )
+                                            },
+                                            enabled = !isCheckingVoucher && voucherInput.isNotBlank()
+                                        ) {
+                                            if (isCheckingVoucher) {
+                                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(16.dp),
+                                                        strokeWidth = 2.dp,
+                                                        color = MaterialTheme.colorScheme.onPrimary
+                                                    )
+                                                    Text(stringResource(R.string.cart_redeem_voucher_button))
+                                                }
+                                            } else {
+                                                Text(stringResource(R.string.cart_redeem_voucher_button))
+                                            }
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showVoucherRedeemDialog = false }) {
+                                            Text(stringResource(R.string.cancel))
+                                        }
+                                    }
+                                )
+                            }
+
+                            if (isSplitPayment) {
+                                val targetSplitTotal = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+                                SplitPaymentBuilder(
+                                    grandTotal = targetSplitTotal,
+                                    splitEntries = splitPayments,
+                                    onEntriesChanged = { cartViewModel.setSplitPayments(it) }
+                                )
+
+                                val splitChangeDue = currentPaymentBreakdown.changeAmount
+
+                                if (splitChangeDue > 0.0) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = Color(0xFF059669).copy(alpha = 0.12f),
+                                        border = BorderStroke(1.dp, Color(0xFF059669).copy(alpha = 0.35f)),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.Paid, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF059669))
+                                                Spacer(Modifier.width(8.dp))
+                                                Column {
                                                     Text(
-                                                        "${suggestion.phone}${if (!suggestion.tag.isNullOrBlank()) " • ${suggestion.tag}" else ""}",
+                                                        text = stringResource(R.string.change),
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 13.sp,
+                                                        color = Color(0xFF059669)
+                                                    )
+                                                    Text(
+                                                        text = stringResource(R.string.split_payment_cash_change_desc),
                                                         fontSize = 11.sp,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                                     )
                                                 }
-                                                if (suggestion.dueAmount > 0) {
-                                                    Text(
-                                                        stringResource(R.string.cart_customer_due_prefix, formatTaka(suggestion.dueAmount)),
-                                                        fontSize = 10.5.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.error,
-                                                        modifier = Modifier.padding(end = 4.dp)
-                                                    )
-                                                }
-                                                Icon(
-                                                    Icons.Default.Check,
-                                                    contentDescription = stringResource(R.string.cd_select),
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
                                             }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Resolved Customer Status Badge
-                            if (resolvedCustomer != null && resolvedCustomer!!.name.isNotBlank()) {
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                Icon(Icons.Default.PersonSearch, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                                                Text(
-                                                    text = when (resolvedCustomer!!.source) {
-                                                        "CUSTOMER_DB" -> stringResource(R.string.customer_source_db)
-                                                        "DUE_RECORD" -> stringResource(R.string.customer_source_due)
-                                                        "LOYALTY" -> stringResource(R.string.customer_source_loyalty)
-                                                        else -> stringResource(R.string.customer_source_history)
-                                                    },
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                            if (resolvedCustomer!!.tier.isNotBlank() && !resolvedCustomer!!.tier.equals("Regular", ignoreCase = true)) {
-                                                Text(
-                                                    stringResource(R.string.cart_badge_tier, resolvedCustomer!!.tier),
-                                                    fontSize = 10.5.sp,
-                                                    fontWeight = FontWeight.ExtraBold,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            if (resolvedCustomer!!.storeCredit > 0) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = MaterialTheme.extendedColors.successContainer
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(R.string.cart_customer_credit_badge, formatTaka(resolvedCustomer!!.storeCredit)),
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.extendedColors.onSuccessContainer,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-                                            if (resolvedCustomer!!.dueAmount > 0) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(R.string.cart_badge_due, formatTaka(resolvedCustomer!!.dueAmount)),
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-                                            if (resolvedCustomer!!.loyaltyPoints > 0) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(R.string.cart_badge_loyalty_pts, resolvedCustomer!!.loyaltyPoints.toString()),
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-                                            if (resolvedCustomer!!.totalOrders > 0) {
-                                                Text(
-                                                    text = stringResource(R.string.cart_badge_orders, resolvedCustomer!!.totalOrders),
-                                                    fontSize = 10.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            OutlinedTextField(
-                                value = customerName,
-                                onValueChange = { cartViewModel.onCustomerNameChanged(it) },
-                                label = {
-                                    Text(
-                                        text = if (isAutoFilledName) stringResource(R.string.customer_name_autofilled) else stringResource(R.string.customer_name),
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        fontSize = 11.5.sp
-                                    )
-                                },
-                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            if (loyaltyCustomer != null) {
-                                LoyaltyRedeemCard(
-                                    customerLoyalty = loyaltyCustomer!!,
-                                    isApplied = loyaltyDiscount > 0.0,
-                                    onToggle = { apply ->
-                                        if (apply) {
-                                            val pointCashValue = loyaltySettings.pointCashValue
-                                            cartViewModel.setLoyaltyDiscount(loyaltyCustomer!!.pointsBalance * pointCashValue, loyaltySettings)
-                                        } else {
-                                            cartViewModel.setLoyaltyDiscount(0.0, loyaltySettings)
-                                        }
-                                    }
-                                )
-                            }
-
-                            if (customerPhone.isNotBlank()) {
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = if (isRefillReminderEnabled) Color(0xFF10B981).copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    border = BorderStroke(1.dp, if (isRefillReminderEnabled) Color(0xFF10B981).copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
-                                                Text("🔄", fontSize = 14.sp)
-                                                Column {
-                                                    Text(
-                                                        text = stringResource(R.string.cart_refill_reminder_toggle),
-                                                        fontSize = 11.5.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    Text(
-                                                        text = stringResource(R.string.cart_refill_reminder_desc),
-                                                        fontSize = 9.5.sp,
-                                                        color = MaterialTheme.colorScheme.outline
-                                                    )
-                                                }
-                                            }
-                                            Switch(
-                                                checked = isRefillReminderEnabled,
-                                                onCheckedChange = { isRefillReminderEnabled = it },
-                                                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF10B981), checkedTrackColor = Color(0xFF10B981).copy(alpha = 0.3f))
+                                            Text(
+                                                text = formatTaka(splitChangeDue),
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 18.sp,
+                                                color = Color(0xFF059669)
                                             )
                                         }
-                                        if (isRefillReminderEnabled) {
-                                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                listOf(15, 30, 60).forEach { days ->
-                                                    val isSelected = refillDays == days
+                                    }
+                                }
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Payment, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(stringResource(R.string.cart_payment_method_label), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                val availablePaymentMethods = remember(resolvedCustomer?.storeCredit to (redeemedVoucher != null)) {
+                                    if ((resolvedCustomer?.storeCredit ?: 0.0) > 0.0 || redeemedVoucher != null) {
+                                        listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due", "Store Credit")
+                                    } else {
+                                        listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due")
+                                    }
+                                }
+
+                                val chipAnims = remember(availablePaymentMethods) {
+                                    availablePaymentMethods.associateWith { Animatable(1f) }
+                                }
+
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    maxItemsInEachRow = 3
+                                ) {
+                                    availablePaymentMethods.forEach { method ->
+                                        val chipScaleAnim = chipAnims[method] ?: Animatable(1f)
+                                        FilterChip(
+                                            selected = paymentMethod == method,
+                                            onClick = {
+                                                scope.launch {
+                                                    chipScaleAnim.animateTo(0.82f, tween(70))
+                                                    chipScaleAnim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                                                }
+                                                cartViewModel.setPaymentMethod(method)
+                                                if (method != "Cash") {
+                                                    receivedAmountText = ""
+                                                    cartViewModel.setAmountPaid(0.0)
+                                                }
+                                            },
+                                            modifier = Modifier.graphicsLayer {
+                                                scaleX = chipScaleAnim.value
+                                                scaleY = chipScaleAnim.value
+                                            },
+                                            label = {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    when (method) {
+                                                        "Cash" -> Icon(Icons.Default.LocalAtm, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFF059669))
+                                                        "Card" -> Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFF2563EB))
+                                                        "Store Credit" -> Icon(Icons.Default.Loyalty, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFFD97706))
+                                                        "bKash", "Nagad", "Rocket" -> Image(
+                                                            painter = painterResource(
+                                                                when (method) {
+                                                                    "bKash" -> R.drawable.logo_bkash
+                                                                    "Nagad" -> R.drawable.logo_nagad
+                                                                    else -> R.drawable.logo_rocket
+                                                                }
+                                                            ),
+                                                            contentDescription = null,
+                                                            modifier = Modifier.size(width = 28.dp, height = 18.dp)
+                                                        )
+                                                        else -> Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFFDC2626))
+                                                    }
+                                                    Spacer(modifier = Modifier.width(5.dp))
+                                                    Text(
+                                                        text = when (method) {
+                                                            "Cash" -> stringResource(R.string.cash)
+                                                            "bKash" -> stringResource(R.string.bkash)
+                                                            "Nagad" -> stringResource(R.string.nagad)
+                                                            "Rocket" -> stringResource(R.string.rocket)
+                                                            "Card" -> stringResource(R.string.card)
+                                                            "Bank" -> stringResource(R.string.bank)
+                                                            "Due" -> stringResource(R.string.due)
+                                                            "Store Credit" -> stringResource(R.string.store_credit)
+                                                            "Split" -> stringResource(R.string.cart_split_payment)
+                                                            else -> method.ifBlank { stringResource(R.string.cash) }
+                                                        },
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+
+                                AnimatedVisibility(visible = paymentMethod == "Store Credit") {
+                                    val availableCredit = (resolvedCustomer?.storeCredit ?: 0.0) + (redeemedVoucher?.remainingBalance ?: 0.0)
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.extendedColors.successContainer,
+                                        border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
+                                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.Loyalty, contentDescription = null, modifier = Modifier.size(22.dp), tint = Color(0xFFD97706))
+                                            Spacer(Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    stringResource(R.string.cart_available_store_credit, formatTaka(availableCredit)),
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.sp,
+                                                    color = MaterialTheme.extendedColors.onSuccessContainer
+                                                )
+                                                Text(
+                                                    stringResource(R.string.cart_store_credit_direct_deduct_desc, formatTaka(grandTotal)),
+                                                    fontSize = 11.5.sp,
+                                                    color = MaterialTheme.extendedColors.onSuccessContainer.copy(alpha = 0.85f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                AnimatedVisibility(visible = paymentMethod in listOf("bKash", "Nagad", "Rocket")) {
+                                    OutlinedTextField(
+                                        value = walletPhone,
+                                        onValueChange = { cartViewModel.setWalletPhone(it.filter(Char::isDigit).take(11)) },
+                                        label = { Text(stringResource(R.string.cart_wallet_mobile_number_label, paymentMethod)) },
+                                        leadingIcon = { Icon(Icons.Default.PhoneAndroid, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
+                                        singleLine = true,
+                                        colors = compactCartFieldColors(),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                    )
+                                }
+
+                                AnimatedVisibility(visible = paymentMethod == "Card") {
+                                    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                            Spacer(Modifier.width(5.dp))
+                                            Text(stringResource(R.string.cart_card_type_label), fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                                        }
+                                        val cardTypes = remember { listOf("Visa", "Mastercard", "Amex", "Other") }
+                                        val cardChipAnims = remember(cardTypes) {
+                                            cardTypes.associateWith { Animatable(1f) }
+                                        }
+                                        FlowRow(
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            cardTypes.forEach { type ->
+                                                val cardChipScaleAnim = cardChipAnims[type] ?: Animatable(1f)
+                                                FilterChip(
+                                                    selected = cardType == type,
+                                                    onClick = {
+                                                        scope.launch {
+                                                            cardChipScaleAnim.animateTo(0.82f, tween(70))
+                                                            cardChipScaleAnim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                                                        }
+                                                        cartViewModel.setCardType(type)
+                                                    },
+                                                    modifier = Modifier.graphicsLayer {
+                                                        scaleX = cardChipScaleAnim.value
+                                                        scaleY = cardChipScaleAnim.value
+                                                    },
+                                                    label = {
+                                                        when (type) {
+                                                            "Visa" -> Text("VISA", color = Color(0xFF17357E), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                                                            "Mastercard" -> Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                Box(Modifier.size(15.dp).background(Color(0xFFEB001B), CircleShape))
+                                                                Box(Modifier.offset(x = (-5).dp).size(15.dp).background(Color(0xFFF79E1B).copy(alpha = .95f), CircleShape))
+                                                            }
+                                                            "Amex" -> Surface(color = Color(0xFF1976BA), shape = RoundedCornerShape(4.dp)) {
+                                                                Text("AMEX", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                                            }
+                                                            else -> Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                                Spacer(Modifier.width(4.dp))
+                                                                Text(stringResource(R.string.cart_card_other_label), fontWeight = FontWeight.Bold)
+                                                            }
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                        OutlinedTextField(
+                                            value = cardLastFour,
+                                            onValueChange = { cartViewModel.setCardLastFour(it.filter(Char::isDigit).take(4)) },
+                                            label = { Text(stringResource(R.string.cart_last_4_digits_label)) },
+                                            leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) },
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Next),
+                                            singleLine = true,
+                                            colors = compactCartFieldColors(),
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            TextButton(
+                                onClick = { if (!hasDueInPayment) showCustomerDetails = !showCustomerDetails },
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                            ) {
+                                Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    if (hasDueInPayment) stringResource(R.string.cart_customer_details_required_due)
+                                    else if (showCustomerDetails) stringResource(R.string.cart_hide_customer_details)
+                                    else stringResource(R.string.cart_add_customer_details)
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Icon(if (showCustomerDetails || hasDueInPayment) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+                            }
+
+                            // Customer details row
+                            AnimatedVisibility(visible = showCustomerDetails || hasDueInPayment) {
+                              Column(
+                                  modifier = Modifier.fillMaxWidth(),
+                                  verticalArrangement = Arrangement.spacedBy(8.dp)
+                              ) {
+                                OutlinedTextField(
+                                    value = customerPhone,
+                                    onValueChange = {
+                                        cartViewModel.onCustomerPhoneChanged(it)
+                                    },
+                                    label = { Text(stringResource(R.string.customer_phone), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
+                                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
+                                    colors = compactCartFieldColors(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    trailingIcon = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            if (customerPhone.isNotBlank()) {
+                                                IconButton(onClick = { cartViewModel.clearCustomerDetails() }, modifier = Modifier.size(48.dp)) {
+                                                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear), modifier = Modifier.size(16.dp))
+                                                }
+                                            }
+                                            IconButton(onClick = {
+                                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+                                                    contactPickerLauncher.launch(null)
+                                                } else {
+                                                    contactPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                                                }
+                                            }, modifier = Modifier.size(48.dp)) {
+                                                Icon(
+                                                    Icons.Default.ContactPhone,
+                                                    contentDescription = stringResource(R.string.cd_pick_from_contacts),
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                // Customer Autocomplete Suggestions Dropdown
+                                if (customerSuggestions.isNotEmpty()) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.padding(6.dp)) {
+                                            Text(
+                                                text = stringResource(R.string.customer_suggestions_title),
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                            customerSuggestions.forEach { suggestion ->
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable { cartViewModel.selectCustomerSuggestion(suggestion) }
+                                                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(suggestion.name.ifBlank { stringResource(R.string.customer) }, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                                                        Text(
+                                                            "${suggestion.phone}${if (!suggestion.tag.isNullOrBlank()) " • ${suggestion.tag}" else ""}",
+                                                            fontSize = 11.sp,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                    if (suggestion.dueAmount > 0) {
+                                                        Text(
+                                                            stringResource(R.string.cart_customer_due_prefix, formatTaka(suggestion.dueAmount)),
+                                                            fontSize = 10.5.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.colorScheme.error,
+                                                            modifier = Modifier.padding(end = 4.dp)
+                                                        )
+                                                    }
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = stringResource(R.string.cd_select),
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Resolved Customer Status Badge
+                                if (resolvedCustomer != null && resolvedCustomer!!.name.isNotBlank()) {
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    Icon(Icons.Default.PersonSearch, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                                    Text(
+                                                        text = when (resolvedCustomer!!.source) {
+                                                            "CUSTOMER_DB" -> stringResource(R.string.customer_source_db)
+                                                            "DUE_RECORD" -> stringResource(R.string.customer_source_due)
+                                                            "LOYALTY" -> stringResource(R.string.customer_source_loyalty)
+                                                            else -> stringResource(R.string.customer_source_history)
+                                                        },
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                                if (resolvedCustomer!!.tier.isNotBlank() && !resolvedCustomer!!.tier.equals("Regular", ignoreCase = true)) {
+                                                    Text(
+                                                        stringResource(R.string.cart_badge_tier, resolvedCustomer!!.tier),
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                if (resolvedCustomer!!.storeCredit > 0) {
                                                     Surface(
-                                                        onClick = { refillDays = days },
-                                                        shape = RoundedCornerShape(8.dp),
-                                                        color = if (isSelected) Color(0xFF10B981) else MaterialTheme.colorScheme.surface,
-                                                        border = BorderStroke(1.dp, if (isSelected) Color(0xFF059669) else MaterialTheme.colorScheme.outlineVariant)
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = MaterialTheme.extendedColors.successContainer
                                                     ) {
                                                         Text(
-                                                            text = stringResource(R.string.refill_in_days_fmt, days),
-                                                            fontSize = 11.sp,
-                                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
-                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                            text = stringResource(R.string.cart_customer_credit_badge, formatTaka(resolvedCustomer!!.storeCredit)),
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.extendedColors.onSuccessContainer,
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                         )
+                                                    }
+                                                }
+                                                if (resolvedCustomer!!.dueAmount > 0) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+                                                    ) {
+                                                        Text(
+                                                            text = stringResource(R.string.cart_badge_due, formatTaka(resolvedCustomer!!.dueAmount)),
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                }
+                                                if (resolvedCustomer!!.loyaltyPoints > 0) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
+                                                    ) {
+                                                        Text(
+                                                            text = stringResource(R.string.cart_badge_loyalty_pts, resolvedCustomer!!.loyaltyPoints.toString()),
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                }
+                                                if (resolvedCustomer!!.totalOrders > 0) {
+                                                    Text(
+                                                        text = stringResource(R.string.cart_badge_orders, resolvedCustomer!!.totalOrders),
+                                                        fontSize = 10.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                OutlinedTextField(
+                                    value = customerName,
+                                    onValueChange = { cartViewModel.onCustomerNameChanged(it) },
+                                    label = {
+                                        Text(
+                                            text = if (isAutoFilledName) stringResource(R.string.customer_name_autofilled) else stringResource(R.string.customer_name),
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            fontSize = 11.5.sp
+                                        )
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                                    colors = compactCartFieldColors(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (loyaltyCustomer != null) {
+                                    LoyaltyRedeemCard(
+                                        customerLoyalty = loyaltyCustomer!!,
+                                        isApplied = loyaltyDiscount > 0.0,
+                                        onToggle = { apply ->
+                                            if (apply) {
+                                                val pointCashValue = loyaltySettings.pointCashValue
+                                                cartViewModel.setLoyaltyDiscount(loyaltyCustomer!!.pointsBalance * pointCashValue, loyaltySettings)
+                                            } else {
+                                                cartViewModel.setLoyaltyDiscount(0.0, loyaltySettings)
+                                            }
+                                        }
+                                    )
+                                }
+
+                                if (customerPhone.isNotBlank()) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isRefillReminderEnabled) Color(0xFF10B981).copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                        border = BorderStroke(1.dp, if (isRefillReminderEnabled) Color(0xFF10B981).copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
+                                                    Icon(Icons.Default.Autorenew, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFF10B981))
+                                                    Column {
+                                                        Text(
+                                                            text = stringResource(R.string.cart_refill_reminder_toggle),
+                                                            fontSize = 11.5.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                        Text(
+                                                            text = stringResource(R.string.cart_refill_reminder_desc),
+                                                            fontSize = 9.5.sp,
+                                                            color = MaterialTheme.colorScheme.outline
+                                                        )
+                                                    }
+                                                }
+                                                Switch(
+                                                    checked = isRefillReminderEnabled,
+                                                    onCheckedChange = { isRefillReminderEnabled = it },
+                                                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF10B981), checkedTrackColor = Color(0xFF10B981).copy(alpha = 0.3f))
+                                                )
+                                            }
+                                            if (isRefillReminderEnabled) {
+                                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                    listOf(15, 30, 60).forEach { days ->
+                                                        val isSelected = refillDays == days
+                                                        Surface(
+                                                            onClick = { refillDays = days },
+                                                            shape = RoundedCornerShape(8.dp),
+                                                            color = if (isSelected) Color(0xFF10B981) else MaterialTheme.colorScheme.surface,
+                                                            border = BorderStroke(1.dp, if (isSelected) Color(0xFF059669) else MaterialTheme.colorScheme.outlineVariant)
+                                                        ) {
+                                                            Text(
+                                                                text = stringResource(R.string.refill_in_days_fmt, days),
+                                                                fontSize = 11.sp,
+                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
                                 }
+                              }
                             }
-                          }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                        // Effective Received Amount & Change calculation for Cash
-                        val effectiveAmountPaid = currentPaymentBreakdown.effectiveAmountPaid
-                        val effectiveChangeAmt = currentPaymentBreakdown.changeAmount
-                        val remainingAfterSC = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+                            // Effective Received Amount & Change calculation for Cash
+                            val effectiveAmountPaid = currentPaymentBreakdown.effectiveAmountPaid
+                            val effectiveChangeAmt = currentPaymentBreakdown.changeAmount
+                            val remainingAfterSC = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
 
-                        // Cash Paid & Change calculation for Cash Payment
-                        AnimatedVisibility(visible = !isSplitPayment && paymentMethod == "Cash") {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                                    .padding(8.dp)
-                            ) {
-                                // Smart Cash Tender Chips Row
-                                val exactAmt = remainingAfterSC
-                                Row(
+                            // Cash Paid & Change calculation for Cash Payment
+                            AnimatedVisibility(visible = !isSplitPayment && paymentMethod == "Cash") {
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                                        .padding(8.dp)
                                 ) {
-                                    // Exact Total Chip
-                                    Surface(
-                                        onClick = {
-                                            cartViewModel.setAmountPaid(exactAmt)
-                                            receivedAmountText = if (exactAmt % 1.0 == 0.0) exactAmt.toLong().toString() else exactAmt.toString()
-                                        },
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                        ) {
-                                            Text("⚡", fontSize = 11.sp)
-                                            Text(
-                                                text = stringResource(R.string.cart_exact_amount_label),
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-                                    }
-
-                                    // Incremental +৳50, +৳100, +৳500, +৳1000 chips
-                                    listOf(50.0, 100.0, 500.0, 1000.0).forEach { inc ->
-                                        Surface(
-                                            onClick = {
-                                                val curr = com.techyfiposmeds.utils.sanitizeNumericInput(receivedAmountText).toDoubleOrNull() ?: 0.0
-                                                val updated = curr + inc
-                                                cartViewModel.setAmountPaid(updated)
-                                                receivedAmountText = if (updated % 1.0 == 0.0) updated.toLong().toString() else updated.toString()
-                                            },
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = MaterialTheme.colorScheme.surface,
-                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                        ) {
-                                            Text(
-                                                text = "+${formatTaka(inc)}",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp)
-                                            )
-                                        }
-                                    }
-
-                                    // Clear chip
-                                    if (receivedAmountText.isNotBlank()) {
-                                        Surface(
-                                            onClick = {
-                                                cartViewModel.setAmountPaid(0.0)
-                                                receivedAmountText = ""
-                                            },
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
-                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.cart_clear_chip),
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp)
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(6.dp))
-                                OutlinedTextField(
-                                    value = receivedAmountText,
-                                    onValueChange = { input ->
-                                        val sanitized = com.techyfiposmeds.utils.sanitizeNumericInput(input)
-                                        receivedAmountText = sanitized
-                                        cartViewModel.setAmountPaid(sanitized.toDoubleOrNull() ?: 0.0)
-                                    },
-                                    label = { Text(stringResource(R.string.cart_cash_received_label), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
-                                    leadingIcon = { Text(formatMoney(0.0).take(1), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-
-                                val paidVal = amountPaid
-                                if (effectiveChangeAmt > 0.0) {
-                                    Surface(
-                                        color = Color(0xFF059669).copy(alpha = 0.12f),
-                                        shape = RoundedCornerShape(8.dp),
-                                        border = BorderStroke(1.dp, Color(0xFF059669).copy(alpha = 0.3f)),
+                                    // Smart Cash Tender Chips Row
+                                    val exactAmt = remainingAfterSC
+                                    Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(top = 6.dp)
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
+                                        // Exact Total Chip
+                                        Surface(
+                                            onClick = {
+                                                cartViewModel.setAmountPaid(exactAmt)
+                                                receivedAmountText = if (exactAmt % 1.0 == 0.0) exactAmt.toLong().toString() else exactAmt.toString()
+                                            },
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                                         ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                Text("💵", fontSize = 14.sp)
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
                                                 Text(
-                                                    stringResource(R.string.change),
+                                                    text = stringResource(R.string.cart_exact_amount_label),
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFF059669),
-                                                    fontSize = 13.sp
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
                                                 )
                                             }
-                                            Text(
-                                                formatTaka(effectiveChangeAmt),
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = Color(0xFF059669),
-                                                fontSize = 16.sp
-                                            )
+                                        }
+
+                                        // Incremental +৳50, +৳100, +৳500, +৳1000 chips
+                                        listOf(50.0, 100.0, 500.0, 1000.0).forEach { inc ->
+                                            Surface(
+                                                onClick = {
+                                                    val curr = com.techyfiposmeds.utils.sanitizeNumericInput(receivedAmountText).toDoubleOrNull() ?: 0.0
+                                                    val updated = curr + inc
+                                                    cartViewModel.setAmountPaid(updated)
+                                                    receivedAmountText = if (updated % 1.0 == 0.0) updated.toLong().toString() else updated.toString()
+                                                },
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.surface,
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                            ) {
+                                                Text(
+                                                    text = "+${formatTaka(inc)}",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp)
+                                                )
+                                            }
+                                        }
+
+                                        // Clear chip
+                                        if (receivedAmountText.isNotBlank()) {
+                                            Surface(
+                                                onClick = {
+                                                    cartViewModel.setAmountPaid(0.0)
+                                                    receivedAmountText = ""
+                                                },
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.cart_clear_chip),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp)
+                                                )
+                                            }
                                         }
                                     }
-                                } else if (paidVal > 0.0 && paidVal < remainingAfterSC) {
-                                    val shortAmt = remainingAfterSC - paidVal
-                                    Surface(
-                                        color = Color(0xFFDC2626).copy(alpha = 0.10f),
-                                        shape = RoundedCornerShape(8.dp),
-                                        border = BorderStroke(1.dp, Color(0xFFDC2626).copy(alpha = 0.25f)),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 6.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                stringResource(R.string.cart_short_amount_warning),
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFDC2626),
-                                                fontSize = 12.sp
-                                            )
-                                            Text(
-                                                "-${formatTaka(shortAmt)}",
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFDC2626),
-                                                fontSize = 14.sp
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
 
-                        // Customer Due Confirmation Notice
-                        AnimatedVisibility(visible = !isSplitPayment && paymentMethod == "Due") {
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text("⏳", fontSize = 18.sp)
-                                    Column {
-                                        Text(
-                                            text = stringResource(R.string.cart_due_sale_title),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.cart_due_sale_notice, formatTaka((grandTotal - (amountPaid + storeCreditApplied)).coerceAtLeast(0.0))),
-                                            fontSize = 11.5.sp,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        // Pricing summaries
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🧾", fontSize = 16.sp)
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    when (priceMode) {
-                                        PriceMode.WHOLESALE  -> stringResource(R.string.cart_subtotal_wholesale)
-                                        PriceMode.MRP        -> stringResource(R.string.cart_subtotal_mrp)
-                                        PriceMode.DISCOUNTED -> stringResource(R.string.subtotal)
-                                    },
-                                    color = Color.Gray
-                                )
-                            }
-                            val displaySubtotal = if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) mrpSubtotal else subtotal
-                            Text(formatTaka(displaySubtotal), fontWeight = FontWeight.Bold)
-                        }
-                        if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("🏷️", fontSize = 14.sp)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        stringResource(R.string.cart_sale_savings),
-                                        color = Color(0xFF15803D),
-                                        fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    OutlinedTextField(
+                                        value = receivedAmountText,
+                                        onValueChange = { input ->
+                                            val sanitized = com.techyfiposmeds.utils.sanitizeNumericInput(input)
+                                            receivedAmountText = sanitized
+                                            cartViewModel.setAmountPaid(sanitized.toDoubleOrNull() ?: 0.0)
+                                        },
+                                        label = { Text(stringResource(R.string.cart_cash_received_label), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
+                                        leadingIcon = { Text(formatMoney(0.0).take(1), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                        singleLine = true,
+                                        colors = compactCartFieldColors(),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth()
                                     )
-                                }
-                                Text(
-                                    "-${formatTaka(saleModeMrpSavings)}",
-                                    color = Color(0xFF16A34A),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        } else if (priceMode == PriceMode.WHOLESALE && priceModesSavings > 0.0) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("📦", fontSize = 14.sp)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        stringResource(R.string.cart_wholesale_bulk_savings),
-                                        color = Color(0xFFB45309),
-                                        fontSize = 12.sp, fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Text(
-                                    "-${formatTaka(priceModesSavings)}",
-                                    color = Color(0xFFD97706),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        } else if (priceMode == PriceMode.MRP && priceModesSavings > 0.0) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("💹", fontSize = 14.sp)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        stringResource(R.string.cart_mrp_premium),
-                                        color = Color(0xFF1D4ED8),
-                                        fontSize = 12.sp, fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Text(
-                                    "+${formatTaka(priceModesSavings)}",
-                                    color = Color(0xFF2563EB),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                        if (discountVal > 0.0) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.LocalOffer, null, Modifier.size(17.dp), tint = Color.Gray)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(stringResource(R.string.discount), color = Color.Gray)
-                                }
-                                Text("-${formatTaka(discountVal)}", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        if (loyaltyDiscount > 0.0) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("⭐", fontSize = 14.sp)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(stringResource(R.string.cart_vip_loyalty_cashback), color = Color(0xFFB45309), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Text("-${formatTaka(loyaltyDiscount)}", color = Color(0xFFD97706), fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        if (taxVal > 0.0) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                val rateStr = invoiceSettingsData.taxRate.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }
-                                val modeStr = if (invoiceSettingsData.taxInclusive) stringResource(R.string.cart_tax_mode_inclusive) else stringResource(R.string.cart_tax_mode_exclusive)
-                                Text(
-                                    "${invoiceSettingsData.taxLabel.ifBlank { stringResource(R.string.cart_default_tax_label) }} ($rateStr% • $modeStr)",
-                                    color = Color.Gray
-                                )
-                                Text(formatTaka(taxVal), fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("💵", fontSize = 18.sp)
-                                Spacer(Modifier.width(7.dp))
-                                Text(stringResource(R.string.grand_total), fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            }
-                            Text(
-                                formatTaka(grandTotal),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
 
-                        if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
-                            val totalSavings = saleModeMrpSavings + discountVal
-                            val pct = if (mrpSubtotal > 0.0) Math.round((totalSavings / mrpSubtotal) * 100).toInt() else 0
-                            val isBn = com.techyfiposmeds.utils.isAppBangla()
-                            val pctStr = if (isBn) com.techyfiposmeds.utils.toBanglaDigits(pct.toString()) else "$pct"
-                            val isItemWise = invoiceSettingsData.showItemWiseMrpDiscount
-
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 10.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.extendedColors.successContainer),
-                                border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("✨", fontSize = 14.sp)
-                                            Spacer(Modifier.width(6.dp))
-                                            Text(
-                                                stringResource(R.string.cart_customer_savings_breakdown),
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 11.5.sp,
-                                                color = MaterialTheme.extendedColors.onSuccessContainer
-                                            )
-                                        }
+                                    val paidVal = amountPaid
+                                    if (effectiveChangeAmt > 0.0) {
                                         Surface(
-                                            color = MaterialTheme.extendedColors.success,
-                                            shape = RoundedCornerShape(12.dp)
+                                            color = Color(0xFF059669).copy(alpha = 0.12f),
+                                            shape = RoundedCornerShape(8.dp),
+                                            border = BorderStroke(1.dp, Color(0xFF059669).copy(alpha = 0.3f)),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 6.dp)
                                         ) {
-                                            Text(
-                                                stringResource(R.string.cart_percent_off, pctStr),
-                                                color = MaterialTheme.extendedColors.onSuccess,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 10.sp,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    Icon(Icons.Default.Paid, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFF059669))
+                                                    Text(
+                                                        stringResource(R.string.change),
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFF059669),
+                                                        fontSize = 13.sp
+                                                    )
+                                                }
+                                                Text(
+                                                    formatTaka(effectiveChangeAmt),
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = Color(0xFF059669),
+                                                    fontSize = 16.sp
+                                                )
+                                            }
                                         }
-                                    }
-
-                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text(stringResource(R.string.cart_original_mrp_subtotal), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Text(formatTaka(mrpSubtotal), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-
-                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text(stringResource(R.string.cart_store_sale_discount), fontSize = 12.sp, color = MaterialTheme.extendedColors.onSuccessContainer, fontWeight = FontWeight.SemiBold)
-                                        Text("-${formatTaka(saleModeMrpSavings)}", fontSize = 12.sp, color = MaterialTheme.extendedColors.onSuccessContainer, fontWeight = FontWeight.Bold)
-                                    }
-
-                                    if (discountVal > 0.0) {
-                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Text(stringResource(R.string.discount), fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
-                                            Text("-${formatTaka(discountVal)}", fontSize = 12.sp, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-
-                                    HorizontalDivider(color = MaterialTheme.extendedColors.onSuccessContainer.copy(alpha = 0.2f), thickness = 1.dp)
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(stringResource(R.string.cart_total_customer_savings), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.extendedColors.onSuccessContainer)
-                                        Text(stringResource(R.string.cart_savings_with_pct, formatTaka(totalSavings), pctStr), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = MaterialTheme.extendedColors.onSuccessContainer)
-                                    }
-
-                                    if (canEditShopSettings) {
-                                        // Switch between item-by-item discount and summary only
-                                        Spacer(Modifier.height(4.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    } else if (paidVal > 0.0 && paidVal < remainingAfterSC) {
+                                        val shortAmt = remainingAfterSC - paidVal
+                                        Surface(
+                                            color = Color(0xFFDC2626).copy(alpha = 0.10f),
+                                            shape = RoundedCornerShape(8.dp),
+                                            border = BorderStroke(1.dp, Color(0xFFDC2626).copy(alpha = 0.25f)),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 6.dp)
                                         ) {
-                                            FilterChip(
-                                                selected = isItemWise,
-                                                onClick = {
-                                                    settingsViewModel.saveInvoiceSettingsData(invoiceSettingsData.copy(showItemWiseMrpDiscount = true))
-                                                },
-                                                label = { Text(stringResource(R.string.cart_item_by_item_switch), fontSize = 11.sp, fontWeight = if (isItemWise) FontWeight.Bold else FontWeight.Normal) },
-                                                leadingIcon = if (isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
-                                                colors = FilterChipDefaults.filterChipColors(
-                                                    selectedContainerColor = Color(0xFF16A34A),
-                                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
-                                                ),
-                                                modifier = Modifier.weight(1f)
-                                            )
-
-                                            FilterChip(
-                                                selected = !isItemWise,
-                                                onClick = {
-                                                    settingsViewModel.saveInvoiceSettingsData(invoiceSettingsData.copy(showItemWiseMrpDiscount = false))
-                                                },
-                                                label = { Text(stringResource(R.string.cart_summary_only_switch), fontSize = 11.sp, fontWeight = if (!isItemWise) FontWeight.Bold else FontWeight.Normal) },
-                                                leadingIcon = if (!isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
-                                                colors = FilterChipDefaults.filterChipColors(
-                                                    selectedContainerColor = Color(0xFF16A34A),
-                                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
-                                                ),
-                                                modifier = Modifier.weight(1f)
-                                            )
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    stringResource(R.string.cart_short_amount_warning),
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFDC2626),
+                                                    fontSize = 12.sp
+                                                )
+                                                Text(
+                                                    "-${formatTaka(shortAmt)}",
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFDC2626),
+                                                    fontSize = 14.sp
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Checkout trigger validation
-                        val remainingToPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
-                        val rawCashReceived = if (paymentMethod == "Cash") (receivedAmountText.toDoubleOrNull() ?: 0.0) else 0.0
-                        val isDueValid = (!hasDueInPayment) || (customerName.isNotBlank() && customerPhone.isNotBlank())
-                        val isWalletValid = isSplitPayment || paymentMethod !in listOf("bKash", "Nagad", "Rocket") || walletPhone.length == 11
-                        val isCardValid = isSplitPayment || paymentMethod != "Card" || cardLastFour.length == 4
-                        val isCashValid = isSplitPayment || paymentMethod != "Cash" || remainingToPay == 0.0 || (rawCashReceived >= remainingToPay && rawCashReceived > 0.0)
-                        val isStoreCreditValid = isSplitPayment || paymentMethod != "Store Credit" || remainingToPay == 0.0 || (((resolvedCustomer?.storeCredit ?: 0.0) + (redeemedVoucher?.remainingBalance ?: 0.0)) >= grandTotal)
-                        val expectedSplitTotal = if (storeCreditApplied > 0.0) remainingToPay else grandTotal
-                        val hasCashInSplit = isSplitPayment && splitPayments.any { it.method == "Cash" }
-                        val nonCashSplitTotal = if (isSplitPayment) splitPayments.filterNot { it.method == "Cash" }.sumOf { it.amount } else 0.0
-                        val splitCollected = splitPayments.sumOf { it.amount }
-                        val isNonCashWithinBounds = !isSplitPayment || nonCashSplitTotal <= expectedSplitTotal + 0.001
-                        val isSplitValid = !isSplitPayment || (splitPayments.isNotEmpty() && isNonCashWithinBounds && (
-                            kotlin.math.abs(splitCollected - expectedSplitTotal) < 0.01 ||
-                            (hasCashInSplit && splitCollected >= expectedSplitTotal)
-                        ))
-                        val isSplitDetailsValid = !isSplitPayment || splitPayments.all { sp ->
-                            when (sp.method) {
-                                "bKash", "Nagad", "Rocket" -> sp.walletPhone?.length == 11
-                                "Card" -> sp.cardLastFour?.length == 4
-                                else -> true
-                            }
-                        }
-                        val hasExpiredItem = cartItems.any { item ->
-                            val expMillis = parseExpiryDateToMillis(item.product.expiryDate)
-                            expMillis != null && expMillis < System.currentTimeMillis()
-                        }
-                        val hasItemExceedingMrp = itemsExceedingMrp.isNotEmpty()
-                        val hasUnacknowledgedHighRiskClinicalAlert = clinicalAlerts.any { it.severity == com.techyfiposmeds.data.clinical.AlertSeverity.HIGH_RISK } && !isClinicalAlertAcknowledged
-                        val isAntibioticMissingDoctor = hasAntibioticInCart &&
-                            invoiceSettingsData.enforceAntibioticDoctor &&
-                            doctorName.isBlank() &&
-                            prescriptionImageUri.isNullOrBlank() &&
-                            !isEmergencyOtcOverride
-                        val isTotalValid = grandTotal > 0.0
-                        val isCheckoutEnabled = cartItems.isNotEmpty() && !hasExpiredItem && !hasItemExceedingMrp && !hasUnacknowledgedHighRiskClinicalAlert && !isAntibioticMissingDoctor && isTotalValid && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
-
-                        if (hasExpiredItem) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.errorContainer,
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text("🚫", fontSize = 20.sp)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text(
-                                            text = stringResource(R.string.expired_medicine_sale_prohibited_title),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
-                                            color = MaterialTheme.colorScheme.onErrorContainer
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.expired_medicine_sale_prohibited_desc),
-                                            fontSize = 11.5.sp,
-                                            color = MaterialTheme.colorScheme.onErrorContainer
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        if (hasItemExceedingMrp) {
-                            Surface(
-                                color = Color(0xFFFEF3C7),
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, Color(0xFFF59E0B)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text("⚠️", fontSize = 20.sp)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text(
-                                            text = stringResource(R.string.dgda_mrp_exceeded_title),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            color = Color(0xFFB45309)
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.dgda_mrp_exceeded_desc, itemsExceedingMrp.size),
-                                            fontSize = 10.5.sp,
-                                            color = Color(0xFF92400E)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        if (clinicalAlerts.isNotEmpty() && !isClinicalAlertAcknowledged) {
-                            val hasHighRisk = clinicalAlerts.any { it.severity == com.techyfiposmeds.data.clinical.AlertSeverity.HIGH_RISK }
-                            Surface(
-                                color = if (hasHighRisk) Color(0xFFFEE2E2) else Color(0xFFFEF3C7),
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, if (hasHighRisk) Color(0xFFDC2626) else Color(0xFFF59E0B)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                                    .clickable { showClinicalAdvisoryDialog = true }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                            // Customer Due Confirmation Notice
+                            AnimatedVisibility(visible = !isSplitPayment && paymentMethod == "Due") {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
                                 ) {
                                     Row(
-                                        modifier = Modifier.weight(1f),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(if (hasHighRisk) "🚨" else "⚠️", fontSize = 20.sp)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
-                                            Text(
-                                                text = if (hasHighRisk) "মারাত্মক ড্রাগ মিথস্ক্রিয়া সতর্কবার্তা (${clinicalAlerts.size}টি)" else "চিকিৎসা সংক্রান্ত সতর্কতা (${clinicalAlerts.size}টি)",
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 12.sp,
-                                                color = if (hasHighRisk) Color(0xFFDC2626) else Color(0xFFB45309)
-                                            )
-                                            Text(
-                                                text = "কার্টের ওষুধের মধ্যে সম্ভাব্য ক্ষতিকর পার্শ্বপ্রতিক্রিয়া বা ডুপ্লিকেট উপাদান সনাক্ত হয়েছে।",
-                                                fontSize = 10.5.sp,
-                                                color = if (hasHighRisk) Color(0xFF991B1B) else Color(0xFF92400E)
-                                            )
-                                        }
-                                    }
-                                    TextButton(
-                                        onClick = { showClinicalAdvisoryDialog = true },
-                                        colors = ButtonDefaults.textButtonColors(contentColor = if (hasHighRisk) Color(0xFFDC2626) else Color(0xFFB45309)),
-                                        modifier = Modifier.minimumInteractiveComponentSize()
-                                    ) {
-                                        Text("পরামর্শ", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
-
-                        if (hasColdChainInCart) {
-                            Surface(
-                                color = Color(0xFFE0F2FE),
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, Color(0xFF0284C7)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                                    .clickable { showColdChainDialog = true }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.padding(10.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Text("❄️", fontSize = 18.sp)
+                                        Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
                                         Column {
                                             Text(
-                                                text = "কোল্ড-চেইন ওষুধ সতর্কতা (2°C – 8°C Storage)",
+                                                text = stringResource(R.string.cart_due_sale_title),
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 12.sp,
-                                                color = Color(0xFF0369A1)
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer
                                             )
                                             Text(
-                                                text = stringResource(R.string.cart_cold_chain_warning_banner),
-                                                fontSize = 10.5.sp,
-                                                color = Color(0xFF075985)
+                                                text = stringResource(R.string.cart_due_sale_notice, formatTaka((grandTotal - (amountPaid + storeCreditApplied)).coerceAtLeast(0.0))),
+                                                fontSize = 11.5.sp,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
                                             )
                                         }
                                     }
-                                    TextButton(
-                                        onClick = { showColdChainDialog = true },
-                                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF0284C7)),
-                                        modifier = Modifier.minimumInteractiveComponentSize()
-                                    ) {
-                                        Text("ফ্রিজ মনিটর", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Pricing summaries
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        when (priceMode) {
+                                            PriceMode.WHOLESALE  -> stringResource(R.string.cart_subtotal_wholesale)
+                                            PriceMode.MRP        -> stringResource(R.string.cart_subtotal_mrp)
+                                            PriceMode.DISCOUNTED -> stringResource(R.string.subtotal)
+                                        },
+                                        color = Color.Gray
+                                    )
+                                }
+                                val displaySubtotal = if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) mrpSubtotal else subtotal
+                                Text(formatTaka(displaySubtotal), fontWeight = FontWeight.Bold)
+                            }
+                            if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.LocalOffer, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF15803D))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            stringResource(R.string.cart_sale_savings),
+                                            color = Color(0xFF15803D),
+                                            fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Text(
+                                        "-${formatTaka(saleModeMrpSavings)}",
+                                        color = Color(0xFF16A34A),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            } else if (priceMode == PriceMode.WHOLESALE && priceModesSavings > 0.0) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Inventory2, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFFB45309))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            stringResource(R.string.cart_wholesale_bulk_savings),
+                                            color = Color(0xFFB45309),
+                                            fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Text(
+                                        "-${formatTaka(priceModesSavings)}",
+                                        color = Color(0xFFD97706),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            } else if (priceMode == PriceMode.MRP && priceModesSavings > 0.0) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF1D4ED8))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            stringResource(R.string.cart_mrp_premium),
+                                            color = Color(0xFF1D4ED8),
+                                            fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Text(
+                                        "+${formatTaka(priceModesSavings)}",
+                                        color = Color(0xFF2563EB),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            if (discountVal > 0.0) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.LocalOffer, null, Modifier.size(16.dp), tint = Color.Gray)
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(stringResource(R.string.discount), color = Color.Gray)
+                                    }
+                                    Text("-${formatTaka(discountVal)}", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            if (loyaltyDiscount > 0.0) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(15.dp), tint = Color(0xFFD97706))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(stringResource(R.string.cart_vip_loyalty_cashback), color = Color(0xFFB45309), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    Text("-${formatTaka(loyaltyDiscount)}", color = Color(0xFFD97706), fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            if (taxVal > 0.0) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    val rateStr = invoiceSettingsData.taxRate.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }
+                                    val modeStr = if (invoiceSettingsData.taxInclusive) stringResource(R.string.cart_tax_mode_inclusive) else stringResource(R.string.cart_tax_mode_exclusive)
+                                    Text(
+                                        "${invoiceSettingsData.taxLabel.ifBlank { stringResource(R.string.cart_default_tax_label) }} ($rateStr% • $modeStr)",
+                                        color = Color.Gray
+                                    )
+                                    Text(formatTaka(taxVal), fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(7.dp))
+                                    Text(stringResource(R.string.grand_total), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                }
+                                Text(
+                                    formatTaka(grandTotal),
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 20.sp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
+                                val totalSavings = saleModeMrpSavings + discountVal
+                                val pct = if (mrpSubtotal > 0.0) Math.round((totalSavings / mrpSubtotal) * 100).toInt() else 0
+                                val isBn = com.techyfiposmeds.utils.isAppBangla()
+                                val pctStr = if (isBn) com.techyfiposmeds.utils.toBanglaDigits(pct.toString()) else "$pct"
+                                val isItemWise = invoiceSettingsData.showItemWiseMrpDiscount
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 10.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.extendedColors.successContainer),
+                                    border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.extendedColors.onSuccessContainer)
+                                                Spacer(Modifier.width(6.dp))
+                                                Text(
+                                                    stringResource(R.string.cart_customer_savings_breakdown),
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 11.5.sp,
+                                                    color = MaterialTheme.extendedColors.onSuccessContainer
+                                                )
+                                            }
+                                            Surface(
+                                                color = MaterialTheme.extendedColors.success,
+                                                shape = RoundedCornerShape(12.dp)
+                                            ) {
+                                                Text(
+                                                    stringResource(R.string.cart_percent_off, pctStr),
+                                                    color = MaterialTheme.extendedColors.onSuccess,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 10.sp,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(stringResource(R.string.cart_original_mrp_subtotal), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(formatTaka(mrpSubtotal), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(stringResource(R.string.cart_store_sale_discount), fontSize = 12.sp, color = MaterialTheme.extendedColors.onSuccessContainer, fontWeight = FontWeight.SemiBold)
+                                            Text("-${formatTaka(saleModeMrpSavings)}", fontSize = 12.sp, color = MaterialTheme.extendedColors.onSuccessContainer, fontWeight = FontWeight.Bold)
+                                        }
+
+                                        if (discountVal > 0.0) {
+                                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Text(stringResource(R.string.discount), fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                                                Text("-${formatTaka(discountVal)}", fontSize = 12.sp, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+
+                                        HorizontalDivider(color = MaterialTheme.extendedColors.onSuccessContainer.copy(alpha = 0.2f), thickness = 1.dp)
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(stringResource(R.string.cart_total_customer_savings), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.extendedColors.onSuccessContainer)
+                                            Text(stringResource(R.string.cart_savings_with_pct, formatTaka(totalSavings), pctStr), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = MaterialTheme.extendedColors.onSuccessContainer)
+                                        }
+
+                                        if (canEditShopSettings) {
+                                            // Switch between item-by-item discount and summary only
+                                            Spacer(Modifier.height(4.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                FilterChip(
+                                                    selected = isItemWise,
+                                                    onClick = {
+                                                        settingsViewModel.saveInvoiceSettingsData(invoiceSettingsData.copy(showItemWiseMrpDiscount = true))
+                                                    },
+                                                    label = { Text(stringResource(R.string.cart_item_by_item_switch), fontSize = 11.sp, fontWeight = if (isItemWise) FontWeight.Bold else FontWeight.Normal) },
+                                                    leadingIcon = if (isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
+                                                    colors = FilterChipDefaults.filterChipColors(
+                                                        selectedContainerColor = Color(0xFF16A34A),
+                                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                                                    ),
+                                                    modifier = Modifier.weight(1f)
+                                                )
+
+                                                FilterChip(
+                                                    selected = !isItemWise,
+                                                    onClick = {
+                                                        settingsViewModel.saveInvoiceSettingsData(invoiceSettingsData.copy(showItemWiseMrpDiscount = false))
+                                                    },
+                                                    label = { Text(stringResource(R.string.cart_summary_only_switch), fontSize = 11.sp, fontWeight = if (!isItemWise) FontWeight.Bold else FontWeight.Normal) },
+                                                    leadingIcon = if (!isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
+                                                    colors = FilterChipDefaults.filterChipColors(
+                                                        selectedContainerColor = Color(0xFF16A34A),
+                                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                                                    ),
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        if (!canSell) {
-                            Text(stringResource(R.string.perm_checkout_required, stringResource(R.string.perm_sales_sell_title)), color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
-                        } else if (!isCheckoutEnabled) {
-                            val reason = when {
-                                hasExpiredItem -> stringResource(R.string.cart_reason_expired_medicine_blocked)
-                                hasItemExceedingMrp -> stringResource(R.string.cart_reason_mrp_exceeded)
-                                hasUnacknowledgedHighRiskClinicalAlert -> stringResource(R.string.cart_reason_clinical_ddi_blocked)
-                                isAntibioticMissingDoctor -> stringResource(R.string.cart_reason_antibiotic_doctor_required)
-                                !isTotalValid -> stringResource(R.string.cart_reason_total_zero)
-                                !isDueValid -> stringResource(R.string.cart_reason_due_details_required)
-                                isSplitPayment && !isNonCashWithinBounds -> stringResource(R.string.cart_reason_split_non_cash_overtender)
-                                isSplitPayment && !isSplitValid -> stringResource(R.string.cart_reason_split_total_mismatch)
-                                isSplitPayment && !isSplitDetailsValid -> stringResource(R.string.cart_reason_split_details_required)
-                                !isWalletValid -> stringResource(R.string.cart_reason_wallet_number_required, paymentMethod)
-                                !isCardValid -> stringResource(R.string.cart_reason_card_digits_required)
-                                !isCashValid -> stringResource(R.string.cart_reason_cash_insufficient)
-                                !isStoreCreditValid -> {
-                                    if (customerPhone.isBlank() && redeemedVoucher == null) stringResource(R.string.cart_reason_store_credit_phone_or_voucher)
-                                    else stringResource(R.string.cart_reason_store_credit_insufficient, formatTaka(if (redeemedVoucher != null) redeemedVoucher!!.remainingBalance else (resolvedCustomer?.storeCredit ?: 0.0)))
+                            // Warning Banners (Expired, MRP, Clinical, Cold Chain)
+                            if (hasExpiredItem) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Block, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onErrorContainer)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(
+                                                text = stringResource(R.string.expired_medicine_sale_prohibited_title),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.expired_medicine_sale_prohibited_desc),
+                                                fontSize = 11.5.sp,
+                                                color = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                        }
+                                    }
                                 }
-                                else -> stringResource(R.string.cart_reason_generic_incomplete)
                             }
-                            Text(reason, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
-                        }
 
-                        val executeSaleAction = {
-                            if (!isCompletingSale && grandTotal > 0.0) {
-                                val currentRawCash = if (paymentMethod == "Cash") (receivedAmountText.toDoubleOrNull() ?: 0.0) else 0.0
-                                val currentRemaining = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
-                                if (paymentMethod == "Cash" && !isSplitPayment && currentRemaining > 0.0 && currentRawCash < currentRemaining) {
-                                    cartViewModel.setCompletingSale(false)
-                                    android.widget.Toast.makeText(context, context.getString(R.string.cart_reason_cash_insufficient), android.widget.Toast.LENGTH_SHORT).show()
-                                } else {
-                                    cartViewModel.setCompletingSale(true)
-                                    val snapshotAmountPaid = if (paymentMethod == "Cash" && !isSplitPayment) currentRawCash else currentPaymentBreakdown.amountPaidToRecord
-                                    val snapshotChange = currentPaymentBreakdown.changeAmount
-                                    scope.launch {
-                                        kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
-                                            doCompleteSale(snapshotAmountPaid, snapshotChange)
+                            if (hasItemExceedingMrp) {
+                                Surface(
+                                    color = Color(0xFFFEF3C7),
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color(0xFFB45309))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(
+                                                text = stringResource(R.string.dgda_mrp_exceeded_title),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = Color(0xFFB45309)
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.dgda_mrp_exceeded_desc, itemsExceedingMrp.size),
+                                                fontSize = 10.5.sp,
+                                                color = Color(0xFF92400E)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (clinicalAlerts.isNotEmpty() && !isClinicalAlertAcknowledged) {
+                                val hasHighRisk = clinicalAlerts.any { it.severity == com.techyfiposmeds.data.clinical.AlertSeverity.HIGH_RISK }
+                                Surface(
+                                    color = if (hasHighRisk) Color(0xFFFEE2E2) else Color(0xFFFEF3C7),
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = BorderStroke(1.dp, if (hasHighRisk) Color(0xFFDC2626) else Color(0xFFF59E0B)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 10.dp)
+                                        .clickable { showClinicalAdvisoryDialog = true }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.weight(1f),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Warning,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = if (hasHighRisk) Color(0xFFDC2626) else Color(0xFFB45309)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column {
+                                                val isBnCart = com.techyfiposmeds.utils.isAppBangla()
+                                                Text(
+                                                    text = if (hasHighRisk) {
+                                                        if (isBnCart) "মারাত্মক ড্রাগ মিথস্ক্রিয়া সতর্কবার্তা (${clinicalAlerts.size}টি)" else "Severe Drug Interaction Alert (${clinicalAlerts.size})"
+                                                    } else {
+                                                        if (isBnCart) "চিকিৎসা সংক্রান্ত সতর্কতা (${clinicalAlerts.size}টি)" else "Clinical Caution Advisory (${clinicalAlerts.size})"
+                                                    },
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                    color = if (hasHighRisk) Color(0xFFDC2626) else Color(0xFFB45309)
+                                                )
+                                                Text(
+                                                    text = if (isBnCart) "কার্টের ওষুধের মধ্যে সম্ভাব্য ক্ষতিকর পার্শ্বপ্রতিক্রিয়া বা ডুপ্লিকেট উপাদান সনাক্ত হয়েছে।" else "Potential harmful adverse interactions or duplicate therapeutic agents detected in cart.",
+                                                    fontSize = 10.5.sp,
+                                                    color = if (hasHighRisk) Color(0xFF991B1B) else Color(0xFF92400E)
+                                                )
+                                            }
+                                        }
+                                        TextButton(
+                                            onClick = { showClinicalAdvisoryDialog = true },
+                                            colors = ButtonDefaults.textButtonColors(contentColor = if (hasHighRisk) Color(0xFFDC2626) else Color(0xFFB45309)),
+                                            modifier = Modifier.heightIn(min = 48.dp)
+                                        ) {
+                                            Text(if (com.techyfiposmeds.utils.isAppBangla()) "পরামর্শ" else "Advisory", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (hasColdChainInCart) {
+                                Surface(
+                                    color = Color(0xFFE0F2FE),
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = BorderStroke(1.dp, Color(0xFF0284C7)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 10.dp)
+                                        .clickable { showColdChainDialog = true }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.weight(1f),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(Icons.Default.AcUnit, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF0369A1))
+                                            Column {
+                                                Text(
+                                                    text = if (com.techyfiposmeds.utils.isAppBangla()) "কোল্ড-চেইন ওষুধ সতর্কতা (2°C – 8°C Storage)" else "Cold-Chain Medicine Alert (2°C – 8°C Storage)",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                    color = Color(0xFF0369A1)
+                                                )
+                                                Text(
+                                                    text = stringResource(R.string.cart_cold_chain_warning_banner),
+                                                    fontSize = 10.5.sp,
+                                                    color = Color(0xFF075985)
+                                                )
+                                            }
+                                        }
+                                        TextButton(
+                                            onClick = { showColdChainDialog = true },
+                                            colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF0284C7)),
+                                            modifier = Modifier.heightIn(min = 48.dp)
+                                        ) {
+                                            Text(if (com.techyfiposmeds.utils.isAppBangla()) "ফ্রিজ মনিটর" else "Monitor", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
                             }
                         }
 
-                        Button(
-                            onClick = {
-                                if (!isCompletingSale) {
-                                    if (hasExpiredItem) {
-                                        Toast.makeText(context, context.getString(R.string.cart_reason_expired_medicine_blocked), Toast.LENGTH_LONG).show()
-                                        return@Button
+                        // Pinned Bottom Action Bar (Surface with elevation & Slate-300 border)
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                            tonalElevation = 8.dp,
+                            shadowElevation = 16.dp,
+                            border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                if (!canSell) {
+                                    Text(
+                                        stringResource(R.string.perm_checkout_required, stringResource(R.string.perm_sales_sell_title)),
+                                        color = MaterialTheme.colorScheme.error,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(bottom = 6.dp)
+                                    )
+                                } else if (!isCheckoutEnabled) {
+                                    val reason = when {
+                                        hasExpiredItem -> stringResource(R.string.cart_reason_expired_medicine_blocked)
+                                        hasItemExceedingMrp -> stringResource(R.string.cart_reason_mrp_exceeded)
+                                        hasUnacknowledgedHighRiskClinicalAlert -> stringResource(R.string.cart_reason_clinical_ddi_blocked)
+                                        isAntibioticMissingDoctor -> stringResource(R.string.cart_reason_antibiotic_doctor_required)
+                                        !isTotalValid -> stringResource(R.string.cart_reason_total_zero)
+                                        !isDueValid -> stringResource(R.string.cart_reason_due_details_required)
+                                        isSplitPayment && !isNonCashWithinBounds -> stringResource(R.string.cart_reason_split_non_cash_overtender)
+                                        isSplitPayment && !isSplitValid -> stringResource(R.string.cart_reason_split_total_mismatch)
+                                        isSplitPayment && !isSplitDetailsValid -> stringResource(R.string.cart_reason_split_details_required)
+                                        !isWalletValid -> stringResource(R.string.cart_reason_wallet_number_required, paymentMethod)
+                                        !isCardValid -> stringResource(R.string.cart_reason_card_digits_required)
+                                        !isCashValid -> stringResource(R.string.cart_reason_cash_insufficient)
+                                        !isStoreCreditValid -> {
+                                            if (customerPhone.isBlank() && redeemedVoucher == null) stringResource(R.string.cart_reason_store_credit_phone_or_voucher)
+                                            else stringResource(R.string.cart_reason_store_credit_insufficient, formatTaka(if (redeemedVoucher != null) redeemedVoucher!!.remainingBalance else (resolvedCustomer?.storeCredit ?: 0.0)))
+                                        }
+                                        else -> stringResource(R.string.cart_reason_generic_incomplete)
                                     }
-                                    if (isAntibioticMissingDoctor) {
-                                        Toast.makeText(context, context.getString(R.string.cart_reason_antibiotic_doctor_required), Toast.LENGTH_LONG).show()
-                                        return@Button
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.padding(bottom = 6.dp)
+                                    ) {
+                                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.error)
+                                        Text(
+                                            reason,
+                                            color = MaterialTheme.colorScheme.error,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
-                                    val newDue = currentPaymentBreakdown.dueAmount
+                                }
 
-                                    val proceedWithSale = {
-                                        if (hasDueInPayment && customerPhone.isNotBlank()) {
-                                            scope.launch {
-                                                val custDue = cartViewModel.getCustomerCreditAccount(customerPhone)
-                                                if (custDue != null && custDue.creditLimit > 0.0 && (custDue.outstandingAmount + newDue) > custDue.creditLimit) {
-                                                    exceededCustomerDue = custDue
-                                                    pendingDueAmount = newDue
-                                                    showCreditLimitWarningDialog = true
+                                Button(
+                                    onClick = {
+                                        if (!isCompletingSale) {
+                                            if (hasExpiredItem) {
+                                                Toast.makeText(context, context.getString(R.string.cart_reason_expired_medicine_blocked), Toast.LENGTH_LONG).show()
+                                                return@Button
+                                            }
+                                            if (isAntibioticMissingDoctor) {
+                                                Toast.makeText(context, context.getString(R.string.cart_reason_antibiotic_doctor_required), Toast.LENGTH_LONG).show()
+                                                return@Button
+                                            }
+                                            val newDue = currentPaymentBreakdown.dueAmount
+
+                                            val proceedWithSale = {
+                                                if (hasDueInPayment && customerPhone.isNotBlank()) {
+                                                    scope.launch {
+                                                        val custDue = cartViewModel.getCustomerCreditAccount(customerPhone)
+                                                        if (custDue != null && custDue.creditLimit > 0.0 && (custDue.outstandingAmount + newDue) > custDue.creditLimit) {
+                                                            exceededCustomerDue = custDue
+                                                            pendingDueAmount = newDue
+                                                            showCreditLimitWarningDialog = true
+                                                        } else {
+                                                            pendingDueCustomerName = custDue?.customerName?.takeIf { it.isNotBlank() } ?: customerName
+                                                            pendingDuePreviousAmount = custDue?.outstandingAmount ?: 0.0
+                                                            pendingDueAmount = newDue
+                                                            showDueConfirmDialog = true
+                                                        }
+                                                    }
                                                 } else {
-                                                    pendingDueCustomerName = custDue?.customerName?.takeIf { it.isNotBlank() } ?: customerName
-                                                    pendingDuePreviousAmount = custDue?.outstandingAmount ?: 0.0
-                                                    pendingDueAmount = newDue
-                                                    showDueConfirmDialog = true
+                                                    executeSaleAction()
                                                 }
                                             }
-                                        } else {
-                                            executeSaleAction()
-                                        }
-                                    }
 
-                                    val hasNegativeStock = cartItems.any { it.quantity > it.product.stockQty && !isSyntheticSaleBarcode(it.product.barcode) }
-                                    if (hasNegativeStock && !invoiceSettingsData.allowNegativeInventory && !isOwner && !isSupervisor) {
-                                        if (authViewModel != null) {
-                                            pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_negative_stock)
-                                            pendingSupervisorAction = { proceedWithSale() }
-                                            showSupervisorAuthDialog = true
-                                        } else {
-                                            Toast.makeText(context, context.getString(R.string.permission_required_negative_stock), Toast.LENGTH_LONG).show()
+                                            val hasNegativeStock = cartItems.any { it.quantity > it.product.stockQty && !isSyntheticSaleBarcode(it.product.barcode) }
+                                            if (hasNegativeStock && !invoiceSettingsData.allowNegativeInventory && !isOwner && !isSupervisor) {
+                                                if (authViewModel != null) {
+                                                    pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_negative_stock)
+                                                    pendingSupervisorAction = { proceedWithSale() }
+                                                    showSupervisorAuthDialog = true
+                                                } else {
+                                                    Toast.makeText(context, context.getString(R.string.permission_required_negative_stock), Toast.LENGTH_LONG).show()
+                                                }
+                                            } else {
+                                                proceedWithSale()
+                                            }
                                         }
+                                    },
+                                    enabled = isCheckoutEnabled && !isCompletingSale,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(52.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                        disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                                    )
+                                ) {
+                                    if (isCompletingSale) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.complete_sale), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                     } else {
-                                        proceedWithSale()
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            stringResource(R.string.complete_sale) + " • " + formatTaka(grandTotal),
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 15.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                                     }
                                 }
-                            },
-                            enabled = isCheckoutEnabled && !isCompletingSale,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            if (isCompletingSale) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.complete_sale), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            } else {
-                                Text("💳", fontSize = 18.sp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.complete_sale), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("➡️", fontSize = 16.sp)
                             }
                         }
 
@@ -3751,6 +3832,8 @@ fun CartScreen(
                         label = { Text(stringResource(R.string.held_cart_name_label)) },
                         placeholder = { Text(stringResource(R.string.held_cart_name_placeholder)) },
                         singleLine = true,
+                        colors = compactCartFieldColors(),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Row(
@@ -3977,6 +4060,21 @@ private fun CartScanUpdateBanner(scanUpdate: CartScanUpdate?) {
 }
 
 @Composable
+private fun compactCartFieldColors(): TextFieldColors {
+    return OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = Color(0xFF059669),
+        focusedLabelColor = Color(0xFF059669),
+        unfocusedBorderColor = Color(0xFFCBD5E1),
+        unfocusedLabelColor = Color(0xFF64748B),
+        focusedContainerColor = Color.White,
+        unfocusedContainerColor = Color.White,
+        focusedTextColor = Color(0xFF0F172A),
+        unfocusedTextColor = Color(0xFF0F172A),
+        cursorColor = Color(0xFF059669)
+    )
+}
+
+@Composable
 fun CartItemRow(
     item: CartItem,
     onQuantityChanged: (Double) -> Unit,
@@ -4073,61 +4171,158 @@ fun CartItemRow(
                 )
             }
 
+            val isBn = com.techyfiposmeds.utils.isAppBangla()
+            val form = item.product.dosageForm?.trim()?.lowercase() ?: ""
+            val canHaveStrip = item.product.isStripApplicable
+
+            // Auto-correct if liquid/topical previously had strip
+            LaunchedEffect(item.product.barcode, item.unitType) {
+                if (item.unitType.equals("strip", ignoreCase = true) && !canHaveStrip) {
+                    onUnitTypeChanged?.invoke("pc")
+                }
+            }
+
             // Location, Expiry, and Antibiotic Badges Row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 2.dp),
+                    .padding(top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 if (!item.product.shelfLocation.isNullOrBlank()) {
                     Surface(
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(6.dp),
                         color = Color(0xFFEEF2FF),
                         border = BorderStroke(0.6.dp, Color(0xFFC7D2FE))
                     ) {
-                        Text(
-                            text = "📍 ${item.product.shelfLocation}",
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF4338CA),
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Place, contentDescription = null, modifier = Modifier.size(11.dp), tint = Color(0xFF4338CA))
+                            Text(
+                                text = item.product.shelfLocation,
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF4338CA)
+                            )
+                        }
                     }
                 }
                 if (!item.product.batchNumber.isNullOrBlank()) {
                     Surface(
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(6.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     ) {
-                        Text(
-                            text = "📦 ${item.product.batchNumber}",
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Layers, contentDescription = null, modifier = Modifier.size(11.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = item.product.batchNumber,
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
                 if (item.product.isAntibiotic) {
                     Surface(
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(6.dp),
                         color = Color(0xFFFEE2E2),
                         border = BorderStroke(0.6.dp, Color(0xFFFECACA))
                     ) {
-                        Text(
-                            text = "🚨 Rx Antibiotic",
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFFDC2626),
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Shield, contentDescription = null, modifier = Modifier.size(11.dp), tint = Color(0xFFDC2626))
+                            Text(
+                                text = "Rx Antibiotic",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFFDC2626)
+                            )
+                        }
+                    }
+                }
+                if (onPrintDosageLabel != null) {
+                    Surface(
+                        onClick = { onPrintDosageLabel() },
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFF0284C7).copy(alpha = 0.12f),
+                        border = BorderStroke(0.6.dp, Color(0xFF0284C7).copy(alpha = 0.45f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(Icons.Default.LocalOffer, contentDescription = null, modifier = Modifier.size(10.dp), tint = Color(0xFF0284C7))
+                            Text(
+                                text = stringResource(R.string.print_dosage_sticker_chip),
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0284C7)
+                            )
+                        }
                     }
                 }
             }
 
-            // 🏷️ Multi-Unit Selector (পিস / পাতা / বক্স)
+            val expMillis = parseExpiryDateToMillis(item.product.expiryDate)
+            if (expMillis != null && expMillis > 0) {
+                if (expMillis < now) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.cart_expired_badge, item.product.expiryDate ?: ""),
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                } else if (expMillis <= now + (7L * 24 * 60 * 60 * 1000)) {
+                    val daysLeft = ((expMillis - now) / (24 * 60 * 60 * 1000)).coerceAtLeast(0)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.extendedColors.warningContainer,
+                        border = BorderStroke(1.dp, MaterialTheme.extendedColors.warning.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.cart_expiring_badge, daysLeft, item.product.expiryDate ?: ""),
+                                color = MaterialTheme.extendedColors.onWarningContainer,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 🏷️ Multi-Unit Selector (পিস/বোতল / পাতা / বক্স)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -4141,11 +4336,29 @@ fun CartItemRow(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                val units = listOf(
-                    Triple("pc", stringResource(R.string.unit_loose_piece), item.product.sellingPrice),
-                    Triple("strip", stringResource(R.string.unit_blister_strip), if (item.product.stripPrice > 0.0) item.product.stripPrice else item.product.sellingPrice * 10),
-                    Triple("box", stringResource(R.string.unit_box), if (item.product.packPrice > 0.0) item.product.packPrice else item.product.sellingPrice * 100)
-                )
+                val pieceLabel = when {
+                    form.contains("syrup") || form.contains("suspension") || form.contains("solution") || form.contains("liquid") ->
+                        if (isBn) "বোতল" else "Bottle"
+                    form.contains("drop") ->
+                        if (isBn) "ড্রপ" else "Drop"
+                    form.contains("cream") || form.contains("ointment") || form.contains("gel") ->
+                        if (isBn) "টিউব" else "Tube"
+                    form.contains("inject") || form.contains("infusion") ->
+                        if (isBn) "ভায়াল" else "Vial"
+                    else -> stringResource(R.string.unit_loose_piece)
+                }
+
+                val units = mutableListOf<Triple<String, String, Double>>()
+                units.add(Triple("pc", pieceLabel, item.product.sellingPrice))
+                if (canHaveStrip) {
+                    val stripCount = if (item.product.stripSize > 0) item.product.stripSize else 10
+                    val stripPrice = if (item.product.stripPrice > 0.0) item.product.stripPrice else item.product.sellingPrice * stripCount
+                    val stripLabel = if (isBn) "পাতা ($stripCount)" else "Strip ($stripCount)"
+                    units.add(Triple("strip", stripLabel, stripPrice))
+                }
+                val boxPrice = if (item.product.packPrice > 0.0) item.product.packPrice else item.product.sellingPrice * 100.0
+                units.add(Triple("box", stringResource(R.string.unit_box), boxPrice))
+
                 units.forEach { (uKey, uLabel, uPrice) ->
                     val isSelected = item.unitType.equals(uKey, ignoreCase = true)
                     Surface(
@@ -4155,7 +4368,7 @@ fun CartItemRow(
                         border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
@@ -4181,17 +4394,32 @@ fun CartItemRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
-                    .padding(top = 5.dp),
+                    .padding(top = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "💊 " + stringResource(R.string.dosage_label),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                val schedules = listOf("১+০+১ (খাওয়ার পর)", "১+১+১", "০+১+০", "১+০+০", "০+০+১", "প্রয়োজনে (SOS)")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Icon(
+                        Icons.Default.DateRange,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = Color(0xFF0284C7)
+                    )
+                    Text(
+                        text = stringResource(R.string.dosage_label),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                val schedules = if (isBn) {
+                    listOf("১+০+১ (খাওয়ার পর)", "১+১+১", "০+১+০", "১+০+০", "০+০+১", "প্রয়োজনে (SOS)")
+                } else {
+                    listOf("1+0+1 (After meals)", "1+1+1", "0+1+0", "1+0+0", "0+0+1", "As needed (SOS)")
+                }
                 schedules.forEach { sch ->
                     val isCurrent = item.dosageSchedule == sch
                     Surface(
@@ -4208,28 +4436,62 @@ fun CartItemRow(
                             fontSize = 9.5.sp,
                             fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                             color = if (isCurrent) Color.White else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
                         )
                     }
                 }
 
+                if (onPrintDosageLabel != null) {
+                    Surface(
+                        onClick = { onPrintDosageLabel() },
+                        shape = RoundedCornerShape(999.dp),
+                        color = Color(0xFF0284C7).copy(alpha = 0.12f),
+                        border = BorderStroke(0.8.dp, Color(0xFF0284C7).copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(Icons.Default.LocalOffer, contentDescription = null, modifier = Modifier.size(10.dp), tint = Color(0xFF0284C7))
+                            Text(
+                                text = stringResource(R.string.print_dosage_sticker_chip),
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0284C7)
+                            )
+                        }
+                    }
+                }
+
+                // Trailing spacer to avoid clipping at the edge of horizontal scroll
+                Spacer(Modifier.width(16.dp))
+            }
+
+            // 📝 Patient Instruction / Item Note (Full width, clear text without clipping)
+            if (!item.note.isNullOrBlank()) {
                 Surface(
-                    onClick = { onPrintDosageLabel?.invoke() },
-                    shape = RoundedCornerShape(999.dp),
-                    color = Color(0xFF0284C7).copy(alpha = 0.12f),
-                    border = BorderStroke(0.8.dp, Color(0xFF0284C7).copy(alpha = 0.4f))
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                    border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp)
+                        .clickable { onEditNote() }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
                     ) {
-                        Text("🏷️", fontSize = 10.sp)
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Spacer(Modifier.width(6.dp))
                         Text(
-                            text = stringResource(R.string.print_dosage_sticker_chip),
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0284C7)
+                            item.note,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -4243,111 +4505,66 @@ fun CartItemRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Left Column: Price & Line Total & Note
+                // Left Column: Price & Line Total
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 6.dp),
+                        .padding(end = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     val unitPriceStr = formatTaka(unitPrice)
                     val totalAmountStr = formatTaka(unitPrice * item.quantity)
-
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Text(
-                            text = "$unitPriceStr/${item.product.unit}",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            softWrap = false
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = if (unitPrice == 0.0) MaterialTheme.extendedColors.successContainer else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-                            border = if (unitPrice == 0.0) BorderStroke(0.8.dp, MaterialTheme.extendedColors.success) else null
-                        ) {
-                            Text(
-                                text = if (unitPrice == 0.0) "🎁 " + stringResource(R.string.cart_free_badge) else stringResource(R.string.cart_item_line_total, totalAmountStr),
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (unitPrice == 0.0) MaterialTheme.extendedColors.onSuccessContainer else MaterialTheme.colorScheme.primary,
-                                maxLines = 1,
-                                softWrap = false,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
-                            )
+                    val activeUnitName = when (item.unitType.lowercase()) {
+                        "strip" -> {
+                            val stripCount = if (item.product.stripSize > 0) item.product.stripSize else 10
+                            if (isBn) "পাতা ($stripCount)" else "Strip ($stripCount)"
                         }
-
-                        val expMillis = parseExpiryDateToMillis(item.product.expiryDate)
-                        if (expMillis != null && expMillis > 0) {
-                            if (expMillis < now) {
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.errorContainer,
-                                    border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.cart_expired_badge, item.product.expiryDate ?: ""),
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
-                                    )
-                                }
-                            } else if (expMillis <= now + (7L * 24 * 60 * 60 * 1000)) {
-                                val daysLeft = ((expMillis - now) / (24 * 60 * 60 * 1000)).coerceAtLeast(0)
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.extendedColors.warningContainer,
-                                    border = BorderStroke(0.8.dp, MaterialTheme.extendedColors.warning.copy(alpha = 0.5f))
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.cart_expiring_badge, daysLeft, item.product.expiryDate ?: ""),
-                                        color = MaterialTheme.extendedColors.onWarningContainer,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
-                                    )
-                                }
+                        "box" -> if (isBn) "বক্স" else "Box"
+                        else -> {
+                            if (form.contains("syrup") || form.contains("suspension") || form.contains("drop") || form.contains("liquid")) {
+                                if (isBn) "বোতল" else "Bottle"
+                            } else if (form.contains("cream") || form.contains("ointment") || form.contains("gel")) {
+                                if (isBn) "টিউব" else "Tube"
+                            } else {
+                                if (isBn) "পিস" else "Pc"
                             }
                         }
                     }
 
-                    if (!item.note.isNullOrBlank()) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                            modifier = Modifier.clickable { onEditNote() }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text("📝", fontSize = 10.sp)
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    item.note,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    } else {
+                    Text(
+                        text = "$unitPriceStr / $activeUnitName",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (unitPrice == 0.0) MaterialTheme.extendedColors.successContainer else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                        border = if (unitPrice == 0.0) BorderStroke(0.8.dp, MaterialTheme.extendedColors.success) else null
+                    ) {
                         Text(
-                            stringResource(R.string.cart_add_note_label),
+                            text = if (unitPrice == 0.0) "🎁 " + stringResource(R.string.cart_free_badge) else stringResource(R.string.cart_item_line_total, totalAmountStr),
                             fontSize = 11.5.sp,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (unitPrice == 0.0) MaterialTheme.extendedColors.onSuccessContainer else MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
+                        )
+                    }
+
+                    if (item.note.isNullOrBlank()) {
+                        Text(
+                            text = stringResource(R.string.cart_add_note_label),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
                             modifier = Modifier
                                 .clickable { onEditNote() }
-                                .padding(vertical = 1.dp)
+                                .padding(top = 1.dp)
                         )
                     }
                 }
@@ -4379,13 +4596,16 @@ fun CartItemRow(
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "➖",
-                                fontSize = 13.sp,
-                                modifier = Modifier.graphicsLayer {
-                                    scaleX = minusAnim.value
-                                    scaleY = minusAnim.value
-                                }
+                            Icon(
+                                Icons.Default.Remove,
+                                contentDescription = stringResource(R.string.cd_decrease),
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .graphicsLayer {
+                                        scaleX = minusAnim.value
+                                        scaleY = minusAnim.value
+                                    },
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -4435,13 +4655,16 @@ fun CartItemRow(
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "➕",
-                                fontSize = 13.sp,
-                                modifier = Modifier.graphicsLayer {
-                                    scaleX = plusAnim.value
-                                    scaleY = plusAnim.value
-                                }
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = stringResource(R.string.cd_increase),
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .graphicsLayer {
+                                        scaleX = plusAnim.value
+                                        scaleY = plusAnim.value
+                                    },
+                                tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     }
@@ -4463,10 +4686,13 @@ fun CartItemRow(
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "🗑️",
-                                fontSize = 14.sp,
-                                modifier = Modifier.graphicsLayer { rotationZ = removeAnim.value }
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.cd_remove),
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .graphicsLayer { rotationZ = removeAnim.value },
+                                tint = MaterialTheme.colorScheme.error
                             )
                         }
                     }

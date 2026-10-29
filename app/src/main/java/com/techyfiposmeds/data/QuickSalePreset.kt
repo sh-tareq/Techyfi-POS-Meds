@@ -28,13 +28,13 @@ data class QuickSalePreset(
         }
 
         fun defaultPresets(): List<QuickSalePreset> = listOf(
-            QuickSalePreset(id = "preset_free_bag", name = "🎁 Free Gift Bag", defaultPrice = 0.0, defaultUnit = "Pcs"),
-            QuickSalePreset(id = "preset_free_sample", name = "🎉 Free Promotion Sample", defaultPrice = 0.0, defaultUnit = "Pcs"),
-            QuickSalePreset(id = "preset_bag", name = "🛍️ Shopping Bag", defaultPrice = 10.0, defaultUnit = "Pcs"),
-            QuickSalePreset(id = "preset_delivery", name = "🚚 Delivery Charge", defaultPrice = 60.0, defaultUnit = "Service"),
-            QuickSalePreset(id = "preset_repair", name = "🔧 Device Servicing", defaultPrice = 250.0, defaultUnit = "Service"),
-            QuickSalePreset(id = "preset_gift", name = "🎁 Gift Wrap Box", defaultPrice = 40.0, defaultUnit = "Pcs"),
-            QuickSalePreset(id = "preset_loose", name = "🌾 খোলা পণ্য", defaultPrice = 85.0, defaultUnit = "Kg")
+            QuickSalePreset(id = "preset_free_sample", name = "🎁 ফ্রি ডক্টর স্যাম্পল", defaultPrice = 0.0, defaultUnit = "Pcs"),
+            QuickSalePreset(id = "preset_med_bag", name = "🛍️ মেডিসিন ক্যারিয়ার ব্যাগ", defaultPrice = 5.0, defaultUnit = "Pcs"),
+            QuickSalePreset(id = "preset_syringe", name = "💉 ডিসপোজেবল সিরিঞ্জ (৫ সিসি)", defaultPrice = 10.0, defaultUnit = "Pcs"),
+            QuickSalePreset(id = "preset_bandage", name = "🩹 ফার্স্ট এইড ব্যান্ডেজ", defaultPrice = 5.0, defaultUnit = "Pcs"),
+            QuickSalePreset(id = "preset_bp_check", name = "🩺 বিপি / প্রেশার চেক ফি", defaultPrice = 20.0, defaultUnit = "Service"),
+            QuickSalePreset(id = "preset_injection_push", name = "💉 ইনজেকশন পুশ / ড্রেসিং", defaultPrice = 50.0, defaultUnit = "Service"),
+            QuickSalePreset(id = "preset_delivery", name = "🚚 হোম ডেলিভারি চার্জ", defaultPrice = 40.0, defaultUnit = "Service")
         )
 
         fun listToJson(list: List<QuickSalePreset>): String {

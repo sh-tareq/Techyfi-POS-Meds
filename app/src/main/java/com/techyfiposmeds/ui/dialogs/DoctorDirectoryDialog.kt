@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.techyfiposmeds.R
+import com.techyfiposmeds.utils.isAppBangla
+import com.techyfiposmeds.utils.toBanglaDigits
 import com.techyfiposmeds.data.db.PrescribingDoctor
 import com.techyfiposmeds.utils.DateFormatters
 
@@ -43,6 +45,7 @@ fun DoctorDirectoryDialog(
     onDeleteDoctor: (PrescribingDoctor) -> Unit
 ) {
     val context = LocalContext.current
+    val isBn = isAppBangla()
     var searchQuery by remember { mutableStateOf("") }
     var selectedSpecialty by remember { mutableStateOf<String?>(null) }
     var isAddingOrEditing by remember { mutableStateOf(false) }
@@ -174,7 +177,7 @@ fun DoctorDirectoryDialog(
                                 value = nameField,
                                 onValueChange = { nameField = it },
                                 label = { Text(stringResource(R.string.doctor_name_label), fontSize = 11.sp) },
-                                placeholder = { Text("ডা. মোঃ রফিকুল ইসলাম", fontSize = 11.sp) },
+                                placeholder = { Text(if (isBn) "ডা. মোঃ রফিকুল ইসলাম" else "Dr. Md. Rafiqul Islam", fontSize = 11.sp) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true
                             )
@@ -221,7 +224,7 @@ fun DoctorDirectoryDialog(
                                 value = clinicField,
                                 onValueChange = { clinicField = it },
                                 label = { Text(stringResource(R.string.doctor_clinic_label), fontSize = 11.sp) },
-                                placeholder = { Text("ঢাকা মেডিকেল কলেজ হাসপাতাল / স্থানীয় চেম্বার", fontSize = 11.sp) },
+                                placeholder = { Text(if (isBn) "ঢাকা মেডিকেল কলেজ হাসপাতাল / স্থানীয় চেম্বার" else "Dhaka Medical College / Local Chamber", fontSize = 11.sp) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true
                             )
@@ -294,7 +297,7 @@ fun DoctorDirectoryDialog(
                         FilterChip(
                             selected = selectedSpecialty == null,
                             onClick = { selectedSpecialty = null },
-                            label = { Text("সব বিভাগ", fontSize = 11.sp) }
+                            label = { Text(if (isBn) "সব বিভাগ" else "All Specialties", fontSize = 11.sp) }
                         )
                         specialties.forEach { spec ->
                             val isSel = selectedSpecialty?.contains(spec, ignoreCase = true) == true
@@ -397,7 +400,7 @@ fun DoctorDirectoryDialog(
                                                     color = Color(0xFFECFDF5)
                                                 ) {
                                                     Text(
-                                                        text = "📋 ${doc.prescriptionCount}টি প্রেসক্রিপশন",
+                                                        text = if (isBn) "📋 ${toBanglaDigits(doc.prescriptionCount.toString())}টি প্রেসক্রিপশন" else "📋 ${doc.prescriptionCount} Prescriptions",
                                                         fontSize = 9.5.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         color = Color(0xFF047857),

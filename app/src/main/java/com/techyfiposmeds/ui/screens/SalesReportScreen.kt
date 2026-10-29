@@ -714,7 +714,7 @@ private fun generateStructuredReportText(
 ): String {
     val isBangla = com.techyfiposmeds.utils.isAppBangla()
     val sb = StringBuilder()
-    sb.appendLine(if (isBangla) "=== টেকিফাই পিওএস বিক্রয় রিপোর্ট ===" else "=== Techyfi POS Sales Report ===")
+    sb.appendLine(if (isBangla) "=== টেকিফাই ফার্মা বিক্রয় রিপোর্ট ===" else "=== Techyfi Pharma Sales Report ===")
     sb.appendLine("${if (isBangla) "সময়কাল" else "Period"}: $rangeLabel")
     sb.appendLine("--------------------------------")
     sb.appendLine("${if (isBangla) "মোট বিক্রয়" else "Total Revenue"}: ${formatTaka(report.totalRevenue, isBangla = isBangla)}")
@@ -726,7 +726,7 @@ private fun generateStructuredReportText(
     sb.appendLine("${if (isBangla) "ইনভয়েস / বিল সংখ্যা" else "Invoices / Bills"}: $invCountStr")
     val rawItemsSoldStr = if (report.itemsSold % 1.0 == 0.0) report.itemsSold.toLong().toString() else String.format(Locale.US, "%.2f", report.itemsSold).trimEnd('0').trimEnd('.')
     val itemsSoldStr = if (isBangla) com.techyfiposmeds.utils.toBanglaDigits(rawItemsSoldStr) else rawItemsSoldStr
-    sb.appendLine("${if (isBangla) "বিক্রিত পণ্য" else "Items Sold"}: $itemsSoldStr")
+    sb.appendLine("${if (isBangla) "বিক্রিত ওষুধ" else "Medicines Sold"}: $itemsSoldStr")
     sb.appendLine("${if (isBangla) "মোট ভ্যাট/ট্যাক্স" else "Total Tax"}: ${formatTaka(report.totalTax, isBangla = isBangla)}")
     sb.appendLine("${if (isBangla) "মোট ডিসকাউন্ট" else "Total Discount"}: ${formatTaka(report.totalDiscount, isBangla = isBangla)}")
     sb.appendLine("${if (isBangla) "মোট রিফান্ড" else "Total Refunds"}: ${formatTaka(report.totalRefunds, isBangla = isBangla)}")
@@ -748,7 +748,7 @@ private fun generateStructuredReportText(
     }
     if (report.topProducts.isNotEmpty()) {
         sb.appendLine("--------------------------------")
-        sb.appendLine(if (isBangla) "সেরা বিক্রিত পণ্য:" else "Top Products:")
+        sb.appendLine(if (isBangla) "সেরা বিক্রিত ওষুধ:" else "Top Medicines:")
         report.topProducts.take(10).forEachIndexed { i, p ->
             val rawQ = if (p.quantity % 1.0 == 0.0) p.quantity.toLong().toString() else String.format(Locale.US, "%.2f", p.quantity).trimEnd('0').trimEnd('.')
             val qStr = if (isBangla) com.techyfiposmeds.utils.toBanglaDigits(rawQ) else rawQ

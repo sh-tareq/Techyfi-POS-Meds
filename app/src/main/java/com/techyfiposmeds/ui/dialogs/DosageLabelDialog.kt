@@ -39,6 +39,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import com.techyfiposmeds.R
+import com.techyfiposmeds.utils.isAppBangla
 import com.techyfiposmeds.data.InvoiceSettingsData
 import com.techyfiposmeds.utils.DosageLabelBitmapGenerator
 import com.techyfiposmeds.utils.printLabelImages
@@ -65,11 +66,12 @@ fun DosageLabelDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val isBn = isAppBangla()
     var patientName by remember { mutableStateOf(initialPatientName) }
     var dosageSchedule by remember {
-        mutableStateOf(if (initialDosageSchedule.isNotBlank()) initialDosageSchedule else "১ + ০ + ১")
+        mutableStateOf(if (initialDosageSchedule.isNotBlank()) initialDosageSchedule else if (isBn) "১ + ০ + ১" else "1 + 0 + 1")
     }
-    var foodTiming by remember { mutableStateOf("খাওয়ার পর ভরা পেটে") }
+    var foodTiming by remember { mutableStateOf(if (isBn) "খাওয়ার পর ভরা পেটে" else "After meals (Full stomach)") }
     var copies by remember { mutableIntStateOf(1) }
     var isPrinting by remember { mutableStateOf(false) }
 
@@ -193,7 +195,7 @@ fun DosageLabelDialog(
                         value = patientName,
                         onValueChange = { patientName = it },
                         label = { Text(stringResource(R.string.patient_name_label), fontSize = 11.5.sp) },
-                        placeholder = { Text("রোগীর নাম লিখুন", fontSize = 11.5.sp) },
+                        placeholder = { Text(if (isBn) "রোগীর নাম লিখুন" else "Enter patient name", fontSize = 11.5.sp) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp)
@@ -207,7 +209,7 @@ fun DosageLabelDialog(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        val dosagePresets = listOf("১ + ০ + ১", "১ + ১ + ১", "০ + ১ + ০", "১ + ০ + ০", "০ + ০ + ১", "১ + ০ + ১ (৩ দিন)", "প্রয়োজনে (SOS)")
+                        val dosagePresets = if (isBn) listOf("১ + ০ + ১", "১ + ১ + ১", "০ + ১ + ০", "১ + ০ + ০", "০ + ০ + ১", "১ + ০ + ১ (৩ দিন)", "প্রয়োজনে (SOS)") else listOf("1 + 0 + 1", "1 + 1 + 1", "0 + 1 + 0", "1 + 0 + 0", "0 + 0 + 1", "1 + 0 + 1 (3 days)", "As needed (SOS)")
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -237,7 +239,7 @@ fun DosageLabelDialog(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        val timingPresets = listOf("খাওয়ার পর ভরা পেটে", "খাওয়ার ৩০ মিনিট আগে", "সকালে খালি পেটে", "রাতে শোবার আগে", "পর্যাপ্ত জল পান করুন")
+                        val timingPresets = if (isBn) listOf("খাওয়ার পর ভরা পেটে", "খাওয়ার ৩০ মিনিট আগে", "সকালে খালি পেটে", "রাতে শোবার আগে", "পর্যাপ্ত জল পান করুন") else listOf("After meals (Full stomach)", "30 mins before meals", "Empty stomach in morning", "Before bedtime", "Drink plenty of water")
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()

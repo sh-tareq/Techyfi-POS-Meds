@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -37,6 +38,7 @@ import com.techyfiposmeds.R
 import com.techyfiposmeds.data.clinical.ColdChainHelper
 import com.techyfiposmeds.data.db.Product
 import com.techyfiposmeds.data.db.RefrigeratorTempLog
+import com.techyfiposmeds.utils.isAppBangla
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -97,6 +99,7 @@ fun ColdChainManagementDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -114,23 +117,35 @@ fun ColdChainManagementDialog(
                                 modifier = Modifier.size(24.dp)
                             )
                         }
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "কোল্ড-চেইন ফ্রিজ মনিটর (২°-৮° সে.)",
-                                fontSize = 17.sp,
+                                text = stringResource(R.string.cold_chain_hub_title),
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                lineHeight = 19.sp
                             )
                             Text(
-                                text = "DGDA ও WHO নির্দেশিকা: দৈনিক তাপমাত্রা লগ ও ভ্যাকসিন অডিট",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = stringResource(R.string.cold_chain_hub_subtitle),
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
 
@@ -145,7 +160,7 @@ fun ColdChainManagementDialog(
                         onClick = { selectedTab = 0 },
                         text = {
                             Text(
-                                "তাপমাত্রা লগ ও হিস্ট্রি (${tempLogs.size})",
+                                if (isAppBangla()) "তাপমাত্রা লগ ও হিস্ট্রি (${tempLogs.size})" else "Temperature Log & History (${tempLogs.size})",
                                 fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium
                             )
                         },
@@ -156,7 +171,7 @@ fun ColdChainManagementDialog(
                         onClick = { selectedTab = 1 },
                         text = {
                             Text(
-                                "কোল্ড-চেইন স্টক অডিট (${coldChainProducts.size})",
+                                if (isAppBangla()) "কোল্ড-চেইন স্টক অডিট (${coldChainProducts.size})" else "Cold-Chain Stock Audit (${coldChainProducts.size})",
                                 fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium
                             )
                         },
@@ -194,8 +209,9 @@ fun ColdChainManagementDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val isBn = isAppBangla()
                                     Text(
-                                        text = "নতুন তাপমাত্রা এন্ট্রি (Log Temperature)",
+                                        text = if (isBn) "নতুন তাপমাত্রা এন্ট্রি (Log Temperature)" else "Log Temperature",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
@@ -218,9 +234,9 @@ fun ColdChainManagementDialog(
                                         ) {
                                             Text(
                                                 text = when (breachStatus) {
-                                                    ColdChainHelper.TempBreachStatus.NORMAL -> "স্বাভাবিক (Optimal 2°-8°C)"
-                                                    ColdChainHelper.TempBreachStatus.FREEZE_RISK -> "⚠️ হিমায়িত ঝুঁকি (<2°C) Freeze Risk!"
-                                                    ColdChainHelper.TempBreachStatus.HEAT_BREACH -> "🚨 উষ্ণতা লঙ্ঘন (>8°C) Heat Breach!"
+                                                    ColdChainHelper.TempBreachStatus.NORMAL -> if (isBn) "স্বাভাবিক (Optimal 2°-8°C)" else "Normal (Optimal 2°-8°C)"
+                                                    ColdChainHelper.TempBreachStatus.FREEZE_RISK -> if (isBn) "⚠️ হিমায়িত ঝুঁকি (<2°C) Freeze Risk!" else "⚠️ Freeze Risk (<2°C)!"
+                                                    ColdChainHelper.TempBreachStatus.HEAT_BREACH -> if (isBn) "🚨 উষ্ণতা লঙ্ঘন (>8°C) Heat Breach!" else "🚨 Heat Breach (>8°C)!"
                                                 },
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
@@ -236,32 +252,94 @@ fun ColdChainManagementDialog(
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isAppBangla()) "তাপমাত্রা (°C)" else "Temp (°C)",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        OutlinedTextField(
+                                            value = tempInput,
+                                            onValueChange = { tempInput = it },
+                                            placeholder = { Text(if (isAppBangla()) "যেমন: 4.5" else "e.g. 4.5", fontSize = 13.sp) },
+                                            trailingIcon = { Text("°C", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp)) },
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                    }
+
+                                    Column(
+                                        modifier = Modifier.weight(1.3f),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isAppBangla()) "ফ্রিজ ইউনিট (Unit)" else "Fridge Unit",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        OutlinedTextField(
+                                            value = unitNameInput,
+                                            onValueChange = { unitNameInput = it },
+                                            placeholder = { Text("Main Fridge", fontSize = 13.sp) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    OutlinedTextField(
-                                        value = tempInput,
-                                        onValueChange = { tempInput = it },
-                                        label = { Text("ফ্রিজের তাপমাত্রা (°C)") },
-                                        placeholder = { Text("যেমন: 4.2") },
-                                        trailingIcon = { Text("°C", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 6.dp)) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true
-                                    )
-
-                                    OutlinedTextField(
-                                        value = unitNameInput,
-                                        onValueChange = { unitNameInput = it },
-                                        label = { Text("রেফ্রিজারেটর ইউনিট") },
-                                        modifier = Modifier.weight(1.3f),
-                                        singleLine = true
-                                    )
+                                    if (breachStatus != null) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = when (breachStatus) {
+                                                ColdChainHelper.TempBreachStatus.NORMAL -> Color(0xFF10B981).copy(alpha = 0.15f)
+                                                else -> Color(0xFFEF4444).copy(alpha = 0.15f)
+                                            },
+                                            border = BorderStroke(
+                                                1.dp,
+                                                when (breachStatus) {
+                                                    ColdChainHelper.TempBreachStatus.NORMAL -> Color(0xFF10B981)
+                                                    else -> Color(0xFFEF4444)
+                                                }
+                                            )
+                                        ) {
+                                            Text(
+                                                text = when (breachStatus) {
+                                                    ColdChainHelper.TempBreachStatus.NORMAL -> if (isAppBangla()) "স্বাভাবিক (2°-8°C)" else "Normal (2°-8°C)"
+                                                    ColdChainHelper.TempBreachStatus.FREEZE_RISK -> if (isAppBangla()) "⚠️ হিমায়িত ঝুঁকি (<2°C)" else "⚠️ Freeze Risk (<2°C)"
+                                                    ColdChainHelper.TempBreachStatus.HEAT_BREACH -> if (isAppBangla()) "🚨 উষ্ণতা লঙ্ঘন (>8°C)" else "🚨 Heat Breach (>8°C)"
+                                                },
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = when (breachStatus) {
+                                                    ColdChainHelper.TempBreachStatus.NORMAL -> Color(0xFF10B981)
+                                                    else -> Color(0xFFEF4444)
+                                                },
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                            )
+                                        }
+                                    } else {
+                                        Spacer(Modifier.width(1.dp))
+                                    }
 
                                     Button(
                                         onClick = {
                                             if (tempDbl == null) {
-                                                Toast.makeText(context, "সঠিক তাপমাত্রা প্রদান করুন", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, if (isAppBangla()) "সঠিক তাপমাত্রা প্রদান করুন" else "Please enter a valid temperature", Toast.LENGTH_SHORT).show()
                                                 return@Button
                                             }
                                             val isBreach = tempDbl < ColdChainHelper.MIN_SAFE_TEMP_C || tempDbl > ColdChainHelper.MAX_SAFE_TEMP_C
@@ -276,15 +354,16 @@ fun ColdChainManagementDialog(
                                             onSaveLog(log)
                                             tempInput = ""
                                             actionTakenInput = ""
-                                            Toast.makeText(context, "তাপমাত্রা লগ সংরক্ষিত হয়েছে", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, if (isAppBangla()) "তাপমাত্রা লগ সংরক্ষিত হয়েছে" else "Temperature log saved", Toast.LENGTH_SHORT).show()
                                         },
-                                        shape = RoundedCornerShape(12.dp),
+                                        shape = RoundedCornerShape(10.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
-                                        modifier = Modifier.height(56.dp)
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                                        modifier = Modifier.height(48.dp)
                                     ) {
                                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text("লগ করুন", fontWeight = FontWeight.Bold)
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(if (isAppBangla()) "লগ সংরক্ষণ করুন" else "Save Temp Log", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
 
@@ -292,8 +371,8 @@ fun ColdChainManagementDialog(
                                     OutlinedTextField(
                                         value = actionTakenInput,
                                         onValueChange = { actionTakenInput = it },
-                                        label = { Text("লঙ্ঘনে গৃহীত সংশোধনমূলক ব্যবস্থা (Action Taken)") },
-                                        placeholder = { Text("যেমন: থার্মোস্ট্যাট সমন্বয়, দরজার সিল পরীক্ষা, ব্যাকআপ জেনারেটর চালু...") },
+                                        label = { Text(if (isAppBangla()) "লঙ্ঘনে গৃহীত সংশোধনমূলক ব্যবস্থা (Action Taken)" else "Corrective Action Taken") },
+                                        placeholder = { Text(if (isAppBangla()) "যেমন: থার্মোস্ট্যাট সমন্বয়, দরজার সিল পরীক্ষা, ব্যাকআপ জেনারেটর চালু..." else "e.g. Adjusted thermostat, checked door seal...") },
                                         modifier = Modifier.fillMaxWidth(),
                                         singleLine = true
                                     )
@@ -301,29 +380,34 @@ fun ColdChainManagementDialog(
                             }
                         }
 
-                        // Recent Log List Header
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "সাম্প্রতিক তাপমাত্রা লগ হিস্ট্রি (DGDA Compliance Log)",
+                                text = if (isAppBangla()) "সাম্প্রতিক তাপমাত্রা লগ হিস্ট্রি" else "Recent Temperature Logs",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
 
-                            TextButton(
+                            FilledTonalButton(
                                 onClick = {
                                     val logText = generateComplianceAuditReport(tempLogs)
                                     clipboardManager.setText(AnnotatedString(logText))
-                                    Toast.makeText(context, "অডিট লগ কপি হয়েছে", Toast.LENGTH_SHORT).show()
-                                }
+                                    Toast.makeText(context, if (isAppBangla()) "অডিট লগ কপি হয়েছে" else "Audit report copied", Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.height(34.dp)
                             ) {
                                 Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("অডিট কপি", fontSize = 12.sp)
+                                Text(if (isAppBangla()) "অডিট কপি" else "Copy Audit", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                             }
                         }
 
@@ -335,7 +419,7 @@ fun ColdChainManagementDialog(
                                     .weight(1f),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("কোনো তাপমাত্রা লগ পাওয়া যায়নি", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(if (isAppBangla()) "কোনো তাপমাত্রা লগ পাওয়া যায়নি" else "No temperature logs recorded", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
                             LazyColumn(
@@ -411,7 +495,7 @@ fun ColdChainManagementDialog(
                                                     )
                                                     if (!log.breachActionTaken.isNullOrBlank()) {
                                                         Text(
-                                                            text = "পদক্ষেপ: ${log.breachActionTaken}",
+                                                            text = if (isAppBangla()) "পদক্ষেপ: ${log.breachActionTaken}" else "Action: ${log.breachActionTaken}",
                                                             fontSize = 11.sp,
                                                             color = Color(0xFFEF4444),
                                                             fontWeight = FontWeight.Medium
@@ -457,7 +541,7 @@ fun ColdChainManagementDialog(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("ইনসুলিন, ভ্যাকসিন বা বায়োলজিক্যাল ওষুধ খুঁজুন...") },
+                            placeholder = { Text(if (isAppBangla()) "ইনসুলিন, ভ্যাকসিন বা বায়োলজিক্যাল ওষুধ খুঁজুন..." else "Search insulin, vaccines, biologics...") },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
@@ -471,7 +555,7 @@ fun ColdChainManagementDialog(
                                     .weight(1f),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("কোনো কোল্ড-চেইন ওষুধ পাওয়া যায়নি", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(if (isAppBangla()) "কোনো কোল্ড-চেইন ওষুধ পাওয়া যায়নি" else "No cold-chain products found", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
                             LazyColumn(
@@ -524,7 +608,7 @@ fun ColdChainManagementDialog(
                                                 )
                                                 if (!prod.shelfLocation.isNullOrBlank()) {
                                                     Text(
-                                                        text = "অবস্থান / Shelf: ${prod.shelfLocation}",
+                                                        text = if (isAppBangla()) "অবস্থান / Shelf: ${prod.shelfLocation}" else "Shelf: ${prod.shelfLocation}",
                                                         fontSize = 11.sp,
                                                         color = Color(0xFF0D9488)
                                                     )
@@ -533,7 +617,7 @@ fun ColdChainManagementDialog(
 
                                             Column(horizontalAlignment = Alignment.End) {
                                                 Text(
-                                                    text = "স্টক: ${prod.stockQty.toInt()} ${prod.unit}",
+                                                    text = if (isAppBangla()) "স্টক: ${prod.stockQty.toInt()} ${prod.unit}" else "Stock: ${prod.stockQty.toInt()} ${prod.unit}",
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = if (prod.stockQty <= 5) Color(0xFFEF4444) else Color(0xFF10B981)
@@ -557,17 +641,18 @@ fun ColdChainManagementDialog(
 }
 
 private fun generateComplianceAuditReport(logs: List<RefrigeratorTempLog>): String {
+    val isBn = com.techyfiposmeds.utils.isAppBangla()
     val dateStr = SimpleDateFormat("dd-MMM-yyyy", Locale.getDefault()).format(Date())
     val sb = StringBuilder()
-    sb.append("❄️ DGDA PHARMACY COLD-CHAIN TEMPERATURE AUDIT LOG (২°-৮° সে.)\n")
-    sb.append("তারিখ: $dateStr | মোট রেকর্ড: ${logs.size}\n")
+    sb.append(if (isBn) "❄️ ডিজিডিএ ফার্মেসি কোল্ড-চেইন তাপমাত্রা অডিট লগ (২°-৮° সে.)\n" else "❄️ DGDA PHARMACY COLD-CHAIN TEMPERATURE AUDIT LOG (2°-8°C)\n")
+    sb.append(if (isBn) "তারিখ: $dateStr | মোট রেকর্ড: ${logs.size}\n" else "Date: $dateStr | Total Records: ${logs.size}\n")
     sb.append("--------------------------------------------------\n")
     logs.take(30).forEach { log ->
         val time = SimpleDateFormat("dd/MM hh:mm a", Locale.getDefault()).format(Date(log.loggedAt))
         val status = if (log.isBreach) "⚠️ BREACH" else "✅ NORMAL"
         sb.append("[$time] ${log.unitName}: ${log.temperatureC}°C ($status) By: ${log.recordedBy}\n")
         if (!log.breachActionTaken.isNullOrBlank()) {
-            sb.append("   -> গৃহীত ব্যবস্থা: ${log.breachActionTaken}\n")
+            sb.append(if (isBn) "   -> গৃহীত ব্যবস্থা: ${log.breachActionTaken}\n" else "   -> Action Taken: ${log.breachActionTaken}\n")
         }
     }
     sb.append("--------------------------------------------------\n")

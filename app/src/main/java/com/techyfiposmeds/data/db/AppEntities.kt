@@ -41,10 +41,34 @@ data class Product(
     val batchNumber: String? = null,
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis()
-)
+) {
+    val isStripApplicable: Boolean
+        @androidx.room.Ignore
+        get() = !isLiquidOrTopicalDosageForm(dosageForm) && (stripSize > 1 || stripPrice > 0.0)
+}
 
 val Product.hasValidExpiryDate: Boolean
     get() = expiryDate.isNullOrBlank() || com.techyfiposmeds.utils.parseExpiryDateToMillis(expiryDate) != null
+
+fun isLiquidOrTopicalDosageForm(dosageForm: String?): Boolean {
+    val form = dosageForm?.trim()?.lowercase() ?: ""
+    return form.contains("syrup") ||
+            form.contains("suspension") ||
+            form.contains("drop") ||
+            form.contains("solution") ||
+            form.contains("cream") ||
+            form.contains("ointment") ||
+            form.contains("gel") ||
+            form.contains("inhaler") ||
+            form.contains("spray") ||
+            form.contains("inject") ||
+            form.contains("infusion") ||
+            form.contains("lotion") ||
+            form.contains("sachet") ||
+            form.contains("powder") ||
+            form.contains("liquid")
+}
+
 
 @Entity(tableName = "expenses")
 data class Expense(

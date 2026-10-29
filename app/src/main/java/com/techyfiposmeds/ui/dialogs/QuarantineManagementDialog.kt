@@ -32,6 +32,7 @@ import com.techyfiposmeds.data.db.MedicineBatch
 import com.techyfiposmeds.data.db.Product
 import com.techyfiposmeds.data.db.Supplier
 import com.techyfiposmeds.utils.formatTaka
+import com.techyfiposmeds.utils.isAppBangla
 import com.techyfiposmeds.utils.parseExpiryDateToMillis
 import java.util.Locale
 
@@ -47,23 +48,24 @@ fun QuarantineManagementDialog(
     onReturnToSupplier: (batchId: Long, supplierId: Long, quantity: Double, refundPrice: Double, reason: String, note: String?) -> Unit,
     onDisposeBatch: (batchId: Long, quantity: Double, reason: String, notes: String?) -> Unit
 ) {
+    val isBn = isAppBangla()
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Expired, 1: Near Expiry, 2: Quarantined, 3: All Batches
     var nearExpiryDaysThreshold by remember { mutableIntStateOf(60) } // 30, 60, 90 days
     var searchQuery by remember { mutableStateOf("") }
 
     // Dialog action states
     var quarantineTarget by remember { mutableStateOf<MedicineBatch?>(null) }
-    var quarantineReason by remember { mutableStateOf("মেয়াদোত্তীর্ণ") }
+    var quarantineReason by remember { mutableStateOf(if (isBn) "মেয়াদোত্তীর্ণ" else "Expired") }
 
     var returnTarget by remember { mutableStateOf<MedicineBatch?>(null) }
     var returnSupplierId by remember { mutableStateOf(suppliers.firstOrNull()?.id ?: 0L) }
     var returnQuantityText by remember { mutableStateOf("") }
     var returnRefundPriceText by remember { mutableStateOf("") }
-    var returnReason by remember { mutableStateOf("মেয়াদোত্তীর্ণ পণ্য ফেরত") }
+    var returnReason by remember { mutableStateOf(if (isBn) "মেয়াদোত্তীর্ণ ওষুধ ফেরত" else "Expired Medicine Return") }
 
     var disposeTarget by remember { mutableStateOf<MedicineBatch?>(null) }
     var disposeQuantityText by remember { mutableStateOf("") }
-    var disposeReason by remember { mutableStateOf("DGDA নিয়ম অনুযায়ী আনুষ্ঠানিক ধ্বংসকরণ") }
+    var disposeReason by remember { mutableStateOf(if (isBn) "DGDA নিয়ম অনুযায়ী আনুষ্ঠানিক ধ্বংসকরণ" else "Official DGDA Compliant Disposal") }
     var disposeNotesText by remember { mutableStateOf("") }
 
     val now = System.currentTimeMillis()
@@ -133,13 +135,13 @@ fun QuarantineManagementDialog(
                         }
                         Column {
                             Text(
-                                text = "কোয়ারেন্টাইন ও মেয়াদোত্তীর্ণ ওষুধ ব্যবস্থাপনা",
+                                text = stringResource(R.string.quarantine_title),
                                 fontSize = 16.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "DGDA সুরক্ষা মানদণ্ড · কোম্পানি ফেরত ও বর্জ্য অপসারণ",
+                                text = stringResource(R.string.quarantine_desc),
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -156,7 +158,7 @@ fun QuarantineManagementDialog(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("ওষুধের নাম, বারকোড বা ব্যাচ নং দিয়ে খুঁজুন...", fontSize = 12.sp) },
+                    placeholder = { Text(if (isAppBangla()) "ওষুধের নাম, বারকোড বা ব্যাচ নং দিয়ে খুঁজুন..." else "Search by medicine name, barcode or batch...", fontSize = 12.sp) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
                     trailingIcon = {
                         if (searchQuery.isNotBlank()) {
@@ -172,6 +174,7 @@ fun QuarantineManagementDialog(
                 Spacer(Modifier.height(8.dp))
 
                 // Tab Selector
+                val isBn = isAppBangla()
                 TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Transparent,
@@ -182,7 +185,13 @@ fun QuarantineManagementDialog(
                         onClick = { selectedTab = 0 },
                         text = {
                             val count = batches.count { !it.isQuarantined && (parseExpiryDateToMillis(it.expiryDate) ?: Long.MAX_VALUE) < now }
-                            Text("🚫 মেয়াদোত্তীর্ণ ($count)", fontSize = 11.5.sp, fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal)
+                            Text(
+                                text = if (isBn) "🚫 মেয়াদোত্তীর্ণ ($count)" else "🚫 Expired ($count)",
+                                fontSize = 10.5.sp,
+                                maxLines = 1,
+                                softWrap = false,
+                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
+                            )
                         }
                     )
                     Tab(
@@ -190,7 +199,13 @@ fun QuarantineManagementDialog(
                         onClick = { selectedTab = 1 },
                         text = {
                             val count = batches.count { !it.isQuarantined && (parseExpiryDateToMillis(it.expiryDate) ?: Long.MAX_VALUE) in now..nearExpiryMillis }
-                            Text("⚠️ আসন্ন মেয়াদ ($count)", fontSize = 11.5.sp, fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal)
+                            Text(
+                                text = if (isBn) "⚠️ আসন্ন ($count)" else "⚠️ Near ($count)",
+                                fontSize = 10.5.sp,
+                                maxLines = 1,
+                                softWrap = false,
+                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                            )
                         }
                     )
                     Tab(
@@ -198,14 +213,26 @@ fun QuarantineManagementDialog(
                         onClick = { selectedTab = 2 },
                         text = {
                             val count = batches.count { it.isQuarantined }
-                            Text("🔒 কোয়ারেন্টাইন ($count)", fontSize = 11.5.sp, fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal)
+                            Text(
+                                text = if (isBn) "🔒 হোল্ড ($count)" else "🔒 Hold ($count)",
+                                fontSize = 10.5.sp,
+                                maxLines = 1,
+                                softWrap = false,
+                                fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal
+                            )
                         }
                     )
                     Tab(
                         selected = selectedTab == 3,
                         onClick = { selectedTab = 3 },
                         text = {
-                            Text("📦 সকল ব্যাচ (${batches.size})", fontSize = 11.5.sp, fontWeight = if (selectedTab == 3) FontWeight.Bold else FontWeight.Normal)
+                            Text(
+                                text = if (isBn) "📦 সকল (${batches.size})" else "📦 All (${batches.size})",
+                                fontSize = 10.5.sp,
+                                maxLines = 1,
+                                softWrap = false,
+                                fontWeight = if (selectedTab == 3) FontWeight.Bold else FontWeight.Normal
+                            )
                         }
                     )
                 }
@@ -217,8 +244,12 @@ fun QuarantineManagementDialog(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("মেয়াদ শেষ হতে বাকি:", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
-                        listOf(30 to "৩০ দিন", 60 to "৬০ দিন", 90 to "৯০ দিন").forEach { (days, label) ->
+                        Text(if (isBn) "মেয়াদ শেষ হতে বাকি:" else "Expires in:", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                        listOf(
+                            30 to if (isBn) "৩০ দিন" else "30 Days",
+                            60 to if (isBn) "৬০ দিন" else "60 Days",
+                            90 to if (isBn) "৯০ দিন" else "90 Days"
+                        ).forEach { (days, label) ->
                             FilterChip(
                                 selected = nearExpiryDaysThreshold == days,
                                 onClick = { nearExpiryDaysThreshold = days },
@@ -238,10 +269,10 @@ fun QuarantineManagementDialog(
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 text = when (selectedTab) {
-                                    0 -> "কোন মেয়াদোত্তীর্ণ ব্যাচ নেই!"
-                                    1 -> "আসন্ন $nearExpiryDaysThreshold দিনে কোন ব্যাচের মেয়াদ শেষ হচ্ছে না।"
-                                    2 -> "বর্তমানে কোয়ারেন্টাইনে কোন ওষুধ নেই।"
-                                    else -> "কোন ব্যাচ রেকর্ড পাওয়া যায়নি।"
+                                    0 -> if (isBn) "কোন মেয়াদোত্তীর্ণ ব্যাচ নেই!" else "No expired batches!"
+                                    1 -> if (isBn) "আসন্ন $nearExpiryDaysThreshold দিনে কোন ব্যাচের মেয়াদ শেষ হচ্ছে না।" else "No batches expiring in next $nearExpiryDaysThreshold days."
+                                    2 -> if (isBn) "বর্তমানে কোয়ারেন্টাইনে কোন ওষুধ নেই।" else "No medicines currently in quarantine."
+                                    else -> if (isBn) "কোন ব্যাচ রেকর্ড পাওয়া যায়নি।" else "No batch records found."
                                 },
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
@@ -314,9 +345,9 @@ fun QuarantineManagementDialog(
                                         ) {
                                             Text(
                                                 text = when {
-                                                    isQuarantined -> "কোয়ারেন্টাইন"
-                                                    isExpired -> "মেয়াদোত্তীর্ণ"
-                                                    else -> "সক্রিয়"
+                                                    isQuarantined -> if (isBn) "কোয়ারেন্টাইন" else "Quarantine"
+                                                    isExpired -> if (isBn) "মেয়াদোত্তীর্ণ" else "Expired"
+                                                    else -> if (isBn) "সক্রিয়" else "Active"
                                                 },
                                                 color = Color.White,
                                                 fontSize = 10.sp,
@@ -334,13 +365,14 @@ fun QuarantineManagementDialog(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "🏷️ ব্যাচ: ${batch.batchNumber} · ⏳ মেয়াদ: ${batch.expiryDate} ${if (isExpired) "(মেয়াদোত্তীর্ণ)" else "($daysLeft দিন বাকি)"}",
+                                            text = if (isBn) "🏷️ ব্যাচ: ${batch.batchNumber} · ⏳ মেয়াদ: ${batch.expiryDate} ${if (isExpired) "(মেয়াদোত্তীর্ণ)" else "($daysLeft দিন বাকি)"}"
+                                                   else "🏷️ Batch: ${batch.batchNumber} · ⏳ Exp: ${batch.expiryDate} ${if (isExpired) "(Expired)" else "($daysLeft days left)"}",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Medium,
                                             color = if (isExpired) Color(0xFFDC2626) else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Text(
-                                            text = "${if (batch.stockQty % 1.0 == 0.0) batch.stockQty.toLong().toString() else "%.1f".format(batch.stockQty)} পিস",
+                                            text = "${if (batch.stockQty % 1.0 == 0.0) batch.stockQty.toLong().toString() else "%.1f".format(batch.stockQty)} ${if (isBn) "পিস" else "pcs"}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = if (isQuarantined) Color(0xFFDC2626) else MaterialTheme.colorScheme.primary
@@ -350,7 +382,7 @@ fun QuarantineManagementDialog(
                                     if (isQuarantined && !batch.quarantineReason.isNullOrBlank()) {
                                         Spacer(Modifier.height(4.dp))
                                         Text(
-                                            text = "🚫 কারণ: ${batch.quarantineReason}",
+                                            text = if (isBn) "🚫 কারণ: ${batch.quarantineReason}" else "🚫 Reason: ${batch.quarantineReason}",
                                             fontSize = 11.sp,
                                             color = Color(0xFFDC2626),
                                             fontWeight = FontWeight.Bold
@@ -374,7 +406,7 @@ fun QuarantineManagementDialog(
                                                 ),
                                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
                                             ) {
-                                                Text("🔒 কোয়ারেন্টাইন করুন", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                Text(if (isBn) "🔒 কোয়ারেন্টাইন করুন" else "🔒 Quarantine", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                             }
                                         } else {
                                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -386,7 +418,7 @@ fun QuarantineManagementDialog(
                                                     },
                                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                                                 ) {
-                                                    Text("🚚 কোম্পানি ফেরত", fontSize = 11.sp)
+                                                    Text(if (isBn) "🚚 কোম্পানি ফেরত" else "🚚 Return", fontSize = 11.sp)
                                                 }
                                                 OutlinedButton(
                                                     onClick = {
@@ -396,13 +428,13 @@ fun QuarantineManagementDialog(
                                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
                                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                                                 ) {
-                                                    Text("🗑️ ধ্বংসকরণ", fontSize = 11.sp)
+                                                    Text(if (isBn) "🗑️ ধ্বংসকরণ" else "🗑️ Dispose", fontSize = 11.sp)
                                                 }
                                                 FilledTonalButton(
                                                     onClick = { onReleaseBatch(batch.id) },
                                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                                                 ) {
-                                                    Text("মুক্ত করুন", fontSize = 11.sp)
+                                                    Text(if (isBn) "মুক্ত করুন" else "Release", fontSize = 11.sp)
                                                 }
                                             }
                                         }
@@ -420,16 +452,19 @@ fun QuarantineManagementDialog(
     quarantineTarget?.let { batch ->
         AlertDialog(
             onDismissRequest = { quarantineTarget = null },
-            title = { Text("স্টক কোয়ারেন্টাইন নিশ্চিতকরণ", fontWeight = FontWeight.Bold) },
+            title = { Text(if (isBn) "স্টক কোয়ারেন্টাইন নিশ্চিতকরণ" else "Confirm Stock Quarantine", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val prod = productMap[batch.productBarcode]
                     Text(
-                        "${prod?.name ?: batch.productBarcode} · ব্যাচ ${batch.batchNumber} (${batch.stockQty} পিস) কোয়ারেন্টাইন করা হলে এটি কাউন্টারে বিক্রি হওয়া থেকে সম্পূর্ণ লক হয়ে যাবে।",
+                        if (isBn) "${prod?.name ?: batch.productBarcode} · ব্যাচ ${batch.batchNumber} (${batch.stockQty} পিস) কোয়ারেন্টাইন করা হলে এটি কাউন্টারে বিক্রি হওয়া থেকে সম্পূর্ণ লক হয়ে যাবে।"
+                        else "Quarantining ${prod?.name ?: batch.productBarcode} · Batch ${batch.batchNumber} (${batch.stockQty} pcs) will prevent it from being sold at the counter.",
                         fontSize = 12.5.sp
                     )
-                    Text("কোয়ারেন্টাইনের কারণ:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    listOf("মেয়াদোত্তীর্ণ", "DGDA প্রত্যাহারের নির্দেশ", "ক্ষতিগ্রস্ত বা ভাঙা ওষুধ", "কোম্পানি ক্রেডিট ফেরত পেন্ডিং").forEach { reason ->
+                    Text(if (isBn) "কোয়ারেন্টাইনের কারণ:" else "Quarantine Reason:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    val reasons = if (isBn) listOf("মেয়াদোত্তীর্ণ", "DGDA প্রত্যাহারের নির্দেশ", "ক্ষতিগ্রস্ত বা ভাঙা ওষুধ", "কোম্পানি ক্রেডিট ফেরত পেন্ডিং")
+                    else listOf("Expired", "DGDA Recall Order", "Damaged / Broken Medicine", "Pending Supplier Return")
+                    reasons.forEach { reason ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
                                 selected = quarantineReason == reason,
@@ -449,7 +484,7 @@ fun QuarantineManagementDialog(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
                 ) {
-                    Text("কোয়ারেন্টাইন করুন", fontWeight = FontWeight.Bold)
+                    Text(if (isBn) "কোয়ারেন্টাইন করুন" else "Quarantine Now", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -468,22 +503,22 @@ fun QuarantineManagementDialog(
 
         AlertDialog(
             onDismissRequest = { returnTarget = null },
-            title = { Text("কোম্পানি / সরবরাহকারীকে স্টক ফেরত", fontWeight = FontWeight.Bold) },
+            title = { Text(if (isBn) "কোম্পানি / সরবরাহকারীকে স্টক ফেরত" else "Return Stock to Supplier", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text("${prod?.name ?: batch.productBarcode} · ব্যাচ: ${batch.batchNumber}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(if (isBn) "${prod?.name ?: batch.productBarcode} · ব্যাচ: ${batch.batchNumber}" else "${prod?.name ?: batch.productBarcode} · Batch: ${batch.batchNumber}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
 
-                    Text("সরবরাহকারী নির্বাচন করুন:", fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                    Text(if (isBn) "সরবরাহকারী নির্বাচন করুন:" else "Select Supplier:", fontWeight = FontWeight.Medium, fontSize = 12.sp)
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(
                             onClick = { supplierMenuExpanded = true },
                             enabled = suppliers.isNotEmpty(),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(selectedSupplier?.let { "${it.companyName} (${it.name})" } ?: "সরবরাহকারী নির্বাচন করুন")
+                            Text(selectedSupplier?.let { "${it.companyName} (${it.name})" } ?: if (isBn) "সরবরাহকারী নির্বাচন করুন" else "Select Supplier")
                         }
                         DropdownMenu(
                             expanded = supplierMenuExpanded,
@@ -505,7 +540,7 @@ fun QuarantineManagementDialog(
                         OutlinedTextField(
                             value = returnQuantityText,
                             onValueChange = { returnQuantityText = it },
-                            label = { Text("ফেরতের পরিমাণ (পিস)") },
+                            label = { Text(if (isBn) "ফেরতের পরিমাণ (পিস)" else "Return Qty (pcs)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             singleLine = true,
                             modifier = Modifier.weight(1f)
@@ -513,7 +548,7 @@ fun QuarantineManagementDialog(
                         OutlinedTextField(
                             value = returnRefundPriceText,
                             onValueChange = { returnRefundPriceText = it },
-                            label = { Text("টিপি / রিফান্ড রেট (৳)") },
+                            label = { Text(if (isBn) "টিপি / রিফান্ড রেট (৳)" else "TP / Refund Rate (৳)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             singleLine = true,
                             modifier = Modifier.weight(1f)
@@ -527,7 +562,7 @@ fun QuarantineManagementDialog(
                     if (totalCredit > 0.0) {
                         Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFDCFCE7), modifier = Modifier.fillMaxWidth()) {
                             Text(
-                                "সরবরাহকারী বকেয়া থেকে কর্তন হবে: ৳${formatTaka(totalCredit)}",
+                                if (isBn) "সরবরাহকারী বকেয়া থেকে কর্তন হবে: ${formatTaka(totalCredit)}" else "Deducted from supplier payable: ${formatTaka(totalCredit)}",
                                 color = Color(0xFF15803D),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
@@ -539,7 +574,7 @@ fun QuarantineManagementDialog(
                     OutlinedTextField(
                         value = returnReason,
                         onValueChange = { returnReason = it },
-                        label = { Text("ফেরতের কারণ / চালান রেফারেন্স") },
+                        label = { Text(if (isBn) "ফেরতের কারণ / চালান রেফারেন্স" else "Return Reason / Invoice Ref") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -557,7 +592,7 @@ fun QuarantineManagementDialog(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
                 ) {
-                    Text("ফেরত নিশ্চিত করুন", fontWeight = FontWeight.Bold)
+                    Text(if (isBn) "ফেরত নিশ্চিত করুন" else "Confirm Return", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -574,19 +609,19 @@ fun QuarantineManagementDialog(
 
         AlertDialog(
             onDismissRequest = { disposeTarget = null },
-            title = { Text("DGDA বর্জ্য অপসারণ / ধ্বংসকরণ রেকর্ড", fontWeight = FontWeight.Bold) },
+            title = { Text(if (isBn) "DGDA বর্জ্য অপসারণ / ধ্বংসকরণ রেকর্ড" else "DGDA Waste Disposal Record", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text("${prod?.name ?: batch.productBarcode} · ব্যাচ: ${batch.batchNumber}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text("DGDA পরিদর্শন মানদণ্ড অনুযায়ী মেয়াদোত্তীর্ণ বা নষ্ট ওষুধের আনুষ্ঠানিক ধ্বংসকরণ লগ সংরক্ষণ করা হবে।", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.outline)
+                    Text(if (isBn) "${prod?.name ?: batch.productBarcode} · ব্যাচ: ${batch.batchNumber}" else "${prod?.name ?: batch.productBarcode} · Batch: ${batch.batchNumber}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(if (isBn) "DGDA পরিদর্শন মানদণ্ড অনুযায়ী মেয়াদোত্তীর্ণ বা নষ্ট ওষুধের আনুষ্ঠানিক ধ্বংসকরণ লগ সংরক্ষণ করা হবে।" else "Official disposal log compliant with DGDA inspection standards will be recorded.", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.outline)
 
                     OutlinedTextField(
                         value = disposeQuantityText,
                         onValueChange = { disposeQuantityText = it },
-                        label = { Text("ধ্বংসের পরিমাণ (পিস)") },
+                        label = { Text(if (isBn) "ধ্বংসের পরিমাণ (পিস)" else "Disposal Qty (pcs)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -595,7 +630,7 @@ fun QuarantineManagementDialog(
                     OutlinedTextField(
                         value = disposeReason,
                         onValueChange = { disposeReason = it },
-                        label = { Text("ধ্বংসকরণের কারণ") },
+                        label = { Text(if (isBn) "ধ্বংসকরণের কারণ" else "Disposal Reason") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -603,7 +638,7 @@ fun QuarantineManagementDialog(
                     OutlinedTextField(
                         value = disposeNotesText,
                         onValueChange = { disposeNotesText = it },
-                        label = { Text("উপস্থিত ফার্মাসিস্ট ও সাক্ষীর নাম / নোট") },
+                        label = { Text(if (isBn) "উপস্থিত ফার্মাসিস্ট ও সাক্ষীর নাম / নোট" else "Witness Pharmacist / Notes") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -620,7 +655,7 @@ fun QuarantineManagementDialog(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
                 ) {
-                    Text("ধ্বংসকরণ রেকর্ড করুন", fontWeight = FontWeight.Bold)
+                    Text(if (isBn) "ধ্বংসকরণ রেকর্ড করুন" else "Record Disposal", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {

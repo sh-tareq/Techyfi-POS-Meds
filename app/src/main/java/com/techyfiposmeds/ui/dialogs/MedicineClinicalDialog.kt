@@ -1,5 +1,7 @@
 package com.techyfiposmeds.ui.dialogs
 
+import com.techyfiposmeds.utils.isAppBangla
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -33,6 +35,7 @@ fun MedicineClinicalDialog(
     clinicalInfo: ClinicalGeneric?,
     onDismiss: () -> Unit
 ) {
+    val isBn = isAppBangla()
     val context = androidx.compose.ui.platform.LocalContext.current
     Dialog(
         onDismissRequest = onDismiss,
@@ -115,31 +118,31 @@ fun MedicineClinicalDialog(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     ClinicalSectionCard(
-                        title = "🩺 Medical Indications (নির্দেশনা)",
+                        title = if (isBn) "🩺 নির্দেশনা (Medical Indications)" else "🩺 Medical Indications",
                         content = clinicalInfo?.indication ?: "Indicated for fever, headache, body aches, neuralgia, arthralgia, and common cold symptoms.",
                         accentColor = Color(0xFF0284C7)
                     )
 
                     ClinicalSectionCard(
-                        title = "💊 Dosage & Administration (সেবন মাত্রা)",
+                        title = if (isBn) "💊 সেবন মাত্রা (Dosage & Administration)" else "💊 Dosage & Administration",
                         content = "Adult Dose:\n${clinicalInfo?.adultDose ?: "500mg-1000mg every 4-6 hours (Maximum 4000mg/day)"}\n\nChild Dose:\n${clinicalInfo?.childDose ?: "10-15 mg/kg body weight every 4-6 hours"}",
                         accentColor = Color(0xFF10B981)
                     )
 
                     ClinicalSectionCard(
-                        title = "⛔ Contraindications (প্রতিনির্দেশনা)",
+                        title = if (isBn) "⛔ প্রতিনির্দেশনা (Contraindications)" else "⛔ Contraindications",
                         content = clinicalInfo?.contraIndication ?: "Severe hepatic or renal impairment, hypersensitivity to active compound.",
                         accentColor = Color(0xFFEF4444)
                     )
 
                     ClinicalSectionCard(
-                        title = "⚠️ Adverse Effects (পার্শ্বপ্রতিক্রিয়া)",
+                        title = if (isBn) "⚠️ পার্শ্বপ্রতিক্রিয়া (Adverse Effects)" else "⚠️ Adverse Effects",
                         content = clinicalInfo?.sideEffect ?: "Skin rash, epigastric distress, transient leukopenia. Generally very well tolerated at therapeutic doses.",
                         accentColor = Color(0xFFF59E0B)
                     )
 
                     ClinicalSectionCard(
-                        title = "🤰 Pregnancy & Precaution (গর্ভাবস্থায় ও সতর্কতা)",
+                        title = if (isBn) "🤰 গর্ভাবস্থায় ও সতর্কতা (Pregnancy & Precaution)" else "🤰 Pregnancy & Precaution",
                         content = clinicalInfo?.precaution ?: "Pregnancy Category B. Safe in recommended therapeutic doses. Avoid prolonged high-dose administration.",
                         accentColor = Color(0xFF8B5CF6)
                     )
@@ -150,27 +153,44 @@ fun MedicineClinicalDialog(
                 Button(
                     onClick = {
                         val counselingText = buildString {
-                            appendLine("📋 রোগীর সেবন নির্দেশিকা (PATIENT COUNSELING NOTE)")
-                            appendLine("ওষুধ: ${medicine.brandName} (${medicine.dosageForm ?: ""})")
-                            appendLine("জেনেরিক: ${medicine.genericName ?: ""}")
-                            appendLine("----------------------------------------")
-                            appendLine("🩺 নির্দেশনা: ${clinicalInfo?.indication ?: "চিকিৎসকের পরামর্শ অনুযায়ী সেব্য"}")
-                            appendLine("💊 সেবন মাত্রা: ${clinicalInfo?.adultDose ?: "১টি করে দিনে ২ বার খাওয়ার পর"}")
-                            if (!clinicalInfo?.administration.isNullOrBlank()) {
-                                appendLine("🍽️ নিয়ম: ${clinicalInfo?.administration}")
+                            if (isBn) {
+                                appendLine("📋 রোগীর সেবন নির্দেশিকা (PATIENT COUNSELING NOTE)")
+                                appendLine("ওষুধ: ${medicine.brandName} (${medicine.dosageForm ?: ""})")
+                                appendLine("জেনেরিক: ${medicine.genericName ?: ""}")
+                                appendLine("----------------------------------------")
+                                appendLine("🩺 নির্দেশনা: ${clinicalInfo?.indication ?: "চিকিৎসকের পরামর্শ অনুযায়ী সেব্য"}")
+                                appendLine("💊 সেবন মাত্রা: ${clinicalInfo?.adultDose ?: "১টি করে দিনে ২ বার খাওয়ার পর"}")
+                                if (!clinicalInfo?.administration.isNullOrBlank()) {
+                                    appendLine("🍽️ নিয়ম: ${clinicalInfo?.administration}")
+                                }
+                                if (!clinicalInfo?.precaution.isNullOrBlank()) {
+                                    appendLine("⚠️ সতর্কতা: ${clinicalInfo?.precaution}")
+                                }
+                                appendLine("----------------------------------------")
+                                appendLine("সুস্থ থাকুন - ফার্মেসি পেশাদার সেবা")
+                            } else {
+                                appendLine("📋 PATIENT COUNSELING NOTE")
+                                appendLine("Medicine: ${medicine.brandName} (${medicine.dosageForm ?: ""})")
+                                appendLine("Generic: ${medicine.genericName ?: ""}")
+                                appendLine("----------------------------------------")
+                                appendLine("🩺 Indication: ${clinicalInfo?.indication ?: "Use as directed by physician"}")
+                                appendLine("💊 Dosage: ${clinicalInfo?.adultDose ?: "1 unit 2 times daily after meal"}")
+                                if (!clinicalInfo?.administration.isNullOrBlank()) {
+                                    appendLine("🍽️ Directions: ${clinicalInfo?.administration}")
+                                }
+                                if (!clinicalInfo?.precaution.isNullOrBlank()) {
+                                    appendLine("⚠️ Precaution: ${clinicalInfo?.precaution}")
+                                }
+                                appendLine("----------------------------------------")
+                                appendLine("Stay Well - Professional Pharmacy Care")
                             }
-                            if (!clinicalInfo?.precaution.isNullOrBlank()) {
-                                appendLine("⚠️ সতর্কতা: ${clinicalInfo?.precaution}")
-                            }
-                            appendLine("----------------------------------------")
-                            appendLine("সুস্থ থাকুন - ফার্মেসি পেশাদার সেবা")
                         }
                         val sendIntent = android.content.Intent().apply {
                             action = android.content.Intent.ACTION_SEND
                             putExtra(android.content.Intent.EXTRA_TEXT, counselingText)
                             type = "text/plain"
                         }
-                        context.startActivity(android.content.Intent.createChooser(sendIntent, "রোগীর সেবন নির্দেশিকা শেয়ার করুন"))
+                        context.startActivity(android.content.Intent.createChooser(sendIntent, if (isBn) "রোগীর সেবন নির্দেশিকা শেয়ার করুন" else "Share Patient Counseling Note"))
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -181,7 +201,7 @@ fun MedicineClinicalDialog(
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("রোগীর সেবন নির্দেশিকা শেয়ার করুন (Counseling Note)", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                    Text(if (isBn) "রোগীর সেবন নির্দেশিকা শেয়ার করুন" else "Share Patient Counseling Note", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

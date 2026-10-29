@@ -2246,7 +2246,7 @@ fun saveProductCodeLabelToPictures(
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-                put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/Techyfi POS/Labels")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/Techyfi Pharma/Labels")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
             }
             val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
@@ -2260,7 +2260,7 @@ fun saveProductCodeLabelToPictures(
             uri
         } else {
             val pictures = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-            val directory = File(pictures, "Techyfi POS/Labels").apply { mkdirs() }
+            val directory = File(pictures, "Techyfi Pharma/Labels").apply { mkdirs() }
             val file = File(directory, fileName)
             FileOutputStream(file).use { output -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, output) }
             Uri.fromFile(file)

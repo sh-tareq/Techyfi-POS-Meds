@@ -66,7 +66,7 @@ import java.io.File
 @Composable
 fun StoreCreditVoucherSlipDialog(
     voucher: StoreCreditVoucher,
-    shopName: String = "Techyfi POS",
+    shopName: String = "Techyfi Pharma",
     shopPhone: String = "",
     shopAddress: String = "",
     invoiceSettingsData: InvoiceSettingsData = InvoiceSettingsData(),

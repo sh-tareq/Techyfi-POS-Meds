@@ -113,17 +113,26 @@ fun ManageCategoriesDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 24.dp,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            modifier = Modifier
-                .fillMaxWidth(0.94f)
-                .fillMaxHeight(0.88f)
-                .padding(vertical = 14.dp)
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+        val isBn = com.techyfiposmeds.utils.isAppBangla()
+        com.techyfiposmeds.LocaleWrapper(language = if (isBn) "bn" else "en") {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp, vertical = 14.dp)
+                    .imePadding(),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 24.dp,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 640.dp)
+                        .fillMaxHeight()
+                ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
                 // Gradient Header
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -451,6 +460,8 @@ fun ManageCategoriesDialog(
             }
         }
     }
+}
+}
 
     if (categoryToDelete != null) {
         val targetCat = categoryToDelete!!

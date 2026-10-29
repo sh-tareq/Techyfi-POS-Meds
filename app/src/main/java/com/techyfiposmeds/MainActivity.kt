@@ -61,12 +61,15 @@ class MainActivity : ComponentActivity() {
       val settingsDataStore = remember { SettingsDataStore(applicationContext) }
       val themeMode by settingsDataStore.themeModeFlow.collectAsState(initial = "SYSTEM")
       val appLanguage by settingsDataStore.languageFlow.collectAsState(initial = "en")
+      androidx.compose.runtime.LaunchedEffect(appLanguage) {
+        com.techyfiposmeds.utils.setAppLanguage(appLanguage)
+      }
       val isDark = when (themeMode) {
         "LIGHT" -> false
         "DARK" -> true
         else -> isSystemInDarkTheme()
       }
-      androidx.compose.runtime.CompositionLocalProvider(com.techyfiposmeds.utils.LocalAppLanguage provides appLanguage) {
+      LocaleWrapper(language = appLanguage) {
         TechyfiPOSTheme(darkTheme = isDark) {
           androidx.compose.runtime.DisposableEffect(isDark) {
             enableEdgeToEdge(

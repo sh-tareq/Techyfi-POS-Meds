@@ -32,6 +32,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.techyfiposmeds.R
 import com.techyfiposmeds.data.db.Product
+import com.techyfiposmeds.utils.isAppBangla
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -54,6 +55,7 @@ fun PharmaStockInwardDialog(
     ) -> Unit
 ) {
     val context = LocalContext.current
+    val isBn = isAppBangla()
     var selectedProduct by remember { mutableStateOf(preselectedProduct) }
     var searchQuery by remember { mutableStateOf("") }
     var isSelectingProduct by remember { mutableStateOf(preselectedProduct == null) }
@@ -157,7 +159,7 @@ fun PharmaStockInwardDialog(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "কোম্পানি চালান ইনওয়ার্ড ও ফ্রি বোনাস পাতা হিসাব",
+                                text = if (isBn) "কোম্পানি চালান ইনওয়ার্ড ও ফ্রি বোনাস পাতা হিসাব" else "Supplier Challan Inward & Bonus Scheme",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF0F766E),
                                 fontWeight = FontWeight.Bold
@@ -189,7 +191,7 @@ fun PharmaStockInwardDialog(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("ওষুধের নাম বা জেনেরিক খুঁজুন...", fontSize = 12.sp) },
+                        placeholder = { Text(if (isBn) "ওষুধের নাম বা জেনেরিক খুঁজুন..." else "Search medicine or generic...", fontSize = 12.sp) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true
@@ -226,7 +228,7 @@ fun PharmaStockInwardDialog(
                                             Text(prod.genericName ?: "", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
                                         }
                                     }
-                                    Text("মজুদ: ${prod.stockQty.toInt()}", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                    Text(if (isBn) "মজুদ: ${prod.stockQty.toInt()}" else "Stock: ${prod.stockQty.toInt()}", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
@@ -254,7 +256,8 @@ fun PharmaStockInwardDialog(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "জেনেরিক: ${selectedProduct!!.genericName ?: "N/A"} • বর্তমান মজুদ: ${selectedProduct!!.stockQty.toInt()} pcs",
+                                    text = if (isBn) "জেনেরিক: ${selectedProduct!!.genericName ?: "N/A"} • বর্তমান মজুদ: ${selectedProduct!!.stockQty.toInt()} pcs"
+                                           else "Generic: ${selectedProduct!!.genericName ?: "N/A"} • Current Stock: ${selectedProduct!!.stockQty.toInt()} pcs",
                                     fontSize = 11.5.sp,
                                     color = Color(0xFF0F766E)
                                 )
@@ -263,7 +266,7 @@ fun PharmaStockInwardDialog(
                                 onClick = { isSelectingProduct = true },
                                 modifier = Modifier.minimumInteractiveComponentSize()
                             ) {
-                                Text("পরিবর্তন", fontSize = 11.5.sp)
+                                Text(if (isBn) "পরিবর্তন" else "Change", fontSize = 11.5.sp)
                             }
                         }
                     }
@@ -284,8 +287,8 @@ fun PharmaStockInwardDialog(
                             OutlinedTextField(
                                 value = supplierName,
                                 onValueChange = { supplierName = it },
-                                label = { Text("কোম্পানি / সরবরাহকারী", fontSize = 11.sp) },
-                                placeholder = { Text("যেমন: Square, Incepta", fontSize = 11.sp) },
+                                label = { Text(if (isBn) "কোম্পানি / সরবরাহকারী" else "Supplier / Company", fontSize = 11.sp) },
+                                placeholder = { Text(if (isBn) "যেমন: Square, Incepta" else "e.g. Square, Incepta", fontSize = 11.sp) },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
                                 shape = RoundedCornerShape(10.dp)
@@ -293,7 +296,7 @@ fun PharmaStockInwardDialog(
                             OutlinedTextField(
                                 value = invoiceNo,
                                 onValueChange = { invoiceNo = it },
-                                label = { Text("চালান / ইনভয়েস নং", fontSize = 11.sp) },
+                                label = { Text(if (isBn) "চালান / ইনভয়েস নং" else "Invoice / Challan No", fontSize = 11.sp) },
                                 placeholder = { Text("INV-2026-01", fontSize = 11.sp) },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
@@ -308,7 +311,7 @@ fun PharmaStockInwardDialog(
                             OutlinedTextField(
                                 value = batchNumber,
                                 onValueChange = { batchNumber = it },
-                                label = { Text("ব্যাচ নম্বর (Batch No)", fontSize = 11.sp) },
+                                label = { Text(if (isBn) "ব্যাচ নম্বর (Batch No)" else "Batch Number", fontSize = 11.sp) },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
                                 shape = RoundedCornerShape(10.dp)
@@ -316,7 +319,7 @@ fun PharmaStockInwardDialog(
                             OutlinedTextField(
                                 value = expiryDate,
                                 onValueChange = { expiryDate = it },
-                                label = { Text("মেয়াদ (YYYY-MM-DD)", fontSize = 11.sp) },
+                                label = { Text(if (isBn) "মেয়াদ (YYYY-MM-DD)" else "Expiry (YYYY-MM-DD)", fontSize = 11.sp) },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
                                 shape = RoundedCornerShape(10.dp)
@@ -334,7 +337,7 @@ fun PharmaStockInwardDialog(
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Text(
-                                    text = "🎁 বোনাস পাতা স্কিম ও পরিমাণ (Bonus Strips / Pcs):",
+                                    text = if (isBn) "🎁 বোনাস পাতা স্কিম ও পরিমাণ (Bonus Strips / Pcs):" else "🎁 Bonus Strips / Free Scheme:",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -347,7 +350,7 @@ fun PharmaStockInwardDialog(
                                     OutlinedTextField(
                                         value = paidQtyStr,
                                         onValueChange = { paidQtyStr = it },
-                                        label = { Text("কেনা পরিমাণ (Paid)", fontSize = 11.sp) },
+                                        label = { Text(if (isBn) "কেনা পরিমাণ (Paid)" else "Paid Quantity", fontSize = 11.sp) },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
@@ -357,7 +360,7 @@ fun PharmaStockInwardDialog(
                                     OutlinedTextField(
                                         value = bonusQtyStr,
                                         onValueChange = { bonusQtyStr = it },
-                                        label = { Text("ফ্রি বোনাস (Free)", fontSize = 11.sp) },
+                                        label = { Text(if (isBn) "ফ্রি বোনাস (Free)" else "Free / Bonus Qty", fontSize = 11.sp) },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
@@ -375,7 +378,7 @@ fun PharmaStockInwardDialog(
                             OutlinedTextField(
                                 value = tpStr,
                                 onValueChange = { tpStr = it },
-                                label = { Text("ট্রেড প্রাইস (TP / কেনা)", fontSize = 11.sp) },
+                                label = { Text(if (isBn) "ট্রেড প্রাইস (TP / কেনা)" else "Trade Price (TP)", fontSize = 11.sp) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
@@ -385,7 +388,7 @@ fun PharmaStockInwardDialog(
                             OutlinedTextField(
                                 value = mrpStr,
                                 onValueChange = { mrpStr = it },
-                                label = { Text("খুচরা মূল্য (MRP)", fontSize = 11.sp) },
+                                label = { Text(if (isBn) "খুচরা মূল্য (MRP)" else "Retail Price (MRP)", fontSize = 11.sp) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
@@ -408,15 +411,17 @@ fun PharmaStockInwardDialog(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("সর্বমোট প্রাপ্ত পরিমাণ:", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.outline)
-                                    Text("${totalReceivedQty.toInt()} pcs (${paidQty.toInt()} পেইড + ${bonusQty.toInt()} ফ্রি)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text(if (isBn) "সর্বমোট প্রাপ্ত পরিমাণ:" else "Total Received Quantity:", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.outline)
+                                    Text(if (isBn) "${totalReceivedQty.toInt()} pcs (${paidQty.toInt()} পেইড + ${bonusQty.toInt()} ফ্রি)"
+                                         else "${totalReceivedQty.toInt()} pcs (${paidQty.toInt()} Paid + ${bonusQty.toInt()} Free)",
+                                         fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("কোম্পানিকে প্রদেয় মূল্য:", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.outline)
+                                    Text(if (isBn) "কোম্পানিকে প্রদেয় মূল্য:" else "Payable to Supplier:", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.outline)
                                     Text("৳ ${String.format(Locale.US, "%,.2f", totalInvoiceCost)}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
 
@@ -428,8 +433,8 @@ fun PharmaStockInwardDialog(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        Text("প্রকৃত কার্যকর কেনা মূল্য (Effective Cost):", fontSize = 11.sp, color = Color(0xFF0F766E), fontWeight = FontWeight.Bold)
-                                        Text("বোনাসে সাশ্রয়: ৳${String.format(Locale.US, "%.2f", unitSavings)} / pc", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline)
+                                        Text(if (isBn) "প্রকৃত কার্যকর কেনা মূল্য (Effective Cost):" else "Effective Cost Price:", fontSize = 11.sp, color = Color(0xFF0F766E), fontWeight = FontWeight.Bold)
+                                        Text(if (isBn) "বোনাসে সাশ্রয়: ৳${String.format(Locale.US, "%.2f", unitSavings)} / pc" else "Bonus Savings: ৳${String.format(Locale.US, "%.2f", unitSavings)} / pc", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline)
                                     }
                                     Text("৳ ${String.format(Locale.US, "%.2f", effectiveCost)}", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = Color(0xFF0F766E))
                                 }
@@ -438,7 +443,7 @@ fun PharmaStockInwardDialog(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("প্রত্যাশিত নিট মার্জিন:", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.outline)
+                                    Text(if (isBn) "প্রত্যাশিত নিট মার্জিন:" else "Expected Net Margin:", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.outline)
                                     Text("${String.format(Locale.US, "%.1f", marginPercent)}%", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, color = Color(0xFF047857))
                                 }
                             }
@@ -451,11 +456,11 @@ fun PharmaStockInwardDialog(
                     Button(
                         onClick = {
                             if (totalReceivedQty <= 0) {
-                                Toast.makeText(context, "পরিমাণ লিখুন", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, if (isBn) "পরিমাণ লিখুন" else "Enter quantity", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
                             if (batchNumber.isBlank()) {
-                                Toast.makeText(context, "ব্যাচ নম্বর লিখুন", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, if (isBn) "ব্যাচ নম্বর লিখুন" else "Enter batch number", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
                             onConfirmInward(
@@ -469,7 +474,7 @@ fun PharmaStockInwardDialog(
                                 supplierName.trim(),
                                 invoiceNo.trim()
                             )
-                            Toast.makeText(context, "স্টক সফলভাবে ইনওয়ার্ড করা হয়েছে", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, if (isBn) "স্টক সফলভাবে ইনওয়ার্ড করা হয়েছে" else "Stock successfully inwarded", Toast.LENGTH_SHORT).show()
                             onDismiss()
                         },
                         modifier = Modifier
@@ -479,7 +484,7 @@ fun PharmaStockInwardDialog(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E))
                     ) {
-                        Text("ইনওয়ার্ড সম্পন্ন করুন (${totalReceivedQty.toInt()} pcs)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(if (isBn) "ইনওয়ার্ড সম্পন্ন করুন (${totalReceivedQty.toInt()} pcs)" else "Complete Inward (${totalReceivedQty.toInt()} pcs)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }

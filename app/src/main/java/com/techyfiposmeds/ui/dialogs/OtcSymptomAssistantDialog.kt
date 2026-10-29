@@ -22,14 +22,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.res.stringResource
+import com.techyfiposmeds.R
 import com.techyfiposmeds.data.clinical.OtcCategory
 import com.techyfiposmeds.data.clinical.OtcRecommendation
 import com.techyfiposmeds.data.clinical.OtcTriageEngine
 import com.techyfiposmeds.data.db.Product
+import com.techyfiposmeds.utils.isAppBangla
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +75,7 @@ fun OtcSymptomAssistantDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -88,23 +93,35 @@ fun OtcSymptomAssistantDialog(
                                 modifier = Modifier.size(24.dp)
                             )
                         }
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "জরুরি প্রাথমিক চিকিৎসা ও ওটিসি সহকারী",
-                                fontSize = 17.sp,
+                                text = stringResource(R.string.otc_assistant_hub_title),
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                lineHeight = 19.sp
                             )
                             Text(
-                                text = "উপসর্গভিত্তিক ক্লিনিক্যাল সমাধান, রেড ফ্ল্যাগ ও ১-ট্যাপ কার্ট",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = stringResource(R.string.otc_assistant_hub_subtitle),
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
 
@@ -123,7 +140,7 @@ fun OtcSymptomAssistantDialog(
                             onClick = { selectedCategoryId = cat.id },
                             label = {
                                 Text(
-                                    cat.titleBn,
+                                    if (isAppBangla()) cat.titleBn else cat.titleEn,
                                     fontSize = 12.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -145,21 +162,21 @@ fun OtcSymptomAssistantDialog(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 18.dp, vertical = 8.dp),
+                        .weight(1f),
+                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 28.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     // Category Subtitle
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = "${currentCategory.titleBn} (${currentCategory.titleEn})",
+                                text = if (isAppBangla()) "${currentCategory.titleBn} (${currentCategory.titleEn})" else "${currentCategory.titleEn} (${currentCategory.titleBn})",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = currentCategory.subtitleBn,
+                                text = if (isAppBangla()) currentCategory.subtitleBn else currentCategory.subtitleEn,
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -188,14 +205,15 @@ fun OtcSymptomAssistantDialog(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = "🚨 রেড ফ্ল্যাগ সতর্কতা: কখন ডাক্তার দেখাবেন?",
+                                        text = if (isAppBangla()) "🚨 রেড ফ্ল্যাগ সতর্কতা: কখন ডাক্তার দেখাবেন?" else "🚨 Red Flag Alerts: When to consult a physician immediately",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFFEF4444)
                                     )
                                 }
 
-                                currentCategory.redFlagsBn.forEach { flag ->
+                                val redFlags = if (isAppBangla()) currentCategory.redFlagsBn else currentCategory.redFlagsEn
+                                redFlags.forEach { flag ->
                                     Row(
                                         modifier = Modifier.padding(start = 4.dp),
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -217,7 +235,7 @@ fun OtcSymptomAssistantDialog(
                     // Recommended Items Section Header
                     item {
                         Text(
-                            text = "💊 ক্লিনিক্যাল ওটিসি সুপারিশ ও ওষুধ তালিকা:",
+                            text = if (isAppBangla()) "💊 ক্লিনিক্যাল ওটিসি সুপারিশ ও ওষুধ তালিকা:" else "💊 Clinical OTC Recommendations & Medicines:",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -288,8 +306,13 @@ private fun OtcRecommendationCard(
                             color = if (recommendation.isPrimary) Color(0xFF059669).copy(alpha = 0.15f)
                             else Color(0xFF64748B).copy(alpha = 0.15f)
                         ) {
+                            val isBn = isAppBangla()
                             Text(
-                                text = if (recommendation.isPrimary) "ফার্স্ট-লাইন" else "সহায়ক",
+                                text = if (recommendation.isPrimary) {
+                                    if (isBn) "ফার্স্ট-লাইন" else "First-Line"
+                                } else {
+                                    if (isBn) "সহায়ক" else "Adjunct"
+                                },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (recommendation.isPrimary) Color(0xFF059669) else Color(0xFF64748B),
@@ -303,8 +326,10 @@ private fun OtcRecommendationCard(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
+                    val isBn = isAppBangla()
                     Text(
-                        text = "ডোজ রূপ: ${recommendation.dosageForm} • উদাহরণ: ${recommendation.commonBrands.joinToString(", ")}",
+                        text = if (isBn) "ডোজ রূপ: ${recommendation.dosageForm} • উদাহরণ: ${recommendation.commonBrands.joinToString(", ")}"
+                        else "Dosage Form: ${recommendation.dosageForm} • e.g.: ${recommendation.commonBrands.joinToString(", ")}",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -318,15 +343,16 @@ private fun OtcRecommendationCard(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val isBn = isAppBangla()
                 Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
-                        text = "সেবনবিধি: ${recommendation.standardDosageBn}",
+                        text = if (isBn) "সেবনবিধি: ${recommendation.standardDosageBn}" else "Dosage: ${recommendation.standardDosageEn}",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "পরামর্শ: ${recommendation.clinicalTipBn}",
+                        text = if (isBn) "পরামর্শ: ${recommendation.clinicalTipBn}" else "Clinical Tip: ${recommendation.clinicalTipEn}",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -335,9 +361,10 @@ private fun OtcRecommendationCard(
 
             // Matching Products in Pharmacy Inventory
             if (matchingProducts.isNotEmpty()) {
+                val isBn = isAppBangla()
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "দোকানের স্টকে বিদ্যমান ব্র্যান্ড (${matchingProducts.size}):",
+                        text = if (isBn) "দোকানের স্টকে বিদ্যমান ব্র্যান্ড (${matchingProducts.size}):" else "Available In-Store Brands (${matchingProducts.size}):",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -373,7 +400,7 @@ private fun OtcRecommendationCard(
                                         color = if (isChosen) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "স্টক: ${prod.stockQty.toInt()}",
+                                        text = if (isBn) "স্টক: ${prod.stockQty.toInt()}" else "Stock: ${prod.stockQty.toInt()}",
                                         fontSize = 10.sp,
                                         color = if (prod.stockQty <= 5) Color(0xFFEF4444) else Color(0xFF10B981),
                                         fontWeight = FontWeight.Bold
@@ -400,7 +427,7 @@ private fun OtcRecommendationCard(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "মোট: ৳ ${(prod.sellingPrice * quantity).toInt()}",
+                                    text = if (isBn) "মোট: ৳ ${(prod.sellingPrice * quantity).toInt()}" else "Total: ৳ ${(prod.sellingPrice * quantity).toInt()}",
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.SemiBold
@@ -414,23 +441,23 @@ private fun OtcRecommendationCard(
                                 // Quantity decrement
                                 IconButton(
                                     onClick = { if (quantity > 1) quantity -= 1 },
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(40.dp)
                                 ) {
-                                    Icon(Icons.Default.Remove, contentDescription = "Minus", modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Remove, contentDescription = "Minus", modifier = Modifier.size(18.dp))
                                 }
 
                                 Text(
                                     text = "${quantity.toInt()}",
-                                    fontSize = 13.sp,
+                                    fontSize = 13.5.sp,
                                     fontWeight = FontWeight.Bold
                                 )
 
                                 // Quantity increment
                                 IconButton(
                                     onClick = { quantity += 1 },
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(40.dp)
                                 ) {
-                                    Icon(Icons.Default.Add, contentDescription = "Plus", modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Add, contentDescription = "Plus", modifier = Modifier.size(18.dp))
                                 }
 
                                 Spacer(Modifier.width(4.dp))
@@ -438,21 +465,24 @@ private fun OtcRecommendationCard(
                                 Button(
                                     onClick = {
                                         onAddToCart(prod, quantity)
-                                        Toast.makeText(context, "${prod.name} (${quantity.toInt()} টি) কার্টে যোগ হয়েছে", Toast.LENGTH_SHORT).show()
+                                        val toastMsg = if (isBn) "${prod.name} (${quantity.toInt()} টি) কার্টে যোগ হয়েছে" else "Added ${quantity.toInt()}x ${prod.name} to cart"
+                                        Toast.makeText(context, toastMsg, Toast.LENGTH_SHORT).show()
                                     },
-                                    shape = RoundedCornerShape(8.dp),
+                                    shape = RoundedCornerShape(10.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                    modifier = Modifier.height(44.dp)
                                 ) {
                                     Icon(Icons.Default.AddShoppingCart, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(4.dp))
-                                    Text("কার্টে যোগ", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(if (isBn) "কার্টে যোগ" else "Add to Cart", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
                     }
                 }
             } else {
+                val isBn = isAppBangla()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -460,9 +490,10 @@ private fun OtcRecommendationCard(
                 ) {
                     Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
                     Text(
-                        text = "দোকানের স্টকে এই ব্র্যান্ড সরাসরি পাওয়া যায়নি। যেকোনো সমমানের জেনেরিক সরবরাহ করুন।",
+                        text = if (isBn) "দোকানের স্টকে এই ব্র্যান্ড সরাসরি পাওয়া যায়নি। যেকোনো সমমানের জেনেরিক সরবরাহ করুন।" else "No direct brand in inventory. Dispense equivalent generic alternative.",
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }

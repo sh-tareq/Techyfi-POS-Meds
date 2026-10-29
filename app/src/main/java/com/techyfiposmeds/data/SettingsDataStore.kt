@@ -46,13 +46,16 @@ class SettingsDataStore(private val context: Context) {
         val RETURN_AUDIT_PRESETS_KEY = stringPreferencesKey("custom_audit_presets_json")
         val DEFAULT_COST_PERCENTAGE_KEY = androidx.datastore.preferences.core.doublePreferencesKey("default_cost_percentage")
         val DEFAULT_NOTE_PRESETS = listOf(
-            "No Warranty",
-            "7 Days Replacement",
-            "30 Days Service",
-            "6 Months Warranty",
-            "1 Year Warranty",
-            "2 Years Warranty",
-            "Fragile / Handle With Care"
+            "খাওয়ার পর ভরা পেটে (After meals)",
+            "খাওয়ার ৩০ মিনিট আগে (Before meals)",
+            "সকালে খালি পেটে (Empty stomach)",
+            "রাতে শোবার আগে (At bedtime)",
+            "১+০+১ (সকাল ও রাত)",
+            "১+১+১ (৩ বেলা)",
+            "প্রয়োজনে (SOS)",
+            "অ্যান্টিবায়োটিক কোর্স সম্পূর্ণ করুন",
+            "ফ্রিজে রাখুন (২°-৮° সেঃ)",
+            "শিশুদের নাগালের বাইরে রাখুন"
         )
     }
 

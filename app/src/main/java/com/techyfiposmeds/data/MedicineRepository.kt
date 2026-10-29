@@ -35,7 +35,10 @@ data class MedicineItem(
     val expiryDate: String?,
     val stockQty: Double,
     val reorderLevel: Int
-)
+) {
+    val isStripApplicable: Boolean
+        get() = !com.techyfiposmeds.data.db.isLiquidOrTopicalDosageForm(dosageForm) && (stripSize > 1 || stripPrice > 0.0)
+}
 
 data class ClinicalGeneric(
     val genericId: Long,
@@ -156,18 +159,28 @@ class MedicineRepository private constructor(private val context: Context) {
 
         val whereClauses = mutableListOf<String>()
         val args = mutableListOf<String>()
+        val orderArgs = mutableListOf<String>()
 
         val trimmed = query.trim()
-        if (trimmed.isNotBlank()) {
-            // Check if FTS5 search is usable
-            val sanitized = trimmed.replace("'", "''").replace("\"", "")
-            whereClauses.add("(m.brand_name LIKE ? OR m.generic_name LIKE ? OR m.company_name LIKE ? OR m.barcode LIKE ? OR m.sku LIKE ?)")
-            val wildcard = "%$sanitized%"
-            args.add(wildcard)
-            args.add(wildcard)
-            args.add(wildcard)
-            args.add(wildcard)
-            args.add(wildcard)
+        val tokens = if (trimmed.isNotBlank()) {
+            trimmed.split("\\s+".toRegex()).filter { it.isNotBlank() }
+        } else {
+            emptyList()
+        }
+
+        if (tokens.isNotEmpty()) {
+            // Each token must match at least one of brand_name, generic_name, strength, company_name, dosage_form, display_name
+            // This accurately matches queries like "Napa 500", "Beximco Napa", "Paracetamol 500", "Square Napa"
+            for (token in tokens) {
+                val wildcard = "%$token%"
+                whereClauses.add("(m.brand_name LIKE ? OR m.generic_name LIKE ? OR m.strength LIKE ? OR m.company_name LIKE ? OR m.dosage_form LIKE ? OR m.display_name LIKE ?)")
+                args.add(wildcard)
+                args.add(wildcard)
+                args.add(wildcard)
+                args.add(wildcard)
+                args.add(wildcard)
+                args.add(wildcard)
+            }
         }
 
         if (!dosageForm.isNullOrBlank() && dosageForm != "all") {
@@ -189,10 +202,35 @@ class MedicineRepository private constructor(private val context: Context) {
         }
 
         val whereSql = if (whereClauses.isNotEmpty()) "WHERE " + whereClauses.joinToString(" AND ") else ""
-        val sql = "SELECT m.* FROM pos_medicines m $whereSql ORDER BY m.brand_name ASC, m.unit_price ASC LIMIT $limit"
+
+        val orderByClause = if (trimmed.isNotBlank()) {
+            val exact = trimmed.lowercase()
+            val prefix = "$exact%"
+            orderArgs.add(exact)
+            orderArgs.add(prefix)
+            orderArgs.add(prefix)
+            """
+            ORDER BY 
+              CASE 
+                WHEN LOWER(m.brand_name) = ? THEN 1
+                WHEN LOWER(m.brand_name) LIKE ? THEN 2
+                WHEN LOWER(m.generic_name) LIKE ? THEN 3
+                ELSE 4
+              END,
+              m.brand_name COLLATE NOCASE ASC,
+              m.strength ASC,
+              m.unit_price ASC
+            """.trimIndent()
+        } else {
+            // By default, sort medicines alphabetically A-Z
+            "ORDER BY m.brand_name COLLATE NOCASE ASC, m.strength ASC"
+        }
+
+        val sql = "SELECT m.* FROM pos_medicines m $whereSql $orderByClause LIMIT $limit"
+        val allArgs = (args + orderArgs).toTypedArray()
 
         try {
-            val cursor = d.rawQuery(sql, args.toTypedArray())
+            val cursor = d.rawQuery(sql, allArgs)
             cursor.use {
                 while (cursor.moveToNext()) {
                     results.add(parseMedicine(cursor))
@@ -377,6 +415,72 @@ class MedicineRepository private constructor(private val context: Context) {
         list
     }
 
+    suspend fun searchGenerics(query: String, limit: Int = 12): List<String> = withContext(Dispatchers.IO) {
+        initializeDatabase()
+        val d = getReadableDb()
+        val list = mutableListOf<String>()
+        val trimmed = query.trim()
+        if (trimmed.length < 2) return@withContext emptyList()
+        try {
+            d.rawQuery(
+                "SELECT generic_name FROM pos_generics WHERE generic_name LIKE ? ORDER BY generic_name ASC LIMIT ?",
+                arrayOf("%$trimmed%", limit.toString())
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(0)
+                    if (!name.isNullOrBlank() && !list.contains(name)) list.add(name)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error searching generics: ${e.message}", e)
+        }
+        list
+    }
+
+    suspend fun searchCompanies(query: String = "", limit: Int = 15): List<String> = withContext(Dispatchers.IO) {
+        initializeDatabase()
+        val d = getReadableDb()
+        val list = mutableListOf<String>()
+        val trimmed = query.trim()
+        try {
+            val sql = if (trimmed.isBlank()) {
+                "SELECT company_name FROM (SELECT company_name, count(*) as cnt FROM pos_medicines WHERE company_name IS NOT NULL AND company_name != '' GROUP BY company_name ORDER BY cnt DESC LIMIT ?)"
+            } else {
+                "SELECT DISTINCT company_name FROM pos_medicines WHERE company_name LIKE ? ORDER BY company_name ASC LIMIT ?"
+            }
+            val args = if (trimmed.isBlank()) arrayOf(limit.toString()) else arrayOf("%$trimmed%", limit.toString())
+            d.rawQuery(sql, args).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val comp = cursor.getString(0)
+                    if (!comp.isNullOrBlank() && !list.contains(comp)) list.add(comp)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error searching companies: ${e.message}", e)
+        }
+        list
+    }
+
+    suspend fun getDistinctShelfLocations(limit: Int = 20): List<String> = withContext(Dispatchers.IO) {
+        initializeDatabase()
+        val d = getReadableDb()
+        val list = mutableListOf<String>()
+        try {
+            d.rawQuery(
+                "SELECT DISTINCT shelf_location FROM pos_medicines WHERE shelf_location IS NOT NULL AND TRIM(shelf_location) != '' ORDER BY shelf_location ASC LIMIT ?",
+                arrayOf(limit.toString())
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val loc = cursor.getString(0)
+                    if (!loc.isNullOrBlank() && !list.contains(loc)) list.add(loc)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading shelf locations: ${e.message}", e)
+        }
+        list
+    }
+
     suspend fun updateMedicineDetails(
         id: Long,
         unitPrice: Double,
@@ -436,6 +540,82 @@ class MedicineRepository private constructor(private val context: Context) {
         }
     }
 
+    suspend fun upsertClinicalGeneric(
+        genericName: String,
+        indication: String?,
+        adultDose: String?,
+        childDose: String?,
+        contraIndication: String?,
+        sideEffect: String?,
+        precaution: String?
+    ): Long = withContext(Dispatchers.IO) {
+        if (genericName.isBlank()) return@withContext -1L
+        initializeDatabase()
+        val d = getReadableDb()
+        val trimmedName = genericName.trim()
+        try {
+            var existingId: Long? = null
+            d.rawQuery("SELECT generic_id FROM pos_generics WHERE LOWER(generic_name) = ? LIMIT 1", arrayOf(trimmedName.lowercase())).use { cursor ->
+                if (cursor.moveToNext()) {
+                    existingId = cursor.getLong(0)
+                }
+            }
+
+            if (existingId != null && existingId!! > 0L) {
+                val cv = ContentValues().apply {
+                    if (!indication.isNullOrBlank()) put("indication", indication.trim())
+                    if (!adultDose.isNullOrBlank()) put("adult_dose", adultDose.trim())
+                    if (!childDose.isNullOrBlank()) put("child_dose", childDose.trim())
+                    if (!contraIndication.isNullOrBlank()) put("contra_indication", contraIndication.trim())
+                    if (!sideEffect.isNullOrBlank()) put("side_effect", sideEffect.trim())
+                    if (!precaution.isNullOrBlank()) put("precaution", precaution.trim())
+                }
+                if (cv.size() > 0) {
+                    d.update("pos_generics", cv, "generic_id = ?", arrayOf(existingId.toString()))
+                }
+                existingId!!
+            } else {
+                val cv = ContentValues().apply {
+                    put("generic_name", trimmedName)
+                    put("category", "Allopathic")
+                    put("indication", indication?.trim())
+                    put("adult_dose", adultDose?.trim())
+                    put("child_dose", childDose?.trim())
+                    put("contra_indication", contraIndication?.trim())
+                    put("side_effect", sideEffect?.trim())
+                    put("precaution", precaution?.trim())
+                }
+                d.insert("pos_generics", null, cv)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error upserting clinical generic: ${e.message}", e)
+            -1L
+        }
+    }
+
+    suspend fun getOrCreateCompanyId(companyName: String): Long? = withContext(Dispatchers.IO) {
+        if (companyName.isBlank()) return@withContext null
+        initializeDatabase()
+        val d = getReadableDb()
+        val trimmed = companyName.trim()
+        try {
+            d.rawQuery("SELECT company_id FROM pos_companies WHERE LOWER(company_name) = ? LIMIT 1", arrayOf(trimmed.lowercase())).use { cursor ->
+                if (cursor.moveToNext()) {
+                    return@withContext cursor.getLong(0)
+                }
+            }
+            val cv = ContentValues().apply {
+                put("company_name", trimmed)
+                put("company_order", 999)
+            }
+            val newId = d.insert("pos_companies", null, cv)
+            if (newId > 0) newId else null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resolving company id: ${e.message}", e)
+            null
+        }
+    }
+
     suspend fun insertCustomMedicine(item: MedicineItem): Long = withContext(Dispatchers.IO) {
         initializeDatabase()
         val d = getReadableDb()
@@ -447,7 +627,13 @@ class MedicineRepository private constructor(private val context: Context) {
                 put("display_name", item.displayName)
                 put("dosage_form", item.dosageForm)
                 put("strength", item.strength)
+                if (item.genericId != null && item.genericId > 0) {
+                    put("generic_id", item.genericId)
+                }
                 put("generic_name", item.genericName)
+                if (item.companyId != null && item.companyId > 0) {
+                    put("company_id", item.companyId)
+                }
                 put("company_name", item.companyName)
                 put("unit_price", item.unitPrice)
                 put("strip_size", item.stripSize)

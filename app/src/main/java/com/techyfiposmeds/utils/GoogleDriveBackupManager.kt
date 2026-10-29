@@ -61,7 +61,7 @@ object GoogleDriveBackupManager {
             GsonFactory.getDefaultInstance(),
             bearerToken
         )
-        .setApplicationName("Techyfi POS")
+        .setApplicationName("Techyfi Pharma")
         .build()
     }
 
@@ -85,7 +85,7 @@ object GoogleDriveBackupManager {
             val fileMetadata = File().apply {
                 name = remoteFileName
                 mimeType = BACKUP_MIME_TYPE
-                description = "Techyfi POS Encrypted Backup Package"
+                description = "Techyfi Pharma Encrypted Backup Package"
                 // Store in Google Drive's isolated appDataFolder sandbox
                 parents = listOf("appDataFolder")
             }
